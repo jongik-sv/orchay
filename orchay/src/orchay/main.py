@@ -152,7 +152,7 @@ class Orchestrator:
         """단일 스케줄링 사이클."""
         logger.debug("_tick 시작")
 
-        # 1. WBS 재파싱
+        # 1. WBS 재파싱 (기존 Task 객체 업데이트, 런타임 상태 유지)
         self.tasks = await self.parser.parse()
 
         # 2. stopAtState에 도달한 Task 정리
@@ -182,6 +182,10 @@ class Orchestrator:
                 )
                 if worker.state == WorkerState.IDLE and not worker.is_manually_paused:
                     task = executable.pop(0)
+                    # Race condition 방지: dispatch 전에 즉시 할당 상태 설정
+                    task.assigned_worker = worker.id
+                    worker.state = WorkerState.BUSY
+                    worker.current_task = task.id
                     logger.info(f"Dispatch: {task.id} -> Worker {worker.id}")
                     await self._dispatch_to_worker(worker, task)
 
@@ -322,6 +326,16 @@ class Orchestrator:
 
     async def _dispatch_to_worker(self, worker: Worker, task: Task) -> None:
         """Worker에 Task를 분배."""
+        # 명령 전송 전 Worker 실제 상태 확인
+        actual_state, _ = await detect_worker_state(worker.pane_id)
+        if actual_state != "idle":
+            logger.warning(
+                f"Worker {worker.id} dispatch 취소: 실제 상태가 {actual_state} (idle 아님)"
+            )
+            task.assigned_worker = None
+            worker.reset()
+            return
+
         # Worker 상태 업데이트 (TaskQueue 할당은 이미 완료됨)
         await dispatch_task(worker, task, self.mode)
 

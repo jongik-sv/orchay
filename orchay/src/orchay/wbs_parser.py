@@ -136,6 +136,7 @@ class WbsParser:
 
         Note:
             파싱 실패 시 이전 캐시된 결과를 반환합니다.
+            기존 Task 객체가 있으면 WBS 필드만 업데이트하고 런타임 상태는 유지합니다.
         """
         try:
             if not self._path.exists():
@@ -144,12 +145,29 @@ class WbsParser:
 
             content = self._path.read_text(encoding="utf-8")
             self._parse_metadata(content)
-            tasks = self._parse_content(content)
+            new_tasks = self._parse_content(content)
 
             # 파싱 결과가 비어있고 이전 캐시가 있으면 캐시 반환 (BR-01)
-            if not tasks and self._cache:
+            if not new_tasks and self._cache:
                 logger.warning("파싱 결과 없음. 이전 캐시 반환")
                 return self._cache
+
+            # 기존 캐시가 있으면 기존 객체 업데이트 (런타임 상태 유지)
+            if self._cache:
+                existing_map = {t.id: t for t in self._cache}
+                result: list[Task] = []
+                for new_task in new_tasks:
+                    if new_task.id in existing_map:
+                        # 기존 객체의 WBS 필드만 업데이트, 런타임 상태 유지
+                        existing = existing_map[new_task.id]
+                        self._update_task_fields(existing, new_task)
+                        result.append(existing)
+                    else:
+                        # 새 Task 추가
+                        result.append(new_task)
+                tasks = result
+            else:
+                tasks = new_tasks
 
             # 캐시 업데이트
             self._cache = tasks
@@ -161,6 +179,31 @@ class WbsParser:
             logger.error(f"WBS 파싱 오류: {e}")
             # 캐시 반환
             return self._cache
+
+    def _update_task_fields(self, existing: Task, new: Task) -> None:
+        """기존 Task 객체의 WBS 필드만 업데이트.
+
+        런타임 상태(assigned_worker)는 유지합니다.
+        """
+        # WBS에서 파싱되는 필드만 업데이트
+        existing.title = new.title
+        existing.category = new.category
+        existing.domain = new.domain
+        existing.status = new.status
+        existing.priority = new.priority
+        existing.assignee = new.assignee
+        existing.schedule = new.schedule
+        existing.tags = new.tags
+        existing.depends = new.depends
+        existing.blocked_by = new.blocked_by
+        existing.workflow = new.workflow
+        existing.prd_ref = new.prd_ref
+        existing.requirements = new.requirements
+        existing.acceptance = new.acceptance
+        existing.tech_spec = new.tech_spec
+        existing.api_spec = new.api_spec
+        existing.ui_spec = new.ui_spec
+        # assigned_worker는 업데이트하지 않음 (런타임 상태)
 
     def _parse_metadata(self, content: str) -> None:
         """메타데이터 블록 파싱.
@@ -306,7 +349,9 @@ class WbsParser:
             priority = _parse_priority(priority_str)
 
             blocked_by_value = get_str("blocked-by")
-            blocked_by: str | None = blocked_by_value if blocked_by_value != "-" else None
+            blocked_by: str | None = (
+                blocked_by_value if blocked_by_value and blocked_by_value != "-" else None
+            )
 
             return Task(
                 id=task_id,

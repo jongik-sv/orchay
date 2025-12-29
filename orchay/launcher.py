@@ -5,14 +5,14 @@
     python launcher.py [OPTIONS]
     python launcher.py --help                    # 도움말 표시
     python launcher.py -w 5                      # Worker 5개로 실행
-    python launcher.py --cols 240 --rows 60      # 창 크기 지정 (약 1920x1080)
+    python launcher.py --width 1920 --height 1080  # 창 크기 지정
     python launcher.py --max-rows 3              # 열당 최대 3개 worker
     python launcher.py -w 5 -m quick             # 조합 사용
 
 Launcher 옵션:
     -w, --workers N       Worker pane 개수 (기본: 3)
-    --cols N              창 너비 columns (기본: 240, 약 1920px)
-    --rows N              창 높이 rows (기본: 60, 약 1080px)
+    --width N             창 너비 픽셀 (기본: 1920)
+    --height N            창 높이 픽셀 (기본: 1080)
     --max-rows N          열당 최대 worker 수 (기본: 3)
     --scheduler-cols N    스케줄러 너비 columns (기본: 100)
     --worker-cols N       Worker 너비 columns (기본: 120)
@@ -151,16 +151,16 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         help="폰트 크기 (기본: 11.0)",
     )
     parser.add_argument(
-        "--cols",
+        "--width",
         type=int,
-        default=240,
-        help="창 너비 columns (기본: 240, 약 1920px)",
+        default=1920,
+        help="창 너비 픽셀 (기본: 1920)",
     )
     parser.add_argument(
-        "--rows",
+        "--height",
         type=int,
-        default=60,
-        help="창 높이 rows (기본: 60, 약 1080px)",
+        default=1080,
+        help="창 높이 픽셀 (기본: 1080)",
     )
     parser.add_argument(
         "--max-rows",
@@ -182,8 +182,8 @@ def main() -> int:
     # --help 또는 -h 처리 (orchay 도움말 표시)
     if "-h" in sys.argv or "--help" in sys.argv:
         print("Launcher 전용 옵션 (WezTerm 레이아웃):")
-        print("  --cols N              창 너비 columns (기본: 240, 약 1920px)")
-        print("  --rows N              창 높이 rows (기본: 60, 약 1080px)")
+        print("  --width N             창 너비 픽셀 (기본: 1920)")
+        print("  --height N            창 높이 픽셀 (기본: 1080)")
         print("  --max-rows N          열당 최대 worker 수 (기본: 3)")
         print("  --scheduler-cols N    스케줄러 너비 columns (기본: 100)")
         print("  --worker-cols N       Worker 너비 columns (기본: 120)")
@@ -218,36 +218,21 @@ def main() -> int:
 
     print("[launcher] Starting WezTerm...")
     print(f"           Workers: {workers}")
-    print(f"           Window: {launcher_args.cols}x{launcher_args.rows}")
+    print(f"           Window: {launcher_args.width}x{launcher_args.height}")
     print(f"           Max rows per column: {launcher_args.max_rows}")
     print(f"           Command: {cmd}")
 
     # wezterm 명령
     wezterm_cmd = "wezterm"
 
-    # WezTerm 시작 (창 크기 지정)
-    start_cmd = (
-        f"{wezterm_cmd} "
-        f"--config 'initial_cols={launcher_args.cols}' "
-        f"--config 'initial_rows={launcher_args.rows}' "
-        f"start --position 0,0"
-    )
-    subprocess.Popen(start_cmd, shell=True)
+    # WezTerm 시작
+    subprocess.Popen(wezterm_cmd, shell=True)
     print("[launcher] Waiting for WezTerm to start...")
+    time.sleep(2)
 
-    # WezTerm이 준비될 때까지 대기
-    for attempt in range(10):
-        time.sleep(1)
-        result = subprocess.run(
-            f"{wezterm_cmd} cli list",
-            shell=True, capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            print(f"[launcher] WezTerm ready (attempt {attempt + 1})")
-            break
-    else:
-        print("[launcher] WezTerm 시작 타임아웃")
-        return 1
+    # 창 크기 조절 (wmctrl 사용)
+    resize_cmd = f"wmctrl -r :ACTIVE: -e 0,0,0,{launcher_args.width},{launcher_args.height}"
+    subprocess.run(resize_cmd, shell=True, capture_output=True)
 
     # 레이아웃 생성:
     # Workers 1-3:                    Workers 4-6:
@@ -261,65 +246,81 @@ def main() -> int:
 
     # Claude Code 명령 (권한 확인 스킵)
     claude_cmd = "claude --dangerously-skip-permissions"
-    max_rows = launcher_args.max_rows
 
-    # 필요한 열 수 계산
-    columns_needed = (workers + max_rows - 1) // max_rows
-    worker_num = 1
+    # 배치 레이아웃: workers -> [열1개수, 열2개수]
+    # 1-3: 세로 1열, 4: 2/2, 5: 3/2, 6: 3/3, 7+: 최대 6개
+    layout_map: dict[int, list[int]] = {
+        1: [1],
+        2: [2],
+        3: [3],
+        4: [2, 2],
+        5: [3, 2],
+        6: [3, 3],
+    }
+    workers = min(workers, 6)  # 최대 6개
+    layout = layout_map[workers]
+
     column_first_panes: list[int] = []  # 각 열의 첫 번째 pane ID
+    column_panes: list[list[int]] = [[] for _ in layout]  # 각 열의 모든 pane ID
 
-    print("[launcher] Creating layout...")
+    print(f"[launcher] Creating layout: {'/'.join(map(str, layout))}")
 
-    for col in range(columns_needed):
-        # 이 열에 배치할 worker 수
-        workers_in_col = min(max_rows, workers - (col * max_rows))
-
+    # 1단계: 각 열의 첫 번째 worker 생성 (수평 분할)
+    for col in range(len(layout)):
         if col == 0:
-            # 첫 열: scheduler pane(0) 오른쪽에 분할
             split_cmd = (
                 f"{wezterm_cmd} cli split-pane --right --pane-id 0 "
                 f"--cwd {shlex.quote(cwd)} -- {claude_cmd}"
             )
         else:
-            # 추가 열: 이전 열의 첫 pane 오른쪽에 분할
             target_pane = column_first_panes[col - 1]
             split_cmd = (
                 f"{wezterm_cmd} cli split-pane --right --pane-id {target_pane} "
                 f"--cwd {shlex.quote(cwd)} -- {claude_cmd}"
             )
 
-        print(f"[launcher] Worker {worker_num}: {split_cmd}")
         result = subprocess.run(split_cmd, shell=True, capture_output=True, text=True)
-        print(f"[launcher] Worker {worker_num} result: rc={result.returncode}, "
-              f"stdout='{result.stdout.strip()}', stderr='{result.stderr.strip()}'")
-
         if result.returncode != 0:
-            print(f"[launcher] Worker {worker_num} pane 생성 실패")
+            print(f"[launcher] 열 {col + 1} 생성 실패: {result.stderr}")
             break
 
-        # 새 pane ID 파싱 (wezterm cli split-pane 출력)
         try:
-            current_pane_id = int(result.stdout.strip())
-            column_first_panes.append(current_pane_id)
+            pane_id = int(result.stdout.strip())
+            column_first_panes.append(pane_id)
+            column_panes[col].append(pane_id)
         except ValueError:
-            print(f"[launcher] pane ID 파싱 실패: stdout='{result.stdout}'")
+            print(f"[launcher] pane ID 파싱 실패: {result.stdout}")
             break
 
-        worker_num += 1
+    # 2단계: 각 열 내에서 수직 분할 (균등 분할)
+    for col, workers_in_col in enumerate(layout):
+        if col >= len(column_first_panes):
+            break
+        current_pane_id = column_first_panes[col]
 
-        # 열 내 나머지 worker를 수직 분할
-        for _row in range(1, workers_in_col):
-            result = subprocess.run(
-                f"{wezterm_cmd} cli split-pane --bottom --pane-id {current_pane_id} "
-                f"--cwd {shlex.quote(cwd)} -- {claude_cmd}",
-                shell=True, capture_output=True, text=True
+        for row in range(1, workers_in_col):
+            # 균등 분할을 위한 비율 계산
+            # 예: 3개 분할 시 첫 분할은 67% (2/3), 두 번째는 50% (1/2)
+            remaining = workers_in_col - row
+            percent = int(remaining / (remaining + 1) * 100)
+            split_cmd = (
+                f"{wezterm_cmd} cli split-pane --bottom --percent {percent} "
+                f"--pane-id {current_pane_id} "
+                f"--cwd {shlex.quote(cwd)} -- {claude_cmd}"
             )
+            result = subprocess.run(split_cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
-                print(f"[launcher] Worker {worker_num} pane 생성 실패: {result.stderr}")
+                print(f"[launcher] pane 생성 실패: {result.stderr}")
             else:
-                # 다음 분할을 위해 현재 pane ID 업데이트
                 with contextlib.suppress(ValueError):
                     current_pane_id = int(result.stdout.strip())
+                    column_panes[col].append(current_pane_id)
+
+    # Worker 번호 출력 (왼쪽 위부터 아래로, 그 다음 오른쪽)
+    worker_num = 1
+    for col_panes in column_panes:
+        for pane_id in col_panes:
+            print(f"[launcher] Worker {worker_num}: pane {pane_id}")
             worker_num += 1
 
     time.sleep(1)

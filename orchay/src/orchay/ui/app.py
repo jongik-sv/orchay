@@ -422,6 +422,7 @@ class OrchayApp(App[None]):
         self._workers_interactive = False
         self._help_visible = False
         self._action_menu_visible = False
+        self._tick_running = False  # tick 중복 실행 방지
 
         # 실제 Orchestrator 또는 Mock
         self._real_orchestrator: Orchestrator | None = orchestrator  # type: ignore[assignment]
@@ -608,8 +609,9 @@ class OrchayApp(App[None]):
     def _on_auto_refresh(self) -> None:
         """자동 갱신 콜백."""
         if not self._paused:
-            # 실제 Orchestrator가 있으면 스케줄링 사이클 실행
-            if self._real_orchestrator is not None:
+            # 실제 Orchestrator가 있으면 스케줄링 사이클 실행 (중복 실행 방지)
+            if self._real_orchestrator is not None and not self._tick_running:
+                self._tick_running = True
                 self.run_worker(self._run_orchestrator_tick())
             self._sync_from_orchestrator()
             self._update_queue_table()
@@ -619,8 +621,11 @@ class OrchayApp(App[None]):
 
     async def _run_orchestrator_tick(self) -> None:
         """Orchestrator 스케줄링 사이클 실행."""
-        if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "_tick"):
-            await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
+        try:
+            if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "_tick"):
+                await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
+        finally:
+            self._tick_running = False
 
     def _sync_from_orchestrator(self) -> None:
         """Orchestrator 상태를 TUI에 동기화."""
