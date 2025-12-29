@@ -1,0 +1,10 @@
+{
+  "id": "deployment",
+  "name": "deployment - Orchay Deployment System",
+  "description": "Orchay 배포 시스템 구축 프로젝트",
+  "version": "0.1.0",
+  "status": "active",
+  "wbsDepth": 4,
+  "createdAt": "2025-12-29T00:00:00.000Z",
+  "updatedAt": "2025-12-29T00:00:00.000Z"
+}

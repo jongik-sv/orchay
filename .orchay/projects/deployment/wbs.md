@@ -18,7 +18,7 @@
 ### TSK-01-01: launcher.py 패키지 이동
 - category: infrastructure
 - domain: infra
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
