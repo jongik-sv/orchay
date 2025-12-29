@@ -1,0 +1,197 @@
+/* orchay TUI Styles */
+
+/* 전체 레이아웃 */
+Screen {
+    background: $surface;
+}
+
+#main-container {
+    height: 100%;
+    width: 100%;
+    padding: 0 1;
+}
+
+/* 헤더 바 */
+#header-bar {
+    height: 3;
+    width: 100%;
+    background: $primary-background;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#header-info {
+    width: 70%;
+    padding: 1 2;
+}
+
+#mode-indicator {
+    width: 30%;
+    padding: 1 2;
+    text-align: right;
+}
+
+/* 스케줄 큐 섹션 */
+#queue-section {
+    height: 40%;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#queue-title {
+    height: 1;
+    padding: 0 1;
+    background: $primary-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+#queue-table {
+    height: 100%;
+    scrollbar-size: 1 1;
+}
+
+DataTable > .datatable--header {
+    background: $primary-darken-1;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $primary;
+    color: $text;
+}
+
+/* Worker 섹션 */
+#workers-section {
+    height: 30%;
+    border: solid $success;
+    margin-bottom: 1;
+}
+
+#workers-title {
+    height: 1;
+    padding: 0 1;
+    background: $success-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+#workers-panel {
+    height: 100%;
+    padding: 1;
+}
+
+/* 진행률 섹션 */
+#progress-section {
+    height: 5;
+    border: solid $warning;
+}
+
+#progress-title {
+    height: 1;
+    padding: 0 1;
+    background: $warning-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+#progress-panel {
+    height: 100%;
+    padding: 1;
+}
+
+/* 상태별 스타일 */
+.worker-idle {
+    color: #22c55e;
+}
+
+.worker-busy {
+    color: #3b82f6;
+}
+
+.worker-paused {
+    color: #f59e0b;
+}
+
+.worker-error {
+    color: #ef4444;
+}
+
+.worker-blocked {
+    color: #8b5cf6;
+}
+
+.worker-dead {
+    color: #6b7280;
+}
+
+.worker-done {
+    color: #10b981;
+}
+
+/* 모드별 스타일 */
+.mode-design {
+    color: #3b82f6;
+}
+
+.mode-quick {
+    color: #22c55e;
+}
+
+.mode-develop {
+    color: #8b5cf6;
+}
+
+.mode-force {
+    color: #f59e0b;
+}
+
+/* 명령어 입력 섹션 */
+#input-section {
+    height: 3;
+    width: 100%;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+#command-input {
+    width: 100%;
+}
+
+/* 큐 인터랙티브 위젯 */
+#queue-widget {
+    layer: modal;
+    width: 80%;
+    height: auto;
+    max-height: 60%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+    margin: 2 5;
+}
+
+/* 도움말 모달 */
+#help-modal {
+    layer: modal;
+    width: 90;
+    height: auto;
+    max-height: 90%;
+    background: $surface;
+    border: solid $success;
+    padding: 1 2;
+    margin: 1 5;
+    color: $text;
+    overflow-y: auto;
+}
+
+/* 액션 메뉴 */
+#action-menu {
+    width: 40;
+    height: auto;
+    background: $surface;
+    border: solid $warning;
+}
+
+/* Note: Textual does not support media queries.
+   Responsive behavior is handled programmatically. */

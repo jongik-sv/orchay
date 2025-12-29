@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4a90d9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357abd;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="orchayGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b5b95;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#524578;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="workerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#88b04b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6a8f39;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="queueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f7cac9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e5b7b6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main Container -->
+  <rect x="10" y="10" width="780" height="430" rx="8" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="10" y="10" width="780" height="40" rx="8" fill="url(#headerGrad)"/>
+  <rect x="10" y="35" width="780" height="15" fill="url(#headerGrad)"/>
+  <text x="400" y="37" text-anchor="middle" fill="white" font-size="16" font-weight="bold">WezTerm (N+1 panes)</text>
+
+  <!-- Pane 0: orchay -->
+  <rect x="25" y="65" width="250" height="360" rx="6" fill="#fff" stroke="#6b5b95" stroke-width="2"/>
+  <rect x="25" y="65" width="250" height="30" rx="6" fill="url(#orchayGrad)"/>
+  <rect x="25" y="85" width="250" height="10" fill="url(#orchayGrad)"/>
+  <text x="150" y="85" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Pane 0: orchay</text>
+
+  <!-- Scheduler Box -->
+  <rect x="40" y="105" width="220" height="180" rx="4" fill="#f3f0f7" stroke="#6b5b95" stroke-width="1"/>
+  <text x="150" y="125" text-anchor="middle" fill="#6b5b95" font-size="12" font-weight="bold">[스케줄러]</text>
+
+  <!-- Scheduler Functions -->
+  <text x="55" y="150" fill="#333" font-size="11">&#8226; wbs.md 모니터링</text>
+  <text x="55" y="170" fill="#333" font-size="11">&#8226; 스케줄 큐 관리</text>
+  <text x="55" y="190" fill="#333" font-size="11">&#8226; pane 상태 감지</text>
+  <text x="55" y="210" fill="#333" font-size="11">&#8226; 작업 분배</text>
+
+  <!-- Queue Box -->
+  <rect x="55" y="225" width="190" height="90" rx="4" fill="url(#queueGrad)" stroke="#d4a5a4" stroke-width="1"/>
+  <text x="150" y="245" text-anchor="middle" fill="#6b4c4b" font-size="11" font-weight="bold">스케줄 큐</text>
+  <text x="70" y="265" fill="#6b4c4b" font-size="10">1. TSK-02-01</text>
+  <text x="70" y="280" fill="#6b4c4b" font-size="10">2. TSK-02-02</text>
+  <text x="70" y="295" fill="#6b4c4b" font-size="10">3. ...</text>
+
+  <!-- Worker Panes Container -->
+  <rect x="295" y="65" width="480" height="360" rx="6" fill="#f0f5f0" stroke="#88b04b" stroke-width="1"/>
+
+  <!-- Worker 1 -->
+  <rect x="310" y="75" width="450" height="105" rx="4" fill="#fff" stroke="#88b04b" stroke-width="2"/>
+  <rect x="310" y="75" width="450" height="25" rx="4" fill="url(#workerGrad)"/>
+  <rect x="310" y="92" width="450" height="8" fill="url(#workerGrad)"/>
+  <text x="535" y="93" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Pane 1: Claude (Worker 1)</text>
+  <rect x="325" y="110" width="420" height="55" rx="3" fill="#f8fff8" stroke="#c5d9c5" stroke-width="1"/>
+  <text x="535" y="135" text-anchor="middle" fill="#4a7c4a" font-size="11">작업 중: TSK-01-01-01</text>
+  <text x="535" y="155" text-anchor="middle" fill="#6a9f6a" font-size="10" font-family="monospace">/wf:start ...</text>
+
+  <!-- Worker 2 -->
+  <rect x="310" y="190" width="450" height="105" rx="4" fill="#fff" stroke="#88b04b" stroke-width="2"/>
+  <rect x="310" y="190" width="450" height="25" rx="4" fill="url(#workerGrad)"/>
+  <rect x="310" y="207" width="450" height="8" fill="url(#workerGrad)"/>
+  <text x="535" y="208" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Pane 2: Claude (Worker 2)</text>
+  <rect x="325" y="225" width="420" height="55" rx="3" fill="#f8fff8" stroke="#c5d9c5" stroke-width="1"/>
+  <text x="535" y="258" text-anchor="middle" fill="#4a7c4a" font-size="11">작업 중: TSK-01-01-02</text>
+
+  <!-- Worker 3 -->
+  <rect x="310" y="305" width="450" height="105" rx="4" fill="#fff" stroke="#88b04b" stroke-width="2"/>
+  <rect x="310" y="305" width="450" height="25" rx="4" fill="url(#workerGrad)"/>
+  <rect x="310" y="322" width="450" height="8" fill="url(#workerGrad)"/>
+  <text x="535" y="323" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Pane 3: Claude (Worker 3)</text>
+  <rect x="325" y="340" width="420" height="55" rx="3" fill="#fff8e8" stroke="#d9c9a5" stroke-width="1"/>
+  <text x="535" y="373" text-anchor="middle" fill="#8a7a4a" font-size="11">대기 중 → 다음 Task 분배</text>
+
+  <!-- Arrows from orchay to workers -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b5b95"/>
+    </marker>
+  </defs>
+
+  <path d="M 275 150 L 305 140" stroke="#6b5b95" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 275 200 L 305 240" stroke="#6b5b95" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 245 315 L 305 355" stroke="#6b5b95" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+</svg>

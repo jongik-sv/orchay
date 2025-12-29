@@ -1,0 +1,11 @@
+{
+  "id": "test-project",
+  "name": "테스트 프로젝트",
+  "description": "E2E 테스트용 프로젝트",
+  "version": "0.1.0",
+  "status": "active",
+  "createdAt": "2025-12-14T00:00:00.000Z",
+  "updatedAt": "2025-12-14T00:00:00.000Z",
+  "scheduledStart": "2025-01-01",
+  "scheduledEnd": "2025-12-31"
+}

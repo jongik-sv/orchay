@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 550" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad7" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#16a085;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1abc9c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="startGrad7" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5dade2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3498db;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="loopGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#58d68d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#27ae60;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="stopGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#eb984e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e67e22;stop-opacity:1" />
+    </linearGradient>
+    <marker id="loopArrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- Main Container -->
+  <rect x="10" y="10" width="680" height="530" rx="10" fill="#fdfefe" stroke="#d5d8dc" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="10" y="10" width="680" height="45" rx="10" fill="url(#headerGrad7)"/>
+  <rect x="10" y="40" width="680" height="15" fill="url(#headerGrad7)"/>
+  <text x="350" y="40" text-anchor="middle" fill="white" font-size="16" font-weight="bold">워커(Claude Code) 생명주기</text>
+
+  <!-- [시작] Phase -->
+  <rect x="30" y="70" width="640" height="115" rx="8" fill="#ebf5fb" stroke="#3498db" stroke-width="2"/>
+  <rect x="45" y="80" width="80" height="28" rx="14" fill="url(#startGrad7)"/>
+  <text x="85" y="99" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[시작]</text>
+
+  <g transform="translate(60, 118)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">├──▶ 1. WezTerm pane에서 Claude Code 실행</text>
+    <text x="30" y="18" fill="#7f8c8d" font-size="10" font-family="monospace">$ claude</text>
+    <text x="0" y="42" fill="#2c3e50" font-size="11">└──▶ 2. 프롬프트 대기 (idle 상태)</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M 350 185 L 350 200" stroke="#7f8c8d" stroke-width="2" fill="none"/>
+  <polygon points="350,210 345,200 355,200" fill="#7f8c8d"/>
+
+  <!-- [작업 루프] Phase -->
+  <rect x="30" y="215" width="640" height="175" rx="8" fill="#e8f8f5" stroke="#1abc9c" stroke-width="2"/>
+  <rect x="45" y="225" width="95" height="28" rx="14" fill="url(#loopGrad)"/>
+  <text x="92" y="244" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[작업 루프]</text>
+
+  <g transform="translate(60, 265)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">├──▶ 명령 수신 (/wf:start TSK-XX-XX)</text>
+    <text x="0" y="28" fill="#2c3e50" font-size="11">├──▶ 워크플로우 실행</text>
+    <text x="0" y="56" fill="#2c3e50" font-size="11">├──▶ wbs.md 상태 업데이트</text>
+    <text x="0" y="84" fill="#2c3e50" font-size="11">└──▶ 프롬프트 복귀 (idle) → 다음 명령 대기</text>
+  </g>
+
+  <!-- Loop back arrow -->
+  <path d="M 600 350 Q 650 350 650 290 Q 650 260 600 260" stroke="#27ae60" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="600,260 610,255 610,265" fill="#27ae60"/>
+  <text x="658" y="305" fill="#27ae60" font-size="9" transform="rotate(90 658,305)">반복</text>
+
+  <!-- Arrow down -->
+  <path d="M 350 390 L 350 410" stroke="#7f8c8d" stroke-width="2" fill="none"/>
+  <polygon points="350,420 345,410 355,410" fill="#7f8c8d"/>
+
+  <!-- [종료] Phase -->
+  <rect x="30" y="425" width="640" height="100" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="2"/>
+  <rect x="45" y="435" width="80" height="28" rx="14" fill="url(#stopGrad)"/>
+  <text x="85" y="454" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[종료]</text>
+
+  <g transform="translate(60, 475)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">├──▶ 방법 1: pane 닫기</text>
+    <text x="0" y="22" fill="#2c3e50" font-size="11">├──▶ 방법 2: /exit 명령</text>
+    <text x="0" y="44" fill="#2c3e50" font-size="11">└──▶ 스케줄러가 감지 → Worker 풀에서 제거</text>
+  </g>
+</svg>

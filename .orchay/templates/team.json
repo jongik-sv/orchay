@@ -1,0 +1,16 @@
+{
+  "members": [
+    {
+      "id": "admin",
+      "name": "Admin",
+      "email": "admin@project.com",
+      "role": "admin",
+      "active": true
+    }
+  ],
+  "roles": [
+    { "id": "admin", "name": "Admin", "permissions": ["all"] },
+    { "id": "member", "name": "Member", "permissions": ["read", "write"] },
+    { "id": "viewer", "name": "Viewer", "permissions": ["read"] }
+  ]
+}

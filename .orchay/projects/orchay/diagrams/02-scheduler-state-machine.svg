@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 320" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="stateGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5dade2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3498db;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="errorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec7063;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e74c3c;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+    <marker id="arrowBi" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect x="5" y="5" width="740" height="310" rx="10" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+
+  <!-- Title -->
+  <text x="375" y="35" text-anchor="middle" fill="#2c3e50" font-size="18" font-weight="bold">스케줄러 상태 머신</text>
+
+  <!-- State: 초기화 -->
+  <rect x="30" y="70" width="120" height="50" rx="25" fill="url(#stateGrad)" stroke="#2980b9" stroke-width="2"/>
+  <text x="90" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="bold">초기화</text>
+
+  <!-- State: 모니터링 -->
+  <rect x="200" y="70" width="120" height="50" rx="25" fill="url(#stateGrad)" stroke="#2980b9" stroke-width="2"/>
+  <text x="260" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="bold">모니터링</text>
+
+  <!-- State: 분배 중 -->
+  <rect x="400" y="70" width="120" height="50" rx="25" fill="url(#stateGrad)" stroke="#2980b9" stroke-width="2"/>
+  <text x="460" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="bold">분배 중</text>
+
+  <!-- State: 대기 중 -->
+  <rect x="600" y="70" width="120" height="50" rx="25" fill="url(#stateGrad)" stroke="#2980b9" stroke-width="2"/>
+  <text x="660" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="bold">대기 중</text>
+
+  <!-- State: 에러 상태 -->
+  <rect x="200" y="220" width="450" height="50" rx="25" fill="url(#errorGrad)" stroke="#c0392b" stroke-width="2"/>
+  <text x="425" y="250" text-anchor="middle" fill="white" font-size="14" font-weight="bold">에러 상태</text>
+
+  <!-- Arrows -->
+  <!-- 초기화 → 모니터링 -->
+  <path d="M 150 95 L 195 95" stroke="#34495e" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- 모니터링 ⇄ 분배 중 -->
+  <path d="M 320 85 L 395 85" stroke="#27ae60" stroke-width="2" fill="none" marker-end="url(#arrowBi)"/>
+  <path d="M 395 105 L 320 105" stroke="#27ae60" stroke-width="2" fill="none" marker-end="url(#arrowBi)"/>
+
+  <!-- 분배 중 → 대기 중 -->
+  <path d="M 520 95 L 595 95" stroke="#34495e" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- 대기 중 → 모니터링 (curved) -->
+  <path d="M 660 70 Q 660 40 450 40 Q 260 40 260 65" stroke="#34495e" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Down arrows to error -->
+  <line x1="90" y1="120" x2="90" y2="175" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="260" y1="120" x2="260" y2="215" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="460" y1="120" x2="460" y2="215" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="660" y1="120" x2="660" y2="175" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- Connect dashed lines to error box -->
+  <path d="M 90 175 Q 90 195 200 220" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+  <path d="M 660 175 Q 660 195 650 220" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+
+  <!-- Legend -->
+  <rect x="30" y="160" width="130" height="75" rx="5" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="95" y="178" text-anchor="middle" fill="#2c3e50" font-size="10" font-weight="bold">전이 조건</text>
+  <line x1="45" y1="190" x2="70" y2="190" stroke="#34495e" stroke-width="2"/>
+  <text x="80" y="194" fill="#34495e" font-size="9">단방향</text>
+  <line x1="45" y1="210" x2="70" y2="210" stroke="#27ae60" stroke-width="2"/>
+  <text x="80" y="214" fill="#27ae60" font-size="9">양방향</text>
+  <line x1="45" y1="228" x2="70" y2="228" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="80" y="232" fill="#7f8c8d" font-size="9">에러 전이</text>
+</svg>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 520" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad9" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1abc9c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a085;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pauseDetect" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d68910;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waitGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sendGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="successGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e8449;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="failGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrowFlow9" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+    <marker id="arrowSuccess" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arrowFail" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect x="5" y="5" width="690" height="510" rx="10" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="5" y="5" width="690" height="45" rx="10" fill="url(#headerGrad9)"/>
+  <rect x="5" y="35" width="690" height="15" fill="url(#headerGrad9)"/>
+  <text x="350" y="35" text-anchor="middle" fill="white" font-size="16" font-weight="bold">자동 재개 흐름 (Auto Resume Flow)</text>
+
+  <!-- Step 1: PAUSED 감지 -->
+  <rect x="250" y="70" width="200" height="50" rx="25" fill="url(#pauseDetect)" stroke="#b7950b" stroke-width="2"/>
+  <text x="350" y="95" text-anchor="middle" fill="white" font-size="13" font-weight="bold">[PAUSED] 상태 감지</text>
+  <text x="350" y="112" text-anchor="middle" fill="#fff9e6" font-size="10">레이트/토큰 리밋</text>
+
+  <!-- Arrow -->
+  <line x1="350" y1="120" x2="350" y2="145" stroke="#34495e" stroke-width="2" marker-end="url(#arrowFlow9)"/>
+
+  <!-- Step 2: 대기 시간 계산 -->
+  <rect x="150" y="155" width="400" height="80" rx="8" fill="#ebf5fb" stroke="#3498db" stroke-width="2"/>
+  <text x="350" y="180" text-anchor="middle" fill="#1a5276" font-size="12" font-weight="bold">대기 시간 계산</text>
+  <text x="180" y="205" fill="#2874a6" font-size="10">레이트 리밋: 60초 (또는 출력에서 추출)</text>
+  <text x="180" y="220" fill="#2874a6" font-size="10">컨텍스트 리밋: 5초</text>
+
+  <!-- Arrow -->
+  <line x1="350" y1="235" x2="350" y2="260" stroke="#34495e" stroke-width="2" marker-end="url(#arrowFlow9)"/>
+
+  <!-- Step 3: 대기 -->
+  <rect x="275" y="270" width="150" height="45" rx="8" fill="url(#waitGrad)" stroke="#2471a3" stroke-width="2"/>
+  <text x="350" y="298" text-anchor="middle" fill="white" font-size="12" font-weight="bold">sleep(wait_time)</text>
+
+  <!-- Arrow -->
+  <line x1="350" y1="315" x2="350" y2="340" stroke="#34495e" stroke-width="2" marker-end="url(#arrowFlow9)"/>
+
+  <!-- Step 4: "계속" 전송 -->
+  <rect x="250" y="350" width="200" height="50" rx="8" fill="url(#sendGrad)" stroke="#7d3c98" stroke-width="2"/>
+  <text x="350" y="375" text-anchor="middle" fill="white" font-size="12" font-weight="bold">"계속" 전송</text>
+  <text x="350" y="392" text-anchor="middle" fill="#e8daef" font-size="10">wezterm send-text "계속"</text>
+
+  <!-- Arrow -->
+  <line x1="350" y1="400" x2="350" y2="425" stroke="#34495e" stroke-width="2" marker-end="url(#arrowFlow9)"/>
+
+  <!-- Step 5: 상태 확인 (Decision) -->
+  <polygon points="350,435 420,465 350,495 280,465" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+  <text x="350" y="468" text-anchor="middle" fill="#9a7d0a" font-size="11">busy?</text>
+
+  <!-- Success path -->
+  <line x1="420" y1="465" x2="520" y2="465" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowSuccess)"/>
+  <text x="465" y="458" fill="#27ae60" font-size="10" font-weight="bold">Yes</text>
+  <rect x="530" y="445" width="130" height="40" rx="20" fill="url(#successGrad)"/>
+  <text x="595" y="470" text-anchor="middle" fill="white" font-size="12" font-weight="bold">BUSY (재개됨)</text>
+
+  <!-- Fail path -->
+  <line x1="280" y1="465" x2="180" y2="465" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrowFail)"/>
+  <text x="230" y="458" fill="#e74c3c" font-size="10" font-weight="bold">No</text>
+
+  <!-- Retry counter -->
+  <rect x="50" y="440" width="120" height="50" rx="8" fill="#fadbd8" stroke="#e74c3c" stroke-width="1"/>
+  <text x="110" y="462" text-anchor="middle" fill="#922b21" font-size="10">retry_count++</text>
+  <text x="110" y="478" text-anchor="middle" fill="#922b21" font-size="9">(최대 3회)</text>
+
+  <!-- Retry loop -->
+  <path d="M 110 440 L 110 320 L 250 320" stroke="#e74c3c" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="250,320 240,315 240,325" fill="#e74c3c"/>
+  <text x="140" y="380" fill="#922b21" font-size="9">재시도</text>
+
+  <!-- Max retry exceeded -->
+  <line x1="110" y1="490" x2="110" y2="500" stroke="#c0392b" stroke-width="2"/>
+  <text x="110" y="512" text-anchor="middle" fill="#c0392b" font-size="9" font-weight="bold">초과 시 → ERROR</text>
+
+  <!-- Info box -->
+  <rect x="530" y="270" width="140" height="90" rx="5" fill="#e8f8f5" stroke="#1abc9c" stroke-width="1"/>
+  <text x="600" y="290" text-anchor="middle" fill="#117a65" font-size="10" font-weight="bold">설정</text>
+  <text x="545" y="310" fill="#148f77" font-size="9">resumeText: "계속"</text>
+  <text x="545" y="325" fill="#148f77" font-size="9">defaultWaitTime: 60</text>
+  <text x="545" y="340" fill="#148f77" font-size="9">maxRetries: 3</text>
+  <text x="545" y="355" fill="#148f77" font-size="9">retryInterval: 5</text>
+</svg>

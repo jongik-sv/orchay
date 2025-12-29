@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 520" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#16a085;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1abc9c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="idleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="busyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e67e22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d35400;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrowFlow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50"/>
+    </marker>
+    <marker id="arrowReturn" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- Main Container -->
+  <rect x="10" y="10" width="680" height="500" rx="10" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="10" y="10" width="680" height="40" rx="10" fill="url(#headerGrad3)"/>
+  <rect x="10" y="35" width="680" height="15" fill="url(#headerGrad3)"/>
+  <text x="350" y="37" text-anchor="middle" fill="white" font-size="16" font-weight="bold">Worker 실행 흐름</text>
+
+  <!-- idle State -->
+  <rect x="50" y="70" width="100" height="40" rx="20" fill="url(#idleGrad)" stroke="#2471a3" stroke-width="2"/>
+  <text x="100" y="95" text-anchor="middle" fill="white" font-size="13" font-weight="bold">[idle]</text>
+
+  <!-- Command received text -->
+  <text x="175" y="90" fill="#2c3e50" font-size="11">명령 수신:</text>
+  <text x="175" y="105" fill="#7f8c8d" font-size="10" font-family="monospace">/wf:start TSK-01-01-01</text>
+
+  <!-- Arrow to busy -->
+  <path d="M 100 110 L 100 145" stroke="#2c3e50" stroke-width="2" fill="none" marker-end="url(#arrowFlow)"/>
+
+  <!-- busy State -->
+  <rect x="50" y="150" width="100" height="40" rx="20" fill="url(#busyGrad)" stroke="#ba4a00" stroke-width="2"/>
+  <text x="100" y="175" text-anchor="middle" fill="white" font-size="13" font-weight="bold">[busy]</text>
+
+  <!-- Steps Container -->
+  <rect x="170" y="150" width="500" height="290" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+
+  <!-- Step arrows from busy -->
+  <line x1="150" y1="170" x2="168" y2="170" stroke="#2c3e50" stroke-width="2"/>
+
+  <!-- Step 1 -->
+  <g transform="translate(180, 160)">
+    <circle cx="15" cy="20" r="12" fill="#3498db"/>
+    <text x="15" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">1</text>
+    <text x="35" y="25" fill="#2c3e50" font-size="12">Task 컨텍스트 로드 (wbs.md에서 상세 정보 읽기)</text>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(180, 210)">
+    <circle cx="15" cy="20" r="12" fill="#3498db"/>
+    <text x="15" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">2</text>
+    <text x="35" y="25" fill="#2c3e50" font-size="12">설계 문서 생성</text>
+    <rect x="45" y="35" width="380" height="25" rx="3" fill="#e8f6f3" stroke="#1abc9c" stroke-width="1"/>
+    <text x="55" y="52" fill="#16a085" font-size="10">└── wbs.md 상태 업데이트: [ ] → [dd]</text>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(180, 275)">
+    <circle cx="15" cy="20" r="12" fill="#3498db"/>
+    <text x="15" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">3</text>
+    <text x="35" y="25" fill="#2c3e50" font-size="12">코드 구현</text>
+    <rect x="45" y="35" width="380" height="25" rx="3" fill="#fef9e7" stroke="#f1c40f" stroke-width="1"/>
+    <text x="55" y="52" fill="#b7950b" font-size="10">└── wbs.md 상태 업데이트: [dd] → [ap] (승인 대기)</text>
+  </g>
+
+  <!-- Step 4 -->
+  <g transform="translate(180, 340)">
+    <circle cx="15" cy="20" r="12" fill="#3498db"/>
+    <text x="15" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">4</text>
+    <text x="35" y="25" fill="#2c3e50" font-size="12">테스트 실행 및 검증</text>
+    <rect x="45" y="35" width="380" height="25" rx="3" fill="#eafaf1" stroke="#27ae60" stroke-width="1"/>
+    <text x="55" y="52" fill="#1e8449" font-size="10">└── wbs.md 상태 업데이트: [ap] → [im]</text>
+  </g>
+
+  <!-- Step 5 -->
+  <g transform="translate(180, 400)">
+    <circle cx="15" cy="20" r="12" fill="#27ae60"/>
+    <text x="15" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="bold">5</text>
+    <text x="35" y="25" fill="#2c3e50" font-size="12">완료 처리</text>
+    <rect x="45" y="35" width="380" height="25" rx="3" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+    <text x="55" y="52" fill="#1e8449" font-size="10">└── 프롬프트 출력 (>)</text>
+  </g>
+
+  <!-- Return arrow to idle -->
+  <path d="M 630 438 Q 660 438 660 90 Q 660 70 155 70" stroke="#27ae60" stroke-width="2" fill="none" marker-end="url(#arrowReturn)" stroke-dasharray="8,4"/>
+
+  <!-- Note -->
+  <rect x="50" y="460" width="600" height="35" rx="5" fill="#e8f8f5" stroke="#16a085" stroke-width="1"/>
+  <text x="60" y="482" fill="#117a65" font-size="11">※ 스케줄러가 프롬프트 감지 → 다음 Task 분배</text>
+</svg>

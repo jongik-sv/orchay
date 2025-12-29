@@ -1,0 +1,11 @@
+{
+  "id": "{{PROJECT_ID}}",
+  "name": "{{PROJECT_NAME}}",
+  "description": "{{PROJECT_DESCRIPTION}}",
+  "version": "0.1.0",
+  "status": "active",
+  "createdAt": "{{CREATED_AT}}",
+  "updatedAt": "{{CREATED_AT}}",
+  "scheduledStart": "{{START_DATE}}",
+  "scheduledEnd": "{{END_DATE}}"
+}

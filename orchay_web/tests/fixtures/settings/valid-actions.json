@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "actions": [
+    {
+      "id": "review",
+      "name": "설계 리뷰",
+      "command": "review",
+      "allowedStates": ["[dd]"],
+      "allowedCategories": ["development"],
+      "document": "021-design-review-{llm}-{n}.md",
+      "description": "LLM 설계 리뷰 수행"
+    }
+  ]
+}

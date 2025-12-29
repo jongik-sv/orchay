@@ -1,0 +1,28 @@
+# 소스 코드 (빌드 결과물만 배포)
+app/
+server/
+tests/
+
+# 개발 설정
+.nuxt/
+.git/
+.github/
+.orchay/
+.claude/
+
+# 설정 파일
+nuxt.config.ts
+tailwind.config.ts
+vitest.config.ts
+playwright.config.ts
+tsconfig.json
+
+# 문서 (README만 포함)
+*.md
+!README.md
+
+# 기타
+node_modules/
+coverage/
+playwright-report/
+test-results/

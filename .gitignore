@@ -1,0 +1,72 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+nul
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node.js
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Nuxt.js
+**/.nuxt/
+**/.output/
+**/dist/
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+**/.venv/
+**/.env
+pip-log.txt
+**/*.egg-info/
+**/.pytest_cache/
+
+# Go
+*.exe~
+*.dll
+*.dylib
+
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+
+# Playwright
+**/.playwright-mcp/
+
+# Test artifacts
+**/coverage/
+**/test-results/
+**/test-results.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Misc
+*.zip
+
+# Tool caches
+.agent/
+.serena/

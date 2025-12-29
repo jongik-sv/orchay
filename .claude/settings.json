@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"$(date '+%Y-%m-%d %H:%M:%S') Claude 응답 완료\" | tee -a /tmp/claude-hook.log"
+          }
+        ]
+      }
+    ]
+  }
+}

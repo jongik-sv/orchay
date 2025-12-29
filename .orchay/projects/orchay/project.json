@@ -1,0 +1,10 @@
+{
+  "id": "orchay",
+  "name": "orchay - WezTerm Task Scheduler",
+  "description": "WezTerm 기반 Task 스케줄러로 wbs.md 파일을 모니터링하고 Claude Code Worker pane에 자동 분배",
+  "version": "0.1.0",
+  "status": "active",
+  "wbsDepth": 4,
+  "createdAt": "2025-12-28T00:00:00.000Z",
+  "updatedAt": "2025-12-29T00:00:00.000Z"
+}

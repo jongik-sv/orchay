@@ -1,0 +1,1150 @@
+/* TailwindCSS Layer 설정 (PrimeVue 통합) */
+@layer tailwind-base, primevue, tailwind-utilities;
+
+@layer tailwind-base {
+  @tailwind base;
+}
+
+@layer tailwind-utilities {
+  @tailwind components;
+  @tailwind utilities;
+}
+
+/* Dark Blue 테마 CSS 변수 (PRD 10.1) */
+:root {
+  /* 배경 색상 */
+  --color-bg: #1a1a2e;
+  --color-header: #16213e;
+  --color-sidebar: #0f0f23;
+  --color-card: #1e1e38;
+
+  /* 프라이머리 색상 */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+
+  /* 시맨틱 색상 */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-highlight: #fbbf24;
+
+  /* 텍스트 색상 */
+  --color-text: #e8e8e8;
+  --color-text-secondary: #888888;
+  --color-text-muted: #666666;
+
+  /* 보더 색상 */
+  --color-border: #3d3d5c;
+  --color-border-light: #4d4d6c;
+
+  /* 계층 아이콘 색상 (PRD 10.1) */
+  --color-level-project: #8b5cf6;
+  --color-level-wp: #3b82f6;
+  --color-level-act: #22c55e;
+  --color-level-task: #f59e0b;
+}
+
+/* 기본 바디 스타일 - Dark 테마 적용 */
+body {
+  @apply bg-bg text-text antialiased;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* 스크롤바 스타일 (다크 테마) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg-sidebar;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border-light;
+}
+
+/* 선택 영역 스타일 */
+::selection {
+  @apply bg-primary/30 text-white;
+}
+
+/* 포커스 링 스타일 */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg;
+}
+
+/* 링크 기본 스타일 */
+a {
+  @apply text-primary hover:text-primary-600 transition-colors;
+}
+
+/* 코드 블록 스타일 */
+code {
+  @apply font-mono text-sm bg-surface-50 px-1.5 py-0.5 rounded text-primary-300;
+}
+
+pre code {
+  @apply bg-transparent p-0;
+}
+
+/* PrimeVue 다크 테마 오버라이드 */
+.dark {
+  /* PrimeVue가 .dark 클래스로 다크 모드 감지 */
+}
+
+/* 유틸리티 클래스 */
+.card {
+  @apply bg-bg-card border border-border rounded-xl p-4 shadow-card;
+}
+
+.card-hover {
+  @apply hover:shadow-card-hover hover:border-border-light transition-all duration-200;
+}
+
+/* 레벨 배지 스타일 */
+.level-badge {
+  @apply inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold text-white;
+}
+
+.level-badge-project {
+  @apply bg-level-project;
+}
+
+.level-badge-wp {
+  @apply bg-level-wp;
+}
+
+.level-badge-act {
+  @apply bg-level-act;
+}
+
+.level-badge-task {
+  @apply bg-level-task;
+}
+
+/* 상태 배지 스타일 */
+.status-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+}
+
+.status-todo {
+  @apply bg-text-muted/20 text-text-secondary;
+}
+
+.status-design {
+  @apply bg-primary/20 text-primary;
+}
+
+.status-implement {
+  @apply bg-warning/20 text-warning;
+}
+
+.status-verify {
+  @apply bg-success/20 text-success;
+}
+
+.status-done {
+  @apply bg-success text-white;
+}
+
+/* 카테고리 태그 스타일 */
+.category-tag {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.category-dev {
+  @apply bg-primary/20 text-primary border border-primary/30;
+}
+
+.category-defect {
+  @apply bg-danger/20 text-danger border border-danger/30;
+}
+
+.category-infra {
+  @apply bg-level-project/20 text-level-project border border-level-project/30;
+}
+
+/* ============================================
+ * PrimeVue 디자인 토큰 오버라이드 (TSK-08-06)
+ * orchay 다크 테마와 통합
+ * ============================================ */
+
+/* ============================================
+ * PrimeVue 기본 Surface/Content 토큰 오버라이드
+ * orchay 다크 테마 글로벌 적용
+ * ============================================ */
+:root {
+  /* Surface 색상 계층 (다크 테마) */
+  --p-surface-0: var(--color-bg);                               /* #1a1a2e - 가장 어두운 배경 */
+  --p-surface-50: rgba(255, 255, 255, 0.03);                    /* 매우 연한 오버레이 */
+  --p-surface-100: var(--color-sidebar);                        /* #0f0f23 - 사이드바 */
+  --p-surface-200: var(--color-header);                         /* #16213e - 헤더 */
+  --p-surface-300: var(--color-card);                           /* #1e1e38 - 카드 */
+  --p-surface-400: var(--color-border);                         /* #3d3d5c - 보더 */
+  --p-surface-500: var(--color-border-light);                   /* #4d4d6c - 밝은 보더 */
+  --p-surface-600: var(--color-text-muted);                     /* #666666 - 뮤트 텍스트 */
+  --p-surface-700: var(--color-text-secondary);                 /* #888888 - 보조 텍스트 */
+  --p-surface-800: #aaaaaa;                                     /* 밝은 회색 */
+  --p-surface-900: var(--color-text);                           /* #e8e8e8 - 기본 텍스트 */
+  --p-surface-950: #ffffff;                                     /* 흰색 */
+
+  /* Content 배경 (폼, 패널 내부) */
+  --p-content-background: var(--color-card);                    /* #1e1e38 */
+  --p-content-color: var(--color-text);                         /* #e8e8e8 */
+  --p-content-border-color: var(--color-border);                /* #3d3d5c */
+
+  /* Primary 색상 */
+  --p-primary-color: var(--color-primary);                      /* #3b82f6 */
+  --p-primary-contrast-color: #ffffff;
+  --p-primary-hover-color: var(--color-primary-hover);          /* #2563eb */
+  --p-primary-active-color: #1d4ed8;
+
+  /* Text 색상 */
+  --p-text-color: var(--color-text);                            /* #e8e8e8 */
+  --p-text-muted-color: var(--color-text-muted);                /* #666666 */
+}
+
+/* PrimeVue Select 컴포넌트 */
+:root {
+  --p-select-background: var(--color-card);                     /* #1e1e38 */
+  --p-select-color: var(--color-text);                          /* #e8e8e8 */
+  --p-select-border-color: var(--color-border);                 /* #3d3d5c */
+  --p-select-hover-border-color: var(--color-border-light);     /* #4d4d6c */
+  --p-select-focus-border-color: var(--color-primary);          /* #3b82f6 */
+  --p-select-disabled-background: var(--color-sidebar);         /* #0f0f23 */
+  --p-select-disabled-color: var(--color-text-muted);           /* #666666 */
+
+  /* Select Dropdown */
+  --p-select-overlay-background: var(--color-card);             /* #1e1e38 */
+  --p-select-overlay-border-color: var(--color-border);         /* #3d3d5c */
+  --p-select-option-color: var(--color-text);                   /* #e8e8e8 */
+  --p-select-option-focus-background: var(--color-header);      /* #16213e */
+  --p-select-option-focus-color: var(--color-text);             /* #e8e8e8 */
+  --p-select-option-selected-background: rgba(59, 130, 246, 0.2); /* primary/20 */
+  --p-select-option-selected-color: var(--color-primary);       /* #3b82f6 */
+}
+
+/* PrimeVue InputText 컴포넌트 */
+:root {
+  --p-inputtext-background: var(--color-card);                  /* #1e1e38 */
+  --p-inputtext-color: var(--color-text);                       /* #e8e8e8 */
+  --p-inputtext-border-color: var(--color-border);              /* #3d3d5c */
+  --p-inputtext-hover-border-color: var(--color-border-light);  /* #4d4d6c */
+  --p-inputtext-focus-border-color: var(--color-primary);       /* #3b82f6 */
+  --p-inputtext-placeholder-color: var(--color-text-muted);     /* #666666 */
+}
+
+/* PrimeVue Panel/Fieldset 컴포넌트 */
+:root {
+  --p-panel-background: var(--color-card);                      /* #1e1e38 */
+  --p-panel-color: var(--color-text);                           /* #e8e8e8 */
+  --p-panel-border-color: var(--color-border);                  /* #3d3d5c */
+  --p-panel-header-background: var(--color-header);             /* #16213e */
+  --p-panel-header-color: var(--color-text);                    /* #e8e8e8 */
+  --p-panel-header-hover-background: var(--color-header);       /* 호버 시 동일 색상 유지 */
+  --p-panel-header-hover-color: var(--color-text);              /* 호버 시 동일 색상 유지 */
+
+  --p-fieldset-background: var(--color-card);                   /* #1e1e38 */
+  --p-fieldset-color: var(--color-text);                        /* #e8e8e8 */
+  --p-fieldset-border-color: var(--color-border);               /* #3d3d5c */
+  --p-fieldset-legend-background: var(--color-header);          /* #16213e */
+  --p-fieldset-legend-color: var(--color-text);                 /* #e8e8e8 */
+}
+
+/* PrimeVue Tree 컴포넌트 (WbsTreePanel - TSK-08-01) */
+:root {
+  /* Tree 배경 및 텍스트 */
+  --p-tree-background: var(--color-sidebar);                    /* #0f0f23 */
+  --p-tree-color: var(--color-text);                            /* #e8e8e8 */
+  --p-tree-padding: 0.5rem;                                     /* 8px */
+
+  /* Tree 노드 상태별 배경색 */
+  --p-tree-node-background: transparent;
+  --p-tree-node-hover-background: var(--color-header);          /* #16213e */
+  --p-tree-node-selected-background: rgba(59, 130, 246, 0.2);   /* primary/20 */
+  --p-tree-node-focus-background: var(--color-header);          /* #16213e */
+
+  /* Tree 노드 텍스트 색상 */
+  --p-tree-node-color: var(--color-text);                       /* #e8e8e8 */
+  --p-tree-node-hover-color: var(--color-text);                 /* #e8e8e8 */
+  --p-tree-node-selected-color: var(--color-text);              /* #e8e8e8 */
+  --p-tree-node-focus-color: var(--color-text);                 /* #e8e8e8 */
+
+  /* Tree 토글 아이콘 */
+  --p-tree-node-icon-color: var(--color-text-secondary);        /* #888888 */
+  --p-tree-node-icon-hover-color: var(--color-text);            /* #e8e8e8 */
+
+  /* Tree 들여쓰기 */
+  --p-tree-indent-size: 1rem;                                   /* 16px */
+
+  /* Tree 경계선 */
+  --p-tree-border-color: var(--color-border);                   /* #3d3d5c */
+
+  /* Tree 로딩 아이콘 */
+  --p-tree-loading-icon-color: var(--color-primary);            /* #3b82f6 */
+}
+
+/* PrimeVue Splitter 컴포넌트 (AppLayout - TSK-08-03) */
+:root {
+  /* Splitter Gutter 상태별 배경색 */
+  --p-splitter-gutter-background: var(--color-border);          /* #3d3d5c */
+  --p-splitter-gutter-hover-background: var(--color-border-light); /* #4d4d6c */
+  --p-splitter-gutter-active-background: var(--color-primary);  /* #3b82f6 */
+
+  /* Splitter Gutter 크기 */
+  --p-splitter-gutter-size: 4px;
+
+  /* Splitter Handle (드래그 핸들) */
+  --p-splitter-handle-background: var(--color-primary);         /* #3b82f6 */
+  --p-splitter-handle-size: 24px;
+}
+
+/* PrimeVue Menubar 컴포넌트 (AppHeader - TSK-08-04) */
+:root {
+  /* Menubar 배경 및 텍스트 */
+  --p-menubar-background: var(--color-header);                  /* #16213e */
+  --p-menubar-border-color: transparent;
+  --p-menubar-padding: 0.75rem 1rem;                            /* 12px 16px */
+
+  /* Menubar 아이템 기본 상태 */
+  --p-menubar-item-color: var(--color-text);                    /* #e8e8e8 */
+  --p-menubar-item-hover-color: var(--color-text);              /* #e8e8e8 */
+  --p-menubar-item-active-color: var(--color-primary);          /* #3b82f6 */
+  --p-menubar-item-focus-color: var(--color-text);              /* #e8e8e8 */
+
+  /* Menubar 아이템 배경색 */
+  --p-menubar-item-background: transparent;
+  --p-menubar-item-hover-background: rgba(255, 255, 255, 0.05); /* surface-50 */
+  --p-menubar-item-active-background: rgba(59, 130, 246, 0.2);  /* primary/20 */
+  --p-menubar-item-focus-background: rgba(59, 130, 246, 0.1);   /* primary/10 */
+
+  /* Menubar 아이템 패딩 및 간격 */
+  --p-menubar-item-padding: 0.5rem 1rem;                        /* 8px 16px */
+  --p-menubar-item-gap: 0.5rem;                                 /* 8px */
+
+  /* Menubar Submenu (현재 미사용, 향후 확장) */
+  --p-menubar-submenu-background: var(--color-card);            /* #1e1e38 */
+  --p-menubar-submenu-border-color: var(--color-border);        /* #3d3d5c */
+}
+
+/* PrimeVue Dialog 컴포넌트 (TaskDetailPanel - TSK-08-05) */
+:root {
+  /* Dialog 배경 및 텍스트 */
+  --p-dialog-background: var(--color-card);                     /* #1e1e38 */
+  --p-dialog-color: var(--color-text);                          /* #e8e8e8 */
+  --p-dialog-border-color: var(--color-border);                 /* #3d3d5c */
+  --p-dialog-border-radius: 1rem;                               /* 16px */
+  --p-dialog-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5),
+                     0 10px 10px -5px rgba(0, 0, 0, 0.4);
+
+  /* Dialog 헤더 */
+  --p-dialog-header-background: var(--color-header);            /* #16213e */
+  --p-dialog-header-color: var(--color-text);                   /* #e8e8e8 */
+  --p-dialog-header-padding: 1rem 1.5rem;                       /* 16px 24px */
+  --p-dialog-header-border-width: 0 0 1px 0;
+  --p-dialog-header-border-color: var(--color-border);          /* #3d3d5c */
+
+  /* Dialog 콘텐츠 */
+  --p-dialog-content-padding: 1.5rem;                           /* 24px */
+  --p-dialog-content-background: var(--color-card);             /* #1e1e38 */
+
+  /* Dialog 푸터 */
+  --p-dialog-footer-padding: 1rem 1.5rem;                       /* 16px 24px */
+  --p-dialog-footer-background: var(--color-card);              /* #1e1e38 */
+  --p-dialog-footer-border-width: 1px 0 0 0;
+  --p-dialog-footer-border-color: var(--color-border);          /* #3d3d5c */
+
+  /* Dialog Mask (오버레이) */
+  --p-dialog-mask-background: rgba(0, 0, 0, 0.6);
+}
+
+/* PrimeVue Card 컴포넌트 (TaskDetailPanel - TSK-08-05) */
+:root {
+  /* Card 배경 및 텍스트 */
+  --p-card-background: var(--color-card);                       /* #1e1e38 */
+  --p-card-color: var(--color-text);                            /* #e8e8e8 */
+  --p-card-border-color: var(--color-border);                   /* #3d3d5c */
+  --p-card-border-radius: 0.75rem;                              /* 12px */
+  --p-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                   0 2px 4px -1px rgba(0, 0, 0, 0.2);
+
+  /* Card Body */
+  --p-card-body-padding: 1rem;                                  /* 16px */
+
+  /* Card Title */
+  --p-card-title-color: var(--color-text);                      /* #e8e8e8 */
+  --p-card-title-font-weight: 600;
+
+  /* Card Subtitle */
+  --p-card-subtitle-color: var(--color-text-secondary);         /* #888888 */
+}
+
+/* PrimeVue Card 클래스 직접 오버라이드 (토큰 미적용 시 fallback) */
+/* PrimeVue 내부 스타일보다 우선 적용을 위해 구체적 선택자 사용 */
+.p-card.p-component {
+  background: var(--color-card) !important;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+@layer tailwind-utilities {
+  .p-card {
+    background: var(--color-card);
+    color: var(--color-text);
+    border-color: var(--color-border);
+  }
+
+  /* Card 높이 100% 지원 (h-full 클래스 사용 시) */
+  .p-card.h-full {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .p-card.h-full > .p-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .p-card.h-full > .p-card-body > .p-card-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
+
+/* PrimeVue ProgressBar 컴포넌트 (ProgressBar - TSK-08-02) */
+:root {
+  /* ProgressBar 배경 및 높이 */
+  --p-progressbar-background: var(--color-border);              /* #3d3d5c */
+  --p-progressbar-height: 1.25rem;                              /* 20px */
+  --p-progressbar-border-radius: 0.625rem;                      /* 10px */
+
+  /* ProgressBar 값 배경색 (기본값 - 중간 진행률) */
+  --p-progressbar-value-background: var(--color-warning);       /* #f59e0b */
+
+  /* 동적 클래스로 오버라이드 가능:
+   * .progress-bar-low, .progress-bar-medium, .progress-bar-high
+   * 이 클래스들이 적용되면 background-color가 재정의됨 */
+
+  /* ProgressBar 라벨 */
+  --p-progressbar-label-color: #1a1a2e;                         /* 어두운 색 (대비용) */
+  --p-progressbar-label-font-size: 0.75rem;                     /* 12px */
+  --p-progressbar-label-font-weight: 600;                       /* 굵게 */
+}
+
+/* ============================================
+ * NodeIcon 컴포넌트 스타일 (TSK-08-01)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* 노드 아이콘 기본 스타일 */
+.node-icon {
+  @apply flex items-center justify-center w-6 h-6 rounded text-white text-sm flex-shrink-0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 노드 타입별 배경색 (CSS 클래스로 중앙 관리) */
+.node-icon-project {
+  @apply bg-level-project;
+}
+
+.node-icon-wp {
+  @apply bg-level-wp;
+}
+
+.node-icon-act {
+  @apply bg-level-act;
+}
+
+.node-icon-task {
+  @apply bg-level-task;
+}
+
+/* TSK-09-01: 프로젝트 노드 타이틀 스타일 */
+.wbs-tree-node-title-project {
+  @apply text-violet-400 font-semibold;
+}
+
+/* 반응형: 모바일 노드 아이콘 */
+@media (max-width: 767px) {
+  .node-icon {
+    @apply w-5 h-5 text-xs;
+  }
+}
+
+/* ============================================
+ * PrimeVue Tree 커스텀 스타일 (TSK-08-01)
+ * ============================================ */
+
+/* WBS Tree 컨테이너 */
+.wbs-tree {
+  @apply p-2;
+}
+
+/* 노드 콘텐츠 기본 스타일 */
+.wbs-tree :deep(.p-tree-node-content) {
+  @apply rounded-lg transition-colors duration-150 py-1.5 px-2 cursor-pointer;
+}
+
+/* 노드 호버 상태 */
+.wbs-tree :deep(.p-tree-node-content:hover) {
+  @apply bg-slate-600 border-l-2 border-primary;
+}
+
+/* 노드 선택 상태 */
+.wbs-tree :deep(.p-tree-node-content.p-tree-node-selected) {
+  @apply bg-primary/20;
+}
+
+/* 노드 포커스 상태 */
+.wbs-tree :deep(.p-tree-node-content:focus) {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-bg-sidebar;
+}
+
+/* 토글 아이콘 스타일 */
+.wbs-tree :deep(.p-tree-node-toggle-button) {
+  @apply text-text-secondary hover:text-text hover:bg-border/30 rounded transition-colors;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* 토글 아이콘 비활성화 (자식 없음) */
+.wbs-tree :deep(.p-tree-node-leaf > .p-tree-node-content > .p-tree-node-toggle-button) {
+  visibility: hidden;
+}
+
+/* 자식 노드 들여쓰기 */
+.wbs-tree :deep(.p-tree-node-children) {
+  @apply ml-4 border-l border-border/30 pl-2;
+}
+
+/* 노드 라벨 컨테이너 */
+.wbs-tree-node-label {
+  @apply flex items-center gap-2 flex-1 cursor-pointer py-1 px-2 rounded-md transition-colors;
+}
+
+.wbs-tree-node-label:hover {
+  @apply bg-slate-600;
+}
+
+/* 노드 제목 텍스트 */
+.wbs-tree-node-title {
+  @apply text-sm truncate;
+}
+
+/* 노드 타입별 텍스트 색상 */
+.wbs-tree-node-title-wp {
+  @apply text-white font-medium;
+}
+
+.wbs-tree-node-title-act {
+  @apply text-text;
+}
+
+.wbs-tree-node-title-task {
+  @apply text-text text-xs;
+}
+
+/* 진행률 표시 */
+.wbs-tree-node-progress {
+  @apply text-xs text-text-muted ml-auto mr-2;
+}
+
+/* ============================================
+ * 실행 상태 스피너 스타일 (orchay개선 PRD 9장)
+ * Task 노드 실행 중 시각화
+ * ============================================ */
+
+/* 실행 중 스피너 (노드 아이콘 왼쪽) */
+.execution-spinner {
+  @apply inline-flex mr-1 flex-shrink-0;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* 실행 중인 노드 라벨 */
+.wbs-tree-node-executing {
+  @apply animate-pulse;
+}
+
+/* ============================================
+ * CategoryTag 컴포넌트 스타일 (TSK-08-02)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+.category-tag-development {
+  @apply bg-primary/20 border border-primary/30 rounded-xl px-2 py-1;
+}
+
+.category-tag-defect {
+  @apply bg-danger/20 border border-danger/30 rounded-xl px-2 py-1;
+}
+
+.category-tag-infrastructure {
+  @apply bg-level-project/20 border border-level-project/30 rounded-xl px-2 py-1;
+}
+
+/* ============================================
+ * ProgressBar 컴포넌트 스타일 (TSK-08-02)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+.progress-bar-low {
+  @apply bg-danger;
+}
+
+.progress-bar-medium {
+  @apply bg-warning;
+}
+
+.progress-bar-high {
+  @apply bg-success;
+}
+
+/* ============================================
+ * AppLayout Splitter 스타일 (TSK-08-03)
+ * CSS 클래스 중앙화 원칙 준수
+ * [M-03] CSS 변수: 위 :root 섹션에 정의됨
+ * ============================================ */
+
+/* Splitter 루트 컨테이너 */
+.app-layout-splitter {
+  @apply h-full;
+  min-width: 1200px; /* 반응형 최소 너비 */
+}
+
+/* Gutter (구분선) - 기본 상태 */
+.app-layout-gutter {
+  @apply transition-colors duration-200;
+  width: 4px;
+  background-color: var(--color-border);
+  cursor: col-resize;
+}
+
+/* Gutter - Hover 상태 */
+.app-layout-gutter:hover {
+  background-color: var(--color-border-light);
+}
+
+/* Gutter - Active (드래그 중) 상태 */
+.app-layout-gutter:active {
+  background-color: var(--color-primary);
+}
+
+/* Gutter - 포커스 상태 (키보드 탐색) */
+.app-layout-gutter:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Gutter Handle (드래그 핸들 시각 표시) */
+.app-layout-gutter-handle {
+  @apply rounded-full bg-primary/30;
+  width: 2px;
+  height: 24px;
+  margin: auto; /* 중앙 정렬 */
+}
+
+/* Gutter Handle - Hover 상태 */
+.app-layout-gutter:hover .app-layout-gutter-handle {
+  @apply bg-primary/50;
+}
+
+/* Gutter Handle - Active (드래그 중) 상태 */
+.app-layout-gutter:active .app-layout-gutter-handle {
+  @apply bg-primary/80;
+}
+
+/* ============================================
+ * TaskDetailPanel Dialog Migration (TSK-08-05)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* Document Viewer Dialog */
+.document-viewer-dialog {
+  width: 80vw;
+  max-width: 1200px;
+  height: 90vh;
+}
+
+.document-viewer-dialog .p-dialog-content {
+  height: calc(90vh - 4rem);  /* 헤더 높이 제외 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.document-viewer-dialog .document-viewer {
+  flex: 1;
+  height: 100%;
+  max-height: none !important;  /* prop으로 전달된 maxHeight 무시 */
+  overflow-y: scroll;  /* auto 대신 scroll로 항상 표시 */
+  /* Firefox 스크롤바 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--color-bg);
+}
+
+/* Document Viewer 스크롤바 스타일 (Webkit/Chrome) */
+.document-viewer-dialog .document-viewer::-webkit-scrollbar {
+  width: 12px;
+}
+
+.document-viewer-dialog .document-viewer::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border-radius: 6px;
+}
+
+.document-viewer-dialog .document-viewer::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 6px;
+  border: 2px solid var(--color-bg);
+}
+
+.document-viewer-dialog .document-viewer::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Task Detail Content Area - 부모 컨테이너 높이 100% 사용 */
+.task-detail-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ============================================
+ * TaskWorkflow 컴포넌트 스타일 (TSK-08-05)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* 워크플로우 노드 - 완료 상태 */
+.workflow-step-completed {
+  @apply bg-success text-white;
+}
+
+/* 워크플로우 노드 - 현재 상태 */
+.workflow-step-current {
+  @apply bg-primary text-white font-bold;
+  transform: scale(1.1);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+/* 워크플로우 노드 - 대기 상태 */
+.workflow-step-pending {
+  @apply bg-bg-card text-text-muted border-2 border-dashed border-border;
+}
+
+/* ============================================
+ * TaskProgress Stepper (TSK-08-07)
+ * 클릭 가능한 워크플로우 Stepper UI
+ * ============================================ */
+
+/* Stepper 노드 - 클릭 가능 스타일 */
+.workflow-step-clickable {
+  @apply cursor-pointer transition-all duration-200;
+}
+
+.workflow-step-clickable:hover {
+  @apply shadow-md;
+  transform: scale(1.1);
+}
+
+.workflow-step-clickable:focus {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-bg outline-none;
+}
+
+/* Stepper 노드 - 비활성화 */
+.workflow-step-disabled {
+  @apply cursor-not-allowed opacity-60;
+}
+
+/* ============================================
+ * TaskDocuments 컴포넌트 스타일 (TSK-08-05)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* 문서 카드 - 존재하는 문서 */
+.doc-card-exists {
+  @apply border border-primary;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.doc-card-exists:hover {
+  @apply shadow-md;
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+/* 문서 카드 - 예정 문서 */
+.doc-card-expected {
+  @apply bg-bg-card border-2 border-dashed border-border opacity-60 cursor-not-allowed;
+}
+
+/* ============================================
+ * AppHeader Menubar 스타일 (TSK-08-04)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* Menubar 루트 컨테이너 */
+.app-menubar {
+  @apply h-full px-4 bg-bg-header;
+}
+
+/* Menubar 메뉴 컨테이너 (ul) */
+.app-menubar-menu {
+  @apply flex items-center gap-2;
+}
+
+/* start 슬롯 컨테이너 */
+.app-menubar-start {
+  @apply flex items-center;
+}
+
+/* end 슬롯 컨테이너 */
+.app-menubar-end {
+  @apply flex items-center;
+}
+
+/* ============================================
+ * 로고 스타일
+ * ============================================ */
+.menubar-logo {
+  @apply text-xl font-bold text-primary hover:opacity-80 transition-opacity;
+}
+
+/* ============================================
+ * 메뉴 아이템 스타일
+ * ============================================ */
+
+/* 메뉴 아이템 - 기본 스타일 */
+.menubar-item {
+  @apply px-4 py-2 rounded text-sm font-medium transition-colors duration-200;
+}
+
+/* 메뉴 아이템 - 활성 상태 (현재 페이지) */
+.menubar-item-active {
+  @apply text-primary bg-primary/20;
+}
+
+/* 메뉴 아이템 - 비활성 상태 (disabled) */
+.menubar-item-disabled {
+  @apply text-text-muted opacity-50 cursor-not-allowed;
+}
+
+/* 메뉴 아이템 - 호버 (활성 메뉴만) */
+.menubar-item:not(.menubar-item-disabled):not(.menubar-item-active):hover {
+  @apply text-text bg-surface-50;
+}
+
+/* ============================================
+ * 프로젝트명 스타일
+ * ============================================ */
+
+/* 프로젝트명 - 선택된 경우 */
+.menubar-project-name {
+  @apply text-sm max-w-[200px] truncate text-text-secondary;
+}
+
+/* 프로젝트명 - 미선택 (안내 메시지) */
+.menubar-project-name-empty {
+  @apply text-sm max-w-[200px] truncate text-text-muted italic;
+}
+
+/* ============================================
+ * WP/ACT Detail Panel 스타일 (TSK-05-05)
+ * ============================================ */
+
+/* WpActDetailPanel 컨테이너 */
+.wp-act-detail-panel {
+  @apply h-full flex flex-col;
+}
+
+.wp-act-detail-content {
+  @apply p-4 space-y-4 overflow-y-auto;
+  max-height: calc(100vh - 8rem);
+}
+
+/* WpActBasicInfo */
+.wp-act-basic-info .field {
+  @apply mb-3;
+}
+
+.wp-act-basic-info .field:last-child {
+  @apply mb-0;
+}
+
+/* WpActProgress - 다단계 ProgressBar */
+.progress-segments {
+  @apply w-full;
+}
+
+.progress-segment-track {
+  @apply flex h-5 rounded-full overflow-hidden bg-border;
+}
+
+.progress-segment {
+  @apply transition-all duration-300;
+}
+
+.progress-segment-completed {
+  @apply bg-success;
+}
+
+.progress-segment-inprogress {
+  @apply bg-warning;
+}
+
+.progress-segment-todo {
+  @apply bg-text-muted;
+}
+
+/* WpActChildren - 하위 노드 목록 */
+.children-list {
+  @apply space-y-2 max-h-[400px] overflow-y-auto;
+}
+
+.child-item {
+  @apply p-3 rounded-lg border border-border bg-bg-card cursor-pointer transition-all;
+}
+
+.child-item:hover {
+  @apply border-border-light bg-slate-700/50 shadow-md;
+}
+
+.child-item:focus {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-bg;
+}
+
+.child-header {
+  @apply flex items-center justify-between gap-2;
+}
+
+.child-info {
+  @apply mt-2 pt-2 border-t border-border/50;
+}
+
+/* 애니메이션: 패널 전환 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ============================================
+ * ProjectDetailPanel 스타일 (TSK-09-01)
+ * 프로젝트 상세 정보 및 파일 목록
+ * ============================================ */
+
+/* 프로젝트 파일 목록 */
+.project-file-list {
+  @apply border border-border rounded-lg divide-y divide-border max-h-96 overflow-y-auto;
+}
+
+.project-file-item {
+  @apply flex items-center gap-3 p-3 hover:bg-slate-700/50 cursor-pointer transition-colors;
+}
+
+.project-file-item:focus {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-bg outline-none;
+}
+
+/* 파일 타입별 아이콘 색상 */
+.file-icon-md {
+  @apply text-primary;
+}
+
+.file-icon-json {
+  @apply text-warning;
+}
+
+.file-icon-image {
+  @apply text-success;
+}
+
+.file-icon-other {
+  @apply text-text-muted;
+}
+
+/* 파일 메타 정보 */
+.file-name {
+  @apply text-sm font-medium text-text;
+}
+
+.file-meta {
+  @apply text-xs text-text-muted;
+}
+
+/* FileViewer Dialog 스타일 */
+.file-viewer-dialog {
+  width: 80vw;
+  max-width: 1200px;
+  height: 85vh;
+}
+
+.file-viewer-dialog .p-dialog-content {
+  height: calc(85vh - 4rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-viewer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* 이미지 뷰어 */
+.image-viewer {
+  @apply flex flex-col items-center justify-center;
+}
+
+.image-viewer img {
+  @apply max-w-full h-auto rounded-lg shadow-lg;
+}
+
+/* 코드 뷰어 (Monaco Editor 컨테이너) */
+.code-viewer {
+  @apply h-full;
+}
+
+/* ============================================
+ * Terminal Components (TSK-01-02)
+ * 터미널 UI 컴포넌트 스타일
+ * ============================================ */
+
+/* Terminal theme colors (Catppuccin Mocha) */
+.terminal-bg {
+  background-color: #1e1e2e;
+}
+
+.terminal-text {
+  color: #cdd6f4;
+}
+
+.terminal-overlay-bg {
+  background-color: rgba(30, 30, 46, 0.9);
+}
+
+.terminal-overlay-text {
+  color: #cdd6f4;
+}
+
+.terminal-empty-text {
+  color: #6c7086;
+}
+
+/* Dialog overrides */
+.terminal-dialog .p-dialog-content {
+  padding: 0;
+  height: calc(80vh - 60px);
+  overflow: hidden;
+}
+
+/* Session status colors */
+.session-status-running {
+  color: theme('colors.green.500');
+}
+
+.session-status-connected {
+  color: theme('colors.blue.500');
+}
+
+.session-status-completed {
+  color: theme('colors.surface.400');
+}
+
+.session-status-error {
+  color: theme('colors.red.500');
+}
+
+.session-status-reconnecting {
+  color: theme('colors.yellow.500');
+}
+
+/* Terminal scrollbar */
+.terminal-container ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.terminal-container ::-webkit-scrollbar-track {
+  background: #313244;
+}
+
+.terminal-container ::-webkit-scrollbar-thumb {
+  background: #585b70;
+  border-radius: 5px;
+}
+
+.terminal-container ::-webkit-scrollbar-thumb:hover {
+  background: #6c7086;
+}
+
+/* ============================================
+ * Dependency Graph Styles (TSK-06-03)
+ * CSS 클래스 중앙화 원칙 준수
+ * ============================================ */
+
+/* Group Node Colors */
+.group-node-wp {
+  border-color: theme('colors.blue.500');
+}
+
+.group-node-act {
+  border-color: theme('colors.green.500');
+}
+
+.group-icon-wp {
+  color: theme('colors.blue.500');
+}
+
+.group-icon-act {
+  color: theme('colors.green.500');
+}
+
+/* Task Node Focus Depth Borders */
+.task-node-focus-depth-0 {
+  border: 4px solid theme('colors.yellow.500');
+}
+
+.task-node-focus-depth-1 {
+  border: 3px solid theme('colors.blue.500');
+}
+
+.task-node-focus-depth-2 {
+  border: 2px dashed theme('colors.blue.500');
+}
+
+.task-node-focus-depth-3 {
+  border: 1px dotted theme('colors.blue.500');
+}
+
+.task-node-selected {
+  border: 3px solid theme('colors.yellow.500');
+}
+
+/* Edge Styles */
+.edge-highlighted {
+  stroke: theme('colors.yellow.500');
+  stroke-width: 3;
+}
+
+.edge-dimmed {
+  stroke: theme('colors.gray.700');
+  stroke-width: 1;
+  opacity: 0.3;
+}
+
+.edge-default {
+  stroke: theme('colors.blue.300');
+  stroke-width: 2;
+}
+

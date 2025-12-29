@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 380" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="schedulerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="workerGrad4" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1abc9c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a085;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrowRight" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrowLeft" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#3498db"/>
+    </marker>
+    <marker id="arrowLeftFile" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect x="10" y="10" width="630" height="360" rx="10" fill="#f5f6fa" stroke="#dcdde1" stroke-width="2"/>
+
+  <!-- Title -->
+  <text x="325" y="40" text-anchor="middle" fill="#2c3e50" font-size="18" font-weight="bold">스케줄러-워커 통신 채널</text>
+
+  <!-- Scheduler Box -->
+  <rect x="40" y="70" width="180" height="250" rx="8" fill="#fff" stroke="#9b59b6" stroke-width="2"/>
+  <rect x="40" y="70" width="180" height="35" rx="8" fill="url(#schedulerGrad)"/>
+  <rect x="40" y="95" width="180" height="10" fill="url(#schedulerGrad)"/>
+  <text x="130" y="95" text-anchor="middle" fill="white" font-size="14" font-weight="bold">스케줄러</text>
+  <text x="130" y="115" text-anchor="middle" fill="#7f8c8d" font-size="11">(orchay)</text>
+
+  <!-- Scheduler functions -->
+  <rect x="55" y="135" width="150" height="30" rx="4" fill="#f3e5f5" stroke="#ce93d8" stroke-width="1"/>
+  <text x="130" y="155" text-anchor="middle" fill="#7b1fa2" font-size="11">명령 전송</text>
+
+  <rect x="55" y="185" width="150" height="30" rx="4" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+  <text x="130" y="205" text-anchor="middle" fill="#1565c0" font-size="11">상태 확인</text>
+
+  <rect x="55" y="245" width="150" height="30" rx="4" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1"/>
+  <text x="130" y="265" text-anchor="middle" fill="#2e7d32" font-size="11">변경 감지</text>
+
+  <!-- Worker Box -->
+  <rect x="430" y="70" width="180" height="250" rx="8" fill="#fff" stroke="#1abc9c" stroke-width="2"/>
+  <rect x="430" y="70" width="180" height="35" rx="8" fill="url(#workerGrad4)"/>
+  <rect x="430" y="95" width="180" height="10" fill="url(#workerGrad4)"/>
+  <text x="520" y="95" text-anchor="middle" fill="white" font-size="14" font-weight="bold">워커</text>
+  <text x="520" y="115" text-anchor="middle" fill="#7f8c8d" font-size="11">(Claude Code)</text>
+
+  <!-- Worker functions -->
+  <rect x="445" y="135" width="150" height="30" rx="4" fill="#f3e5f5" stroke="#ce93d8" stroke-width="1"/>
+  <text x="520" y="155" text-anchor="middle" fill="#7b1fa2" font-size="11">명령 수신</text>
+
+  <rect x="445" y="185" width="150" height="30" rx="4" fill="#e3f2fd" stroke="#90caf9" stroke-width="1"/>
+  <text x="520" y="205" text-anchor="middle" fill="#1565c0" font-size="11">출력 생성</text>
+
+  <rect x="445" y="245" width="150" height="30" rx="4" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1"/>
+  <text x="520" y="265" text-anchor="middle" fill="#2e7d32" font-size="11">상태 갱신</text>
+
+  <!-- Communication arrows -->
+  <!-- Command send -->
+  <path d="M 205 150 L 425 150" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#arrowRight)"/>
+  <text x="315" y="140" text-anchor="middle" fill="#c0392b" font-size="9" font-weight="bold">wezterm cli send-text</text>
+
+  <!-- Status check -->
+  <path d="M 425 200 L 205 200" stroke="#3498db" stroke-width="2" fill="none" marker-end="url(#arrowLeft)"/>
+  <text x="315" y="190" text-anchor="middle" fill="#2980b9" font-size="9" font-weight="bold">wezterm cli get-text</text>
+  <text x="315" y="220" text-anchor="middle" fill="#7f8c8d" font-size="8">(폴링)</text>
+
+  <!-- wbs.md file -->
+  <rect x="275" y="285" width="100" height="35" rx="5" fill="#fff9c4" stroke="#fbc02d" stroke-width="2"/>
+  <text x="325" y="307" text-anchor="middle" fill="#f57f17" font-size="11" font-weight="bold">wbs.md</text>
+
+  <!-- File monitoring arrows -->
+  <path d="M 275 300 L 208 270" stroke="#27ae60" stroke-width="2" fill="none" marker-end="url(#arrowLeftFile)"/>
+  <path d="M 375 300 L 443 270" stroke="#27ae60" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+
+  <text x="235" y="295" text-anchor="middle" fill="#1e8449" font-size="8">(파일 모니터링)</text>
+
+  <!-- Legend -->
+  <rect x="40" y="330" width="570" height="35" rx="5" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <line x1="60" y1="350" x2="100" y2="350" stroke="#e74c3c" stroke-width="2"/>
+  <text x="110" y="354" fill="#2c3e50" font-size="10">명령 전송</text>
+  <line x1="180" y1="350" x2="220" y2="350" stroke="#3498db" stroke-width="2"/>
+  <text x="230" y="354" fill="#2c3e50" font-size="10">상태 폴링</text>
+  <line x1="310" y1="350" x2="350" y2="350" stroke="#27ae60" stroke-width="2"/>
+  <text x="360" y="354" fill="#2c3e50" font-size="10">파일 변경</text>
+  <line x1="440" y1="350" x2="480" y2="350" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="490" y="354" fill="#2c3e50" font-size="10">파일 쓰기</text>
+</svg>

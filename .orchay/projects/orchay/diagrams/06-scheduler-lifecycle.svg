@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 550" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad6" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8e44ad;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="phaseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5dade2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3498db;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="runGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#58d68d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#27ae60;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="endGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#eb984e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e67e22;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main Container -->
+  <rect x="10" y="10" width="680" height="530" rx="10" fill="#fdfefe" stroke="#d5d8dc" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="10" y="10" width="680" height="45" rx="10" fill="url(#headerGrad6)"/>
+  <rect x="10" y="40" width="680" height="15" fill="url(#headerGrad6)"/>
+  <text x="350" y="40" text-anchor="middle" fill="white" font-size="16" font-weight="bold">스케줄러(orchay) 생명주기</text>
+
+  <!-- [시작] Phase -->
+  <rect x="30" y="70" width="640" height="175" rx="8" fill="#ebf5fb" stroke="#3498db" stroke-width="2"/>
+  <rect x="45" y="80" width="80" height="28" rx="14" fill="url(#phaseGrad)"/>
+  <text x="85" y="99" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[시작]</text>
+
+  <g transform="translate(60, 115)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">├──▶ 1. 설정 파일 로드 (orchay.json)</text>
+    <text x="0" y="22" fill="#2c3e50" font-size="11">├──▶ 2. wbs.md 초기 파싱</text>
+    <text x="0" y="44" fill="#2c3e50" font-size="11">├──▶ 3. Worker pane 탐지 (wezterm cli list)</text>
+    <text x="0" y="66" fill="#2c3e50" font-size="11">├──▶ 4. 스케줄 큐 초기화</text>
+    <text x="0" y="88" fill="#2c3e50" font-size="11">└──▶ 5. 이벤트 루프 시작</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M 350 245 L 350 260" stroke="#7f8c8d" stroke-width="2" fill="none"/>
+  <polygon points="350,270 345,260 355,260" fill="#7f8c8d"/>
+
+  <!-- [실행 중] Phase -->
+  <rect x="30" y="275" width="640" height="85" rx="8" fill="#e8f8f5" stroke="#1abc9c" stroke-width="2"/>
+  <rect x="45" y="285" width="90" height="28" rx="14" fill="url(#runGrad)"/>
+  <text x="90" y="304" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[실행 중]</text>
+
+  <g transform="translate(60, 325)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">└──▶ 이벤트 루프 반복 (모니터링 → 분배 → 대기)</text>
+  </g>
+
+  <!-- Loop arrow -->
+  <path d="M 580 315 Q 620 315 620 305 Q 620 295 580 295" stroke="#1abc9c" stroke-width="2" fill="none"/>
+  <polygon points="580,295 590,290 590,300" fill="#1abc9c"/>
+
+  <!-- Arrow down -->
+  <path d="M 350 360 L 350 375" stroke="#7f8c8d" stroke-width="2" fill="none"/>
+  <polygon points="350,385 345,375 355,375" fill="#7f8c8d"/>
+
+  <!-- [종료] Phase -->
+  <rect x="30" y="390" width="640" height="130" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="2"/>
+  <rect x="45" y="400" width="80" height="28" rx="14" fill="url(#endGrad)"/>
+  <text x="85" y="419" text-anchor="middle" fill="white" font-size="12" font-weight="bold">[종료]</text>
+
+  <g transform="translate(60, 440)">
+    <text x="0" y="0" fill="#2c3e50" font-size="11">├──▶ 1. Ctrl+C 또는 SIGTERM 수신</text>
+    <text x="0" y="22" fill="#2c3e50" font-size="11">├──▶ 2. 진행 중 Task 상태 출력</text>
+    <text x="0" y="44" fill="#2c3e50" font-size="11">├──▶ 3. 현재 큐 상태 저장 (선택)</text>
+    <text x="0" y="66" fill="#2c3e50" font-size="11">└──▶ 4. 정리 및 종료</text>
+  </g>
+</svg>

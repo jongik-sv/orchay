@@ -1,0 +1,273 @@
+/**
+ * Markdown Body Styles
+ * TSK-05-04: Document Viewer
+ *
+ * Dark Blue 테마에 맞춘 Markdown 스타일
+ */
+
+.markdown-body {
+  /* CSS 변수 정의 */
+  --md-bg-primary: #0f0f23;
+  --md-bg-secondary: #16213e;
+  --md-border: #2a2a4e;
+  --md-text-primary: #e0e0e0;
+  --md-text-secondary: #b0b0b0;
+  --md-link: #6c9bcf;
+  --md-code-text: #9cdcfe;
+  --md-code-bg: #16213e;
+  --md-codeblock-bg: #0f0f23;
+  --md-table-header-bg: #16213e;
+
+  /* 기본 폰트 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--md-text-secondary);
+}
+
+/* 헤딩 */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  color: var(--md-text-primary);
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body h1 {
+  font-size: 2rem;
+  border-bottom: 1px solid var(--md-border);
+  padding-bottom: 0.5rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--md-border);
+  padding-bottom: 0.3rem;
+}
+
+.markdown-body h3 {
+  font-size: 1.25rem;
+}
+
+.markdown-body h4 {
+  font-size: 1.1rem;
+}
+
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: 1rem;
+}
+
+/* 단락 */
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+/* 링크 */
+.markdown-body a {
+  color: var(--md-link);
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.markdown-body a:hover {
+  color: #8bb3df;
+}
+
+.markdown-body a:focus {
+  outline: 2px solid var(--md-link);
+  outline-offset: 2px;
+}
+
+/* 리스트 */
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body li > p {
+  margin-bottom: 0.5rem;
+}
+
+/* 인라인 코드 */
+.markdown-body code {
+  background-color: var(--md-code-bg);
+  color: var(--md-code-text);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+/* 코드 블록 */
+.markdown-body pre {
+  background-color: var(--md-codeblock-bg);
+  border: 1px solid var(--md-border);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--md-text-primary);
+}
+
+/* 블록 인용 */
+.markdown-body blockquote {
+  border-left: 4px solid var(--md-border);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 1rem;
+  color: var(--md-text-secondary);
+  font-style: italic;
+}
+
+/* 테이블 */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.markdown-body thead {
+  background-color: var(--md-table-header-bg);
+}
+
+.markdown-body th {
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--md-text-primary);
+  border: 1px solid var(--md-border);
+}
+
+.markdown-body td {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--md-border);
+  color: var(--md-text-secondary);
+}
+
+.markdown-body tr:nth-child(even) {
+  background-color: rgba(22, 33, 62, 0.3);
+}
+
+/* 체크박스 */
+.markdown-body input[type="checkbox"] {
+  pointer-events: none;
+  margin-right: 0.5rem;
+  accent-color: var(--md-link);
+}
+
+/* 취소선 */
+.markdown-body del {
+  color: var(--md-text-secondary);
+  opacity: 0.7;
+}
+
+/* 수평선 */
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--md-border);
+  margin: 1.5rem 0;
+}
+
+/* 강조 */
+.markdown-body strong {
+  font-weight: 600;
+  color: var(--md-text-primary);
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+/* Shiki 코드 하이라이팅 (github-dark 테마 기반) */
+.markdown-body pre.shiki {
+  background: var(--md-codeblock-bg) !important;
+  border: 1px solid var(--md-border);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.markdown-body pre.shiki code {
+  background: transparent !important;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* MDC 기본 스타일 오버라이드 */
+.markdown-body :deep(.prose) {
+  color: var(--md-text-secondary);
+  max-width: none;
+}
+
+.markdown-body :deep(.prose pre) {
+  background: var(--md-codeblock-bg);
+  border: 1px solid var(--md-border);
+  border-radius: 6px;
+}
+
+.markdown-body :deep(.prose code) {
+  background-color: var(--md-code-bg);
+  color: var(--md-code-text);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.markdown-body :deep(.prose pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .markdown-body {
+    font-size: 14px;
+  }
+
+  .markdown-body h1 {
+    font-size: 1.75rem;
+  }
+
+  .markdown-body h2 {
+    font-size: 1.5rem;
+  }
+
+  .markdown-body h3 {
+    font-size: 1.25rem;
+  }
+
+  .markdown-body pre {
+    padding: 0.75rem;
+  }
+
+  .markdown-body table {
+    font-size: 0.875rem;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    padding: 0.375rem 0.75rem;
+  }
+}

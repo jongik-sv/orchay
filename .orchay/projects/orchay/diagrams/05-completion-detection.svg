@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 450" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad5" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="stepGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main Container -->
+  <rect x="10" y="10" width="680" height="430" rx="10" fill="#fff" stroke="#bdc3c7" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="10" y="10" width="680" height="45" rx="10" fill="url(#headerGrad5)"/>
+  <rect x="10" y="40" width="680" height="15" fill="url(#headerGrad5)"/>
+  <text x="350" y="40" text-anchor="middle" fill="white" font-size="16" font-weight="bold">완료 감지 시퀀스</text>
+
+  <!-- Step 1 -->
+  <g transform="translate(30, 75)">
+    <rect x="0" y="0" width="640" height="55" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1"/>
+    <circle cx="25" cy="27" r="18" fill="url(#stepGrad)"/>
+    <text x="25" y="33" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+    <text x="55" y="25" fill="#2c3e50" font-size="12" font-weight="bold">스케줄러: wezterm cli get-text --pane-id N</text>
+    <text x="65" y="45" fill="#7f8c8d" font-size="11">└── Worker pane의 최근 출력 읽기</text>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(30, 140)">
+    <rect x="0" y="0" width="640" height="75" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1"/>
+    <circle cx="25" cy="37" r="18" fill="url(#stepGrad)"/>
+    <text x="25" y="43" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+    <text x="55" y="25" fill="#2c3e50" font-size="12" font-weight="bold">프롬프트 패턴 매칭</text>
+    <text x="65" y="45" fill="#7f8c8d" font-size="11">└── 기본: ^&gt;\s*$ (줄 시작이 &gt; 로 시작)</text>
+    <text x="65" y="65" fill="#7f8c8d" font-size="11">└── 커스텀: promptPattern 설정으로 변경 가능</text>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(30, 225)">
+    <rect x="0" y="0" width="640" height="55" rx="6" fill="#e8f8f5" stroke="#1abc9c" stroke-width="1"/>
+    <circle cx="25" cy="27" r="18" fill="#1abc9c"/>
+    <text x="25" y="33" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+    <text x="55" y="25" fill="#2c3e50" font-size="12" font-weight="bold">매칭 성공 → idle 상태 판정</text>
+    <text x="65" y="45" fill="#16a085" font-size="11">✓ Worker가 작업을 완료하고 대기 상태로 전환됨</text>
+  </g>
+
+  <!-- Step 4 -->
+  <g transform="translate(30, 290)">
+    <rect x="0" y="0" width="640" height="75" rx="6" fill="#fef9e7" stroke="#f1c40f" stroke-width="1"/>
+    <circle cx="25" cy="37" r="18" fill="#f1c40f"/>
+    <text x="25" y="43" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+    <text x="55" y="25" fill="#2c3e50" font-size="12" font-weight="bold">wbs.md 재읽기</text>
+    <text x="65" y="45" fill="#7f8c8d" font-size="11">└── 해당 Task의 상태 확인</text>
+    <text x="65" y="60" fill="#27ae60" font-size="10">└── 상태가 진행되었으면 → 작업 완료로 판정</text>
+    <text x="65" y="75" fill="#e74c3c" font-size="10">└── 상태 미변경 → 에러 또는 스킵으로 판정</text>
+  </g>
+
+  <!-- Step 5 -->
+  <g transform="translate(30, 375)">
+    <rect x="0" y="0" width="640" height="50" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1"/>
+    <circle cx="25" cy="25" r="18" fill="#27ae60"/>
+    <text x="25" y="31" text-anchor="middle" fill="white" font-size="14" font-weight="bold">5</text>
+    <text x="55" y="25" fill="#2c3e50" font-size="12" font-weight="bold">다음 Task 분배 (큐에 항목 있으면)</text>
+    <text x="65" y="42" fill="#1e8449" font-size="11">→ 스케줄 큐에서 다음 Task를 Worker에게 전송</text>
+  </g>
+
+  <!-- Flow arrows on the side -->
+  <path d="M 15 130 L 15 145" stroke="#3498db" stroke-width="2"/>
+  <path d="M 15 215 L 15 230" stroke="#3498db" stroke-width="2"/>
+  <path d="M 15 280 L 15 295" stroke="#3498db" stroke-width="2"/>
+  <path d="M 15 365 L 15 380" stroke="#3498db" stroke-width="2"/>
+</svg>

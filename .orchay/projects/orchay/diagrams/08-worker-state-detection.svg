@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 600" font-family="Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad8" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="checkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="deadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f8c8d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#636e72;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pausedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d68910;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="errorGrad8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blockedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="idleGrad8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e8449;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="busyGrad8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#17a2b8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#138496;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrowDown" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect x="5" y="5" width="740" height="590" rx="10" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+
+  <!-- Header -->
+  <rect x="5" y="5" width="740" height="45" rx="10" fill="url(#headerGrad8)"/>
+  <rect x="5" y="35" width="740" height="15" fill="url(#headerGrad8)"/>
+  <text x="375" y="35" text-anchor="middle" fill="white" font-size="16" font-weight="bold">Worker 상태 감지 흐름</text>
+
+  <!-- Start: get-text -->
+  <rect x="275" y="65" width="200" height="40" rx="20" fill="url(#checkGrad)" stroke="#2471a3" stroke-width="2"/>
+  <text x="375" y="90" text-anchor="middle" fill="white" font-size="12" font-weight="bold">wezterm cli get-text</text>
+
+  <!-- Arrow -->
+  <line x1="375" y1="105" x2="375" y2="125" stroke="#34495e" stroke-width="2" marker-end="url(#arrowDown)"/>
+
+  <!-- Check 0: pane exists -->
+  <polygon points="375,135 450,175 375,215 300,175" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="375" y="172" text-anchor="middle" fill="#2c3e50" font-size="11">pane 존재?</text>
+
+  <!-- No -> DEAD -->
+  <line x1="450" y1="175" x2="550" y2="175" stroke="#34495e" stroke-width="2"/>
+  <text x="480" y="168" fill="#7f8c8d" font-size="10">No</text>
+  <rect x="550" y="155" width="100" height="40" rx="20" fill="url(#deadGrad)"/>
+  <text x="600" y="180" text-anchor="middle" fill="white" font-size="12" font-weight="bold">DEAD</text>
+
+  <!-- Yes -> Check 1 -->
+  <line x1="375" y1="215" x2="375" y2="245" stroke="#34495e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="385" y="233" fill="#27ae60" font-size="10">Yes</text>
+
+  <!-- Check 1: pause pattern -->
+  <polygon points="375,255 460,295 375,335 290,295" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <text x="375" y="288" text-anchor="middle" fill="#9a7d0a" font-size="10">일시 중단</text>
+  <text x="375" y="302" text-anchor="middle" fill="#9a7d0a" font-size="10">패턴?</text>
+
+  <!-- Yes -> PAUSED -->
+  <line x1="460" y1="295" x2="550" y2="295" stroke="#34495e" stroke-width="2"/>
+  <text x="490" y="288" fill="#27ae60" font-size="10">Yes</text>
+  <rect x="550" y="275" width="100" height="40" rx="20" fill="url(#pausedGrad)"/>
+  <text x="600" y="300" text-anchor="middle" fill="white" font-size="12" font-weight="bold">PAUSED</text>
+
+  <!-- No -> Check 2 -->
+  <line x1="375" y1="335" x2="375" y2="365" stroke="#34495e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="385" y="353" fill="#e74c3c" font-size="10">No</text>
+
+  <!-- Check 2: error pattern -->
+  <polygon points="375,375 460,415 375,455 290,415" fill="#fdedec" stroke="#e74c3c" stroke-width="2"/>
+  <text x="375" y="408" text-anchor="middle" fill="#922b21" font-size="10">에러</text>
+  <text x="375" y="422" text-anchor="middle" fill="#922b21" font-size="10">패턴?</text>
+
+  <!-- Yes -> ERROR -->
+  <line x1="460" y1="415" x2="550" y2="415" stroke="#34495e" stroke-width="2"/>
+  <text x="490" y="408" fill="#27ae60" font-size="10">Yes</text>
+  <rect x="550" y="395" width="100" height="40" rx="20" fill="url(#errorGrad8)"/>
+  <text x="600" y="420" text-anchor="middle" fill="white" font-size="12" font-weight="bold">ERROR</text>
+
+  <!-- No -> Check 3 -->
+  <line x1="290" y1="415" x2="200" y2="415" stroke="#34495e" stroke-width="2"/>
+  <line x1="200" y1="415" x2="200" y2="295" stroke="#34495e" stroke-width="2"/>
+  <text x="240" y="408" fill="#e74c3c" font-size="10">No</text>
+
+  <!-- Check 3: question pattern -->
+  <polygon points="200,255 285,295 200,335 115,295" fill="#f4ecf7" stroke="#9b59b6" stroke-width="2"/>
+  <text x="200" y="288" text-anchor="middle" fill="#6c3483" font-size="10">질문</text>
+  <text x="200" y="302" text-anchor="middle" fill="#6c3483" font-size="10">패턴?</text>
+
+  <!-- Yes -> BLOCKED -->
+  <line x1="115" y1="295" x2="50" y2="295" stroke="#34495e" stroke-width="2"/>
+  <text x="80" y="288" fill="#27ae60" font-size="10">Yes</text>
+  <rect x="25" y="350" width="100" height="40" rx="20" fill="url(#blockedGrad)" transform="rotate(-90 75 370)"/>
+  <text x="75" y="375" text-anchor="middle" fill="white" font-size="12" font-weight="bold" transform="rotate(-90 75 375)">BLOCKED</text>
+
+  <!-- No -> Check 4 -->
+  <line x1="200" y1="335" x2="200" y2="475" stroke="#34495e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="210" y="400" fill="#e74c3c" font-size="10">No</text>
+
+  <!-- Check 4: prompt pattern -->
+  <polygon points="200,485 285,525 200,565 115,525" fill="#e8f8f5" stroke="#27ae60" stroke-width="2"/>
+  <text x="200" y="518" text-anchor="middle" fill="#1e8449" font-size="10">프롬프트</text>
+  <text x="200" y="532" text-anchor="middle" fill="#1e8449" font-size="10">패턴?</text>
+
+  <!-- Yes -> IDLE -->
+  <line x1="115" y1="525" x2="50" y2="525" stroke="#34495e" stroke-width="2"/>
+  <text x="80" y="518" fill="#27ae60" font-size="10">Yes</text>
+  <rect x="25" y="480" width="100" height="40" rx="20" fill="url(#idleGrad8)" transform="rotate(-90 75 500)"/>
+  <text x="75" y="505" text-anchor="middle" fill="white" font-size="12" font-weight="bold" transform="rotate(-90 75 505)">IDLE</text>
+
+  <!-- No -> BUSY -->
+  <line x1="285" y1="525" x2="350" y2="525" stroke="#34495e" stroke-width="2"/>
+  <text x="310" y="518" fill="#e74c3c" font-size="10">No</text>
+  <rect x="350" y="505" width="100" height="40" rx="20" fill="url(#busyGrad8)"/>
+  <text x="400" y="530" text-anchor="middle" fill="white" font-size="12" font-weight="bold">BUSY</text>
+
+  <!-- Legend -->
+  <rect x="500" y="480" width="230" height="100" rx="5" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="615" y="500" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">우선순위</text>
+  <text x="515" y="520" fill="#7f8c8d" font-size="10">1. pane 존재 확인</text>
+  <text x="515" y="535" fill="#f39c12" font-size="10">2. 일시 중단 패턴</text>
+  <text x="515" y="550" fill="#e74c3c" font-size="10">3. 에러 패턴</text>
+  <text x="515" y="565" fill="#9b59b6" font-size="10">4. 질문 패턴 → 5. 프롬프트</text>
+</svg>

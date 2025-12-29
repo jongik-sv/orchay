@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "members": [
+    {
+      "id": "hong",
+      "name": "홍길동",
+      "email": "hong@test.com",
+      "role": "Developer",
+      "active": true
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "columns": [
+    {
+      "id": "todo",
+      "name": "Todo",
+      "statusCode": "[ ]",
+      "order": 1,
+      "color": "#6b7280",
+      "description": "대기 중인 작업"
+    },
+    {
+      "id": "done",
+      "name": "Done",
+      "statusCode": "[xx]",
+      "order": 2,
+      "color": "#10b981",
+      "description": "완료된 작업"
+    }
+  ]
+}

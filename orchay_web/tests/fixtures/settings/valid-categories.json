@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "categories": [
+    {
+      "id": "development",
+      "name": "Development",
+      "code": "dev",
+      "color": "#3b82f6",
+      "icon": "pi-code",
+      "description": "신규 기능 개발 작업",
+      "workflowId": "development"
+    }
+  ]
+}
