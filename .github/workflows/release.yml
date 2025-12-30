@@ -50,6 +50,19 @@ jobs:
           pip install pyinstaller
           pip install ./orchay
 
+      # TSK-02-05: UPX 설치 (플랫폼별)
+      - name: Install UPX (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y upx
+
+      - name: Install UPX (Windows)
+        if: runner.os == 'Windows'
+        run: choco install upx -y
+
+      - name: Install UPX (macOS)
+        if: runner.os == 'macOS'
+        run: brew install upx
+
       - name: Build with PyInstaller (spec file)
         working-directory: orchay
         run: pyinstaller orchay.spec

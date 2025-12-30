@@ -3,8 +3,36 @@
 # TSK-02-01: spec 파일 생성
 # TSK-02-02: Hidden Imports 설정
 # TSK-02-03: 데이터 파일 및 리소스 번들링
+# TSK-02-05: UPX 압축 설정
 
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+
+# UPX 압축 제외 대상 (TSK-02-05)
+# 아래 파일들은 UPX 압축 시 손상될 수 있어 제외
+upx_exclude = [
+    # Python 바이트코드/동적 라이브러리
+    'python*.dll',
+    'python*.so*',
+    '_ssl*.so*',
+    '_ssl*.pyd',
+
+    # Pydantic Core (Rust 컴파일 바이너리)
+    'pydantic_core*.so*',
+    'pydantic_core*.pyd',
+
+    # 암호화 관련 라이브러리
+    'libcrypto*.so*',
+    'libssl*.so*',
+    'libffi*.so*',
+
+    # Windows CRT 런타임
+    'vcruntime*.dll',
+    'api-ms-*.dll',
+    'ucrtbase.dll',
+
+    # macOS 시스템 라이브러리
+    'libSystem*.dylib',
+]
 
 # Hidden imports - 동적 로딩 모듈 (TSK-02-02)
 hiddenimports = [
@@ -82,7 +110,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=upx_exclude,  # TSK-02-05: UPX 압축 제외 목록 적용
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -97,6 +125,6 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=upx_exclude,  # TSK-02-05: UPX 압축 제외 목록 적용
     name='orchay',
 )

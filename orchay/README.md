@@ -12,12 +12,105 @@ orchay는 다음 도구들이 필요합니다:
 
 | 도구 | 용도 | 필수 |
 |------|------|------|
-| Python 3.10+ | orchay 실행 | O |
-| WezTerm | 멀티 pane 터미널 | O |
-| Claude Code | AI Worker | O |
-| uv | Python 패키지 관리 | O |
+| WezTerm | 멀티 pane 터미널 | ✅ |
+| Claude Code | AI Worker | ✅ |
+| Python 3.10+ | orchay 실행 (pip/pipx 설치 시) | 조건부 |
 
-### Windows
+> **Note:** 실행 파일 다운로드 방식은 Python 설치가 불필요합니다.
+
+---
+
+### 설치 방법
+
+#### 방법 1: 실행 파일 다운로드 (권장)
+
+Python 설치 없이 바로 사용할 수 있습니다.
+
+1. [GitHub Releases](https://github.com/your-username/orchay/releases/latest)에서 플랫폼에 맞는 파일 다운로드:
+   - **Linux**: `orchay-linux-x64.tar.gz`
+   - **Windows**: `orchay-windows-x64.zip`
+   - **macOS**: `orchay-macos-x64.tar.gz`
+
+2. 압축 해제 및 실행:
+
+```bash
+# Linux/macOS
+tar -xzf orchay-linux-x64.tar.gz  # 또는 orchay-macos-x64.tar.gz
+cd orchay
+./orchay --help
+
+# Windows (PowerShell)
+Expand-Archive orchay-windows-x64.zip -DestinationPath .
+cd orchay
+.\orchay.exe --help
+```
+
+3. (선택) PATH에 추가:
+
+```bash
+# Linux/macOS - ~/.bashrc 또는 ~/.zshrc에 추가
+export PATH="$PATH:/path/to/orchay"
+
+# Windows - 시스템 환경 변수에 orchay 폴더 경로 추가
+```
+
+---
+
+#### 방법 2: pipx 설치 (권장)
+
+격리된 환경에서 설치되어 시스템 Python과 충돌하지 않습니다.
+
+```bash
+# pipx 설치 (없는 경우)
+pip install pipx
+pipx ensurepath
+
+# orchay 설치
+pipx install orchay
+
+# 실행
+orchay --help
+```
+
+---
+
+#### 방법 3: pip 설치
+
+```bash
+# 전역 설치
+pip install orchay
+
+# 또는 가상환경에서 설치
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install orchay
+
+# 실행
+orchay --help
+```
+
+---
+
+#### 방법 4: 소스에서 실행 (개발용)
+
+uv를 사용하여 소스 코드에서 직접 실행합니다.
+
+```bash
+# uv 설치 (없는 경우)
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
+# Windows: irm https://astral.sh/uv/install.ps1 | iex
+
+# 소스 클론 및 실행
+git clone https://github.com/your-username/orchay.git
+cd orchay
+uv run python -m orchay --help
+```
+
+---
+
+### 사전 요구사항 설치
+
+#### Windows
 
 ```powershell
 # 1. WezTerm 설치
@@ -26,15 +119,12 @@ winget install wez.wezterm
 # 2. Claude Code 설치 (Native)
 irm https://claude.ai/install.ps1 | iex
 
-# 3. uv 설치
-irm https://astral.sh/uv/install.ps1 | iex
-
-# 4. 새 터미널 열고 orchay 실행
+# 새 터미널 열고 orchay 실행
 cd {프로젝트 폴더}
-python orchay/launcher.py project_name
+orchay project_name
 ```
 
-### Linux (Ubuntu/Debian)
+#### Linux (Ubuntu/Debian)
 
 ```bash
 # 1. WezTerm 설치
@@ -46,16 +136,12 @@ sudo apt update && sudo apt install wezterm
 curl -fsSL https://claude.ai/install.sh | bash
 source ~/.bashrc  # 또는 source ~/.zshrc
 
-# 3. uv 설치
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.local/bin/env
-
-# 4. orchay 실행
+# orchay 실행
 cd {프로젝트 폴더}
-python orchay/launcher.py project_name
+orchay project_name
 ```
 
-### macOS
+#### macOS
 
 ```bash
 # 1. WezTerm 설치
@@ -65,61 +151,53 @@ brew install --cask wezterm
 curl -fsSL https://claude.ai/install.sh | bash
 source ~/.zshrc
 
-# 3. uv 설치
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 4. orchay 실행
+# orchay 실행
 cd {프로젝트 폴더}
-python orchay/launcher.py project_name
+orchay project_name
 ```
+
+---
 
 ### 의존성 자동 체크
 
-launcher.py는 시작 시 모든 의존성을 자동으로 체크합니다. 누락된 도구가 있으면 플랫폼별 설치 명령을 안내합니다.
+orchay는 시작 시 모든 의존성을 자동으로 체크합니다. 누락된 도구가 있으면 플랫폼별 설치 명령을 안내합니다.
 
 ## 실행
 
-### 방법 1: launcher.py 사용 (권장)
+### 기본 사용법
 
-**launcher.py**는 WezTerm을 자동으로 구성하고 orchay를 실행합니다:
+orchay 명령은 WezTerm을 자동으로 구성하고 실행합니다:
 - 스케줄러 pane (좌측)
 - Worker panes (우측, Claude Code 인스턴스들)
 
 ```bash
 cd {프로젝트 루트}  # .orchay 폴더가 있는 위치
-python orchay/launcher.py [ORCHAY_OPTIONS] [LAUNCHER_OPTIONS]
+orchay [PROJECT] [OPTIONS]
 ```
-
-**옵션 구분:**
-
-| 구분 | 옵션 | 용도 |
-|------|------|------|
-| **orchay 옵션** | 모든 표준 옵션 | orchay에 그대로 전달됨 |
-| **launcher 전용** | `--scheduler-cols`, `--worker-cols`, `--font-size` | WezTerm 레이아웃 설정 |
 
 **예시:**
 
 ```bash
-# 기본 실행 (orchay 프로젝트, Worker 3개, 웹서버 포함)
-python orchay/launcher.py
+# 기본 실행 (orchay 프로젝트, Worker 3개)
+orchay
 
 # 다른 프로젝트 실행
-python orchay/launcher.py my_project
+orchay my_project
 
 # Worker 5개로 실행
-python orchay/launcher.py my_project -w 5
+orchay my_project -w 5
 
 # 웹서버 포함 (포트 9000)
-python orchay/launcher.py my_project -w 3 --web --port 9000
+orchay my_project -w 3 --web --port 9000
 
-# 폰트 크기와 레이아웃 조정 (launcher 전용 옵션)
-python orchay/launcher.py my_project --font-size 9 --scheduler-cols 80 --worker-cols 100
+# 폰트 크기와 레이아웃 조정
+orchay my_project --font-size 9 --scheduler-cols 80 --worker-cols 100
 
 # 조합 사용
-python orchay/launcher.py my_project -w 5 -m quick --web --font-size 10
+orchay my_project -w 5 -m quick --web --font-size 10
 ```
 
-**launcher 전용 옵션:**
+**레이아웃 옵션:**
 
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
@@ -130,15 +208,15 @@ python orchay/launcher.py my_project -w 5 -m quick --web --font-size 10
 **내부 동작:**
 
 ```
-launcher.py
-    │
-    ├─ 1. 의존성 체크 (wezterm, claude, uv)
-    ├─ 2. 기존 WezTerm 프로세스 종료
-    ├─ 3. WezTerm 실행
-    └─ 4. WezTerm CLI로 레이아웃 생성
-          │
-          ├─ 왼쪽: 스케줄러 pane (orchay 실행)
-          └─ 오른쪽: Worker panes (Claude Code 실행)
+orchay
+  │
+  ├─ 1. 의존성 체크 (wezterm, claude)
+  ├─ 2. 기존 WezTerm 프로세스 종료
+  ├─ 3. WezTerm 실행
+  └─ 4. WezTerm CLI로 레이아웃 생성
+        │
+        ├─ 왼쪽: 스케줄러 pane (orchay 실행)
+        └─ 오른쪽: Worker panes (Claude Code 실행)
 ```
 
 **레이아웃:**
@@ -155,21 +233,17 @@ launcher.py
 
 ---
 
-### 방법 2: 직접 실행 (수동 pane 관리)
+### 직접 실행 (수동 pane 관리)
 
-WezTerm pane을 직접 구성한 경우:
+WezTerm pane을 직접 구성한 경우, 스케줄러만 실행할 수 있습니다:
 
 ```bash
-# uv 사용 (권장)
-cd {프로젝트 루트}  # .orchay 폴더가 있는 위치
-uv run --project orchay python -m orchay [PROJECT] [OPTIONS]
+# pip/pipx로 설치한 경우
+orchay run [PROJECT] [OPTIONS]
 
-# 또는 venv 활성화 후
-cd orchay
-.venv\Scripts\activate      # Windows
-# source .venv/bin/activate  # Linux/Mac
-cd ..  # 프로젝트 루트로 이동
-python -m orchay [PROJECT] [OPTIONS]
+# 소스에서 실행 (uv 사용)
+cd {프로젝트 루트}
+uv run --project orchay python -m orchay [PROJECT] [OPTIONS]
 ```
 
 ### CLI 옵션
@@ -200,22 +274,22 @@ options:
 
 ```bash
 # TUI 모드로 실행 (기본)
-uv run python -m orchay orchay
+orchay orchay
 
 # dry-run 모드 (분배 없이 상태만 표시)
-uv run python -m orchay orchay --dry-run
+orchay orchay --dry-run
 
 # orchay-flutter 프로젝트 실행
-uv run python -m orchay orchay-flutter
+orchay orchay-flutter
 
 # develop 모드로 실행
-uv run python -m orchay orchay -m develop
+orchay orchay -m develop
 
 # 5개 Worker로 실행
-uv run python -m orchay orchay -w 5
+orchay orchay -w 5
 
 # 모니터링 간격 10초
-uv run python -m orchay orchay -i 10
+orchay orchay -i 10
 ```
 
 ### 실행 화면
@@ -252,16 +326,13 @@ orchay에 내장된 웹서버를 통해 브라우저에서 WBS 진행 상황을 
 
 ```bash
 # 스케줄러 + 웹서버 동시 실행
-uv run python -m orchay orchay --web
+orchay orchay --web
 
 # 웹서버만 실행 (스케줄링 없음, WezTerm 불필요)
-uv run python -m orchay orchay --web-only
+orchay orchay --web-only
 
 # 포트 지정 (기본: 8080)
-uv run python -m orchay orchay --web --port 3000
-
-# launcher.py와 함께 사용
-python orchay/launcher.py my_project --web --port 9000
+orchay orchay --web --port 3000
 ```
 
 웹서버 시작 후 http://localhost:8080 (또는 지정한 포트)로 접속합니다.
