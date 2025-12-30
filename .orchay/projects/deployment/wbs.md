@@ -209,7 +209,7 @@
 ### TSK-03-01: PyInstaller 빌드 워크플로우
 - category: infrastructure
 - domain: devops
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
