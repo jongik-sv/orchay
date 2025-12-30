@@ -336,7 +336,7 @@
 
 - category: development
 - domain: qa
-- status: [ ]
+- status: detail-design [dd]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-02
