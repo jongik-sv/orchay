@@ -1,0 +1,103 @@
+# .github/workflows/release.yml
+# TSK-03-01: PyInstaller 빌드 워크플로우
+# 크로스 플랫폼 빌드 및 GitHub Releases 배포
+
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v0.1.0)'
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: orchay-linux-x64
+            archive: tar.gz
+          - os: windows-latest
+            artifact: orchay-windows-x64
+            archive: zip
+          - os: macos-latest
+            artifact: orchay-macos-x64
+            archive: tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install ./orchay
+
+      - name: Build with PyInstaller (spec file)
+        working-directory: orchay
+        run: pyinstaller orchay.spec
+
+      - name: Create archive (Linux/macOS)
+        if: runner.os != 'Windows'
+        working-directory: orchay/dist
+        run: |
+          tar -czvf ${{ matrix.artifact }}.${{ matrix.archive }} orchay/
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        working-directory: orchay/dist
+        run: |
+          Compress-Archive -Path orchay -DestinationPath ${{ matrix.artifact }}.${{ matrix.archive }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: orchay/dist/${{ matrix.artifact }}.${{ matrix.archive }}
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: |
+            artifacts/orchay-linux-x64/orchay-linux-x64.tar.gz
+            artifacts/orchay-windows-x64/orchay-windows-x64.zip
+            artifacts/orchay-macos-x64/orchay-macos-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
