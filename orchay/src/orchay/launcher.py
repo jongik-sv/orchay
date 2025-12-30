@@ -358,7 +358,7 @@ def main() -> int:
     log.info(f"  Workers: {workers}")
     log.info(f"  Window: {launcher_args.width}x{launcher_args.height}")
     log.info(f"  Max rows per column: {launcher_args.max_rows}")
-    log.info(f"  Command: {cmd}")
+    log.info(f"  Command: {' '.join(full_orchay_cmd_list)}")
 
     # wezterm 명령
     wezterm_cmd = "wezterm"
@@ -412,6 +412,7 @@ def main() -> int:
     log.info(f"Creating layout: {'/'.join(map(str, layout))}")
 
     # 1단계: 각 열의 첫 번째 worker 생성 (수평 분할)
+    for col in range(len(layout)):
         if col == 0:
             split_cmd = [
                 wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", "0",
@@ -479,9 +480,14 @@ def main() -> int:
 
     # pane 0에 스케줄러 명령 전송
     log.info("Sending scheduler command to pane 0...")
-    # wezterm cli send-text는 리스트로 전달할 때 인용 부호 문제를 피할 수 있음
-    # 명령 끝에 개행 문자 추가
-    full_cmd_str = " ".join(full_orchay_cmd_list) + "\n"
+    # pane 0은 홈 디렉토리에서 시작하므로, cd로 프로젝트 디렉토리로 이동 후 명령 실행
+    orchay_cmd_str = " ".join(full_orchay_cmd_list)
+    if platform.system() == "Windows":
+        # PowerShell: cd path; command (세미콜론으로 연결)
+        full_cmd_str = f"cd {cwd}; {orchay_cmd_str}\n"
+    else:
+        # Linux/macOS: cd path && command
+        full_cmd_str = f"cd {shlex.quote(cwd)} && {orchay_cmd_str}\n"
     send_text_cmd = [
         wezterm_cmd, "cli", "send-text", "--pane-id", "0", "--no-paste", full_cmd_str
     ]
