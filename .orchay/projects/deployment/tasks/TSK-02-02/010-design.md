@@ -1,276 +1,378 @@
-# TSK-02-02 - Hidden Imports 분석 및 설정 설계 문서
+# TSK-02-02: Hidden Imports 분석 및 설정 - 통합설계
 
 ## 문서 정보
 
 | 항목 | 내용 |
 |------|------|
 | Task ID | TSK-02-02 |
-| 문서 버전 | 1.0 |
+| 문서 유형 | 통합설계 (Basic + Detail) |
 | 작성일 | 2025-12-30 |
-| 상태 | 작성중 |
-| 카테고리 | development |
+| 상태 | Draft |
+| PRD 참조 | PRD 4.6 Hidden Imports |
 
 ---
 
 ## 1. 개요
 
-### 1.1 배경 및 문제 정의
+### 1.1 목적
 
-**현재 상황:**
-- PyInstaller는 정적 분석을 통해 import 구문을 감지하지만, 동적으로 로딩되는 모듈은 자동 감지하지 못함
-- orchay 프로젝트는 pydantic, textual, rich, watchdog 등 동적 로딩을 사용하는 패키지에 의존
+PyInstaller가 자동으로 감지하지 못하는 동적 import 모듈을 분석하고, `orchay.spec` 파일의 `hiddenimports` 목록을 완성하여 런타임 `ModuleNotFoundError`를 해결한다.
 
-**해결하려는 문제:**
-- PyInstaller 빌드 후 실행 시 `ModuleNotFoundError` 발생
-- 런타임에 필요한 모듈이 번들에 포함되지 않음
-- 플랫폼별 구현체가 누락됨
+### 1.2 배경
 
-### 1.2 목적 및 기대 효과
-
-**목적:**
-- PyInstaller 빌드 시 필요한 모든 hidden imports 식별 및 설정
-- 빌드된 실행 파일에서 런타임 오류 없이 동작하도록 보장
-
-**기대 효과:**
-- 단일 실행 파일로 배포 가능
-- 모든 플랫폼(Windows, Linux, macOS)에서 동일하게 동작
-- 런타임 ModuleNotFoundError 완전 해결
+- PyInstaller는 정적 분석으로 import를 감지
+- 동적 import (`importlib.import_module`, `__import__`)는 감지 불가
+- 런타임에 `ModuleNotFoundError` 발생 가능
 
 ### 1.3 범위
 
-**포함:**
-- pydantic 관련 hidden imports 분석 및 설정
-- textual 관련 hidden imports 분석 및 설정
-- rich 관련 hidden imports 분석 및 설정
-- watchdog 관련 hidden imports 분석 및 설정
-- collect_submodules 활용 방안
+| 포함 | 제외 |
+|------|------|
+| Pydantic 동적 모듈 분석 | spec 파일 기본 구조 (TSK-02-01) |
+| Textual 위젯 분석 | 데이터 파일 번들링 (TSK-02-03) |
+| Watchdog 플랫폼별 분석 | 빌드 테스트 (TSK-02-04) |
+| Rich 포맷터 분석 | |
+| collect_submodules 활용 | |
 
-**제외:**
-- spec 파일 전체 구조 (TSK-02-01에서 처리)
-- 데이터 파일 번들링 (TSK-02-03에서 처리)
-- 로컬 빌드 테스트 (TSK-02-04에서 처리)
+---
 
-### 1.4 참조 문서
+## 2. 현재 상태 분석
 
-| 문서 | 경로 | 관련 섹션 |
+### 2.1 orchay 의존성 구조
+
+```
+orchay/pyproject.toml dependencies:
+├── textual>=1.0
+├── rich>=14.0
+├── watchdog>=4.0
+├── pydantic>=2.0
+└── PyYAML>=6.0
+```
+
+### 2.2 Import 사용 현황
+
+| 파일 | 패키지 | Import 패턴 |
+|------|--------|-------------|
+| `models/config.py` | pydantic | `from pydantic import BaseModel, Field` |
+| `models/task.py` | pydantic | `from pydantic import BaseModel, Field` |
+| `models/worker.py` | pydantic | `from pydantic import BaseModel, Field` |
+| `ui/app.py` | textual | `from textual.app import App, ComposeResult` |
+| `ui/app.py` | textual | `from textual.containers import Container, Horizontal, Vertical, VerticalScroll` |
+| `ui/app.py` | textual | `from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static` |
+| `ui/widgets.py` | textual | `from textual.containers import VerticalScroll` |
+| `ui/widgets.py` | textual | `from textual.widgets import OptionList, Static` |
+| `wbs_parser.py` | watchdog | `from watchdog.events import FileSystemEvent, FileSystemEventHandler` |
+| `wbs_parser.py` | watchdog | `from watchdog.observers import Observer` |
+| `main.py` | rich | `from rich.console import Console` |
+| `main.py` | rich | `from rich.table import Table` |
+| `cli.py` | rich | `from rich.console import Console, Table` |
+
+### 2.3 TSK-02-01 기본 Hidden Imports
+
+```python
+# TSK-02-01에서 설정한 기본 목록
+hidden_imports = [
+    'pydantic',
+    'pydantic.deprecated.decorator',
+    'pydantic_core',
+    'textual',
+    'textual.widgets',
+    'rich',
+    'rich.console',
+    'watchdog',
+    'watchdog.observers',
+    'watchdog.events',
+]
+```
+
+---
+
+## 3. 동적 Import 분석
+
+### 3.1 Pydantic 동적 모듈
+
+Pydantic v2는 런타임에 다양한 모듈을 동적으로 로드합니다.
+
+| 모듈 | 이유 | 추가 필요 |
 |------|------|----------|
-| PRD | `.orchay/projects/deployment/prd.md` | 4.6 히든 임포트 |
-| spec 파일 | `.orchay/projects/deployment/prd.md` | 4.5 spec 파일 설정 |
+| `pydantic_core` | Rust 바인딩 코어 | ✅ |
+| `pydantic.deprecated.decorator` | 데코레이터 호환성 | ✅ |
+| `pydantic.v1` | v1 호환 레이어 | ❌ (미사용) |
+| `pydantic.fields` | Field 정의 | ✅ |
+| `pydantic.functional_validators` | 검증기 | ✅ |
+| `pydantic.json_schema` | JSON 스키마 | ✅ |
+| `pydantic.dataclasses` | dataclass 지원 | ❌ (미사용) |
+
+### 3.2 Textual 동적 모듈
+
+Textual은 위젯을 동적으로 로드합니다.
+
+| 모듈 | 이유 | 추가 필요 |
+|------|------|----------|
+| `textual.widgets._data_table` | DataTable 내부 | ✅ |
+| `textual.widgets._header` | Header 내부 | ✅ |
+| `textual.widgets._footer` | Footer 내부 | ✅ |
+| `textual.widgets._input` | Input 내부 | ✅ |
+| `textual.widgets._static` | Static 내부 | ✅ |
+| `textual.widgets._rich_log` | RichLog 내부 | ✅ |
+| `textual.widgets._option_list` | OptionList 내부 | ✅ |
+| `textual.css.stylesheet` | CSS 파서 | ✅ |
+| `textual.screen` | Screen 관리 | ✅ |
+| `textual.driver` | 터미널 드라이버 | ✅ |
+
+### 3.3 Watchdog 플랫폼별 모듈
+
+Watchdog는 플랫폼에 따라 다른 Observer를 사용합니다.
+
+| 모듈 | 플랫폼 | 추가 필요 |
+|------|--------|----------|
+| `watchdog.observers.inotify` | Linux | ✅ |
+| `watchdog.observers.inotify_buffer` | Linux | ✅ |
+| `watchdog.observers.fsevents` | macOS | ✅ |
+| `watchdog.observers.kqueue` | macOS/BSD | ✅ |
+| `watchdog.observers.read_directory_changes` | Windows | ✅ |
+| `watchdog.observers.polling` | 폴백 | ✅ |
+
+### 3.4 Rich 동적 모듈
+
+| 모듈 | 이유 | 추가 필요 |
+|------|------|----------|
+| `rich.table` | 테이블 렌더링 | ✅ |
+| `rich.text` | 텍스트 스타일링 | ✅ |
+| `rich.panel` | 패널 렌더링 | ✅ |
+| `rich.syntax` | 코드 하이라이팅 | ❌ (미사용) |
+| `rich.markdown` | 마크다운 렌더링 | ❌ (미사용) |
+| `rich.progress` | 프로그레스 바 | ❌ (미사용) |
 
 ---
 
-## 2. 대상 패키지 분석
+## 4. 상세 설계
 
-### 2.1 동적 로딩 패턴
+### 4.1 완성된 Hidden Imports 목록
 
-| 패키지 | 동적 로딩 방식 | 문제점 |
-|--------|--------------|--------|
-| Pydantic | 런타임 타입 검증, 데코레이터 | `pydantic_core`, deprecated 모듈 누락 |
-| Textual | 위젯 동적 로딩 | `textual.widgets.*` 서브모듈 누락 |
-| Rich | 콘솔 포맷터 동적 로딩 | 일부 포맷터 누락 |
-| Watchdog | 플랫폼별 Observer 구현체 | 플랫폼별 구현체 누락 |
+```python
+hidden_imports = [
+    # ===== Pydantic (런타임 검증) =====
+    'pydantic',
+    'pydantic_core',
+    'pydantic_core._pydantic_core',
+    'pydantic.deprecated.decorator',
+    'pydantic.fields',
+    'pydantic.functional_validators',
+    'pydantic.json_schema',
+    'pydantic.main',
+    'pydantic.config',
 
-### 2.2 orchay 코드 분석
+    # ===== Textual (TUI 프레임워크) =====
+    'textual',
+    'textual.app',
+    'textual.screen',
+    'textual.driver',
+    'textual.css.stylesheet',
+    'textual.containers',
+    'textual.message',
+    'textual.binding',
+    'textual.widgets',
+    'textual.widgets._data_table',
+    'textual.widgets._header',
+    'textual.widgets._footer',
+    'textual.widgets._input',
+    'textual.widgets._static',
+    'textual.widgets._rich_log',
+    'textual.widgets._option_list',
 
-**pydantic 사용처:**
+    # ===== Rich (콘솔 출력) =====
+    'rich',
+    'rich.console',
+    'rich.table',
+    'rich.text',
+    'rich.panel',
+    'rich.style',
+    'rich.theme',
+
+    # ===== Watchdog (파일 감시) =====
+    'watchdog',
+    'watchdog.events',
+    'watchdog.observers',
+    'watchdog.observers.polling',
+    # Linux
+    'watchdog.observers.inotify',
+    'watchdog.observers.inotify_buffer',
+    # macOS
+    'watchdog.observers.fsevents',
+    'watchdog.observers.kqueue',
+    # Windows
+    'watchdog.observers.read_directory_changes',
+
+    # ===== PyYAML =====
+    'yaml',
+]
 ```
-orchay/src/orchay/models/config.py  - Config, ExecutionConfig 모델
-orchay/src/orchay/models/task.py    - Task, TaskStatus 모델
-orchay/src/orchay/models/worker.py  - Worker, WorkerState 모델
-```
 
-**textual 사용처:**
-- 현재 직접 사용하지 않음 (향후 TUI 구현 시 필요)
+### 4.2 collect_submodules 활용
 
-**rich 사용처:**
-```
-orchay/src/orchay/main.py          - Console, Table
-orchay/src/orchay/cli.py           - Rich console 출력
-```
-
-**watchdog 사용처:**
-```
-orchay/src/orchay/wbs_parser.py    - WbsWatcher, FileSystemEventHandler
-```
-
----
-
-## 3. Hidden Imports 명세
-
-### 3.1 필수 Hidden Imports
-
-| 패키지 | 모듈 | 이유 | 우선순위 |
-|--------|------|------|----------|
-| pydantic | `pydantic.deprecated.decorator` | V2 호환 데코레이터 | 높음 |
-| pydantic | `pydantic_core` | 핵심 검증 로직 | 높음 |
-| pydantic | `pydantic.json_schema` | JSON 스키마 생성 | 중간 |
-| rich | `rich.console` | 콘솔 출력 | 높음 |
-| rich | `rich.table` | 테이블 출력 | 높음 |
-| rich | `rich.progress` | 진행률 표시 (잠재적) | 낮음 |
-| watchdog | `watchdog.observers` | 파일 감시 | 높음 |
-| watchdog | `watchdog.events` | 이벤트 핸들러 | 높음 |
-
-### 3.2 플랫폼별 Hidden Imports
-
-| 플랫폼 | 패키지 | 모듈 | 이유 |
-|--------|--------|------|------|
-| Linux | watchdog | `watchdog.observers.inotify` | inotify 기반 감시 |
-| macOS | watchdog | `watchdog.observers.fsevents` | FSEvents 기반 감시 |
-| Windows | watchdog | `watchdog.observers.read_directory_changes_async` | Windows API 기반 감시 |
-| 공통 | watchdog | `watchdog.observers.polling` | 폴링 폴백 |
-
-### 3.3 collect_submodules 활용
-
-효율적인 서브모듈 수집을 위해 PyInstaller 유틸리티 사용:
+spec 파일에서 `collect_submodules`를 사용하여 전체 서브모듈을 자동 수집:
 
 ```python
 from PyInstaller.utils.hooks import collect_submodules
 
-# 전체 서브모듈 수집이 필요한 패키지
-collected_modules = (
-    collect_submodules('pydantic') +
-    collect_submodules('watchdog.observers')
-)
+hidden_imports = []
+
+# Textual 전체 서브모듈 수집 (크기 증가 주의)
+hidden_imports += collect_submodules('textual')
+
+# Pydantic 전체 서브모듈 수집
+hidden_imports += collect_submodules('pydantic')
+
+# Watchdog observers 수집
+hidden_imports += collect_submodules('watchdog.observers')
 ```
 
-**collect_submodules 사용 기준:**
-| 패키지 | 개별 지정 | collect_submodules | 이유 |
-|--------|----------|-------------------|------|
-| pydantic | - | O | 내부 구조 복잡, 버전별 차이 |
-| rich | O | - | 필요 모듈 명확 |
-| watchdog.observers | - | O | 플랫폼별 구현체 자동 포함 |
-| watchdog.events | O | - | 단일 모듈 |
+### 4.3 권장 접근 방식
 
----
+**선택지 비교**:
 
-## 4. 구현 설계
+| 방식 | 장점 | 단점 |
+|------|------|------|
+| 명시적 목록 | 최소 크기 | 누락 가능성 |
+| collect_submodules | 완전성 | 파일 크기 증가 |
+| 혼합 | 균형 | 관리 복잡 |
 
-### 4.1 spec 파일 수정 위치
+**권장**: 혼합 방식
+- Watchdog: `collect_submodules` (플랫폼별 차이)
+- Textual/Pydantic: 명시적 목록 (사용하는 것만)
 
-```
-orchay/orchay.spec
-├── hidden_imports = [...]  ← 수정 대상
-└── Analysis(...)
-```
-
-### 4.2 Hidden Imports 설정 코드
+### 4.4 수정된 spec 파일 (hiddenimports 섹션)
 
 ```python
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
 
-# 동적 로딩 모듈 수집
-pydantic_imports = collect_submodules('pydantic')
-watchdog_observer_imports = collect_submodules('watchdog.observers')
+block_cipher = None
 
-# 명시적 hidden imports
+# 명시적 히든 임포트
 hidden_imports = [
-    # Pydantic 핵심
+    # Pydantic
+    'pydantic',
     'pydantic_core',
+    'pydantic_core._pydantic_core',
+    'pydantic.deprecated.decorator',
+    'pydantic.fields',
+    'pydantic.functional_validators',
+    'pydantic.json_schema',
+    'pydantic.main',
+    'pydantic.config',
 
-    # Rich 콘솔
+    # Textual 핵심 모듈
+    'textual',
+    'textual.app',
+    'textual.screen',
+    'textual.driver',
+    'textual.css.stylesheet',
+    'textual.containers',
+    'textual.message',
+    'textual.binding',
+    'textual.widgets',
+    'textual.widgets._data_table',
+    'textual.widgets._header',
+    'textual.widgets._footer',
+    'textual.widgets._input',
+    'textual.widgets._static',
+    'textual.widgets._rich_log',
+    'textual.widgets._option_list',
+
+    # Rich
+    'rich',
     'rich.console',
     'rich.table',
     'rich.text',
+    'rich.panel',
     'rich.style',
+    'rich.theme',
 
-    # Watchdog 이벤트
-    'watchdog.events',
-
-    # collect_submodules로 수집된 모듈 병합
-    *pydantic_imports,
-    *watchdog_observer_imports,
+    # PyYAML
+    'yaml',
 ]
+
+# Watchdog은 플랫폼별 차이가 크므로 collect_submodules 사용
+hidden_imports += collect_submodules('watchdog.observers')
 ```
-
-### 4.3 검증 방법
-
-**빌드 후 검증 단계:**
-
-1. **Import 테스트 스크립트:**
-```python
-# verify_imports.py
-import pydantic
-from pydantic import BaseModel
-from rich.console import Console
-from rich.table import Table
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-
-print("All imports successful")
-```
-
-2. **실행 테스트:**
-```bash
-./dist/orchay --help
-./dist/orchay --dry-run
-```
-
-3. **런타임 오류 확인:**
-- Pydantic 모델 검증 동작
-- Rich 테이블 출력 정상
-- Watchdog 파일 감시 정상
 
 ---
 
-## 5. 의존성 및 제약사항
+## 5. 검증 계획
 
-### 5.1 의존성
+### 5.1 빌드 전 검증
 
-| 의존 항목 | 이유 | 상태 |
-|----------|------|------|
-| TSK-02-01 | spec 파일 기본 구조 필요 | 대기 |
+```bash
+# import 테스트
+python -c "
+from pydantic import BaseModel
+from textual.app import App
+from textual.widgets import DataTable, Header, Footer
+from watchdog.observers import Observer
+from rich.console import Console
+print('All imports OK')
+"
+```
 
-### 5.2 제약 사항
+### 5.2 빌드 후 검증
 
-| 제약 | 설명 | 대응 방안 |
-|------|------|----------|
-| pydantic 버전 | V2와 V1 호환 모듈 구조 다름 | pydantic>=2.0 가정 |
-| 플랫폼 특성 | 각 OS별 watchdog 구현체 상이 | collect_submodules로 전체 포함 |
-| 빌드 크기 증가 | 불필요 모듈 포함 가능 | excludes로 제외 목록 관리 |
+```bash
+# 빌드
+cd orchay
+pyinstaller orchay.spec
+
+# 실행 테스트
+./dist/orchay --help
+
+# import 오류 확인
+./dist/orchay 2>&1 | grep -i "ModuleNotFoundError"
+```
+
+### 5.3 플랫폼별 검증
+
+| 플랫폼 | 검증 항목 |
+|--------|----------|
+| Linux | inotify observer 동작 |
+| macOS | fsevents observer 동작 |
+| Windows | read_directory_changes observer 동작 |
 
 ---
 
 ## 6. 수용 기준
 
-### 6.1 기능적 요구사항
-
-| ID | 요구사항 | 검증 방법 |
-|----|----------|----------|
-| AC-01 | 빌드된 실행 파일에서 import 오류 없음 | `./dist/orchay --help` 정상 실행 |
-| AC-02 | 모든 Pydantic 모델 정상 동작 | Config, Task 모델 로드 성공 |
-| AC-03 | Rich 콘솔 출력 정상 | 테이블, 컬러 출력 확인 |
-| AC-04 | Watchdog 파일 감시 정상 | WBS 파일 변경 감지 확인 |
-
-### 6.2 비기능적 요구사항
-
-| ID | 요구사항 | 기준 |
-|----|----------|------|
-| NF-01 | 빌드 시간 | 기존 대비 10% 이내 증가 |
-| NF-02 | 실행 파일 크기 | 30MB 이하 |
+| ID | 기준 | 검증 방법 |
+|----|------|----------|
+| AC-01 | 빌드된 실행 파일에서 import 오류 없음 | `./dist/orchay --help` 실행 |
+| AC-02 | 모든 Pydantic 모델 정상 동작 | Config, Task, Worker 모델 생성 |
+| AC-03 | Textual UI 정상 렌더링 | TUI 화면 표시 |
+| AC-04 | Watchdog 파일 감시 동작 | wbs.md 변경 감지 |
 
 ---
 
-## 7. 체크리스트
+## 7. 리스크 및 대응
 
-### 7.1 설계 완료 확인
+| 리스크 | 영향 | 대응 |
+|--------|------|------|
+| 누락된 hidden import | 런타임 오류 | 오류 메시지로 추가 후 재빌드 |
+| collect_submodules 크기 증가 | 파일 크기 +10-20MB | 명시적 목록으로 전환 |
+| 플랫폼별 차이 | 특정 OS에서 오류 | CI/CD에서 3개 플랫폼 테스트 |
 
-- [x] 문제 정의 및 목적 명확화
-- [x] 대상 패키지 분석 완료
-- [x] Hidden imports 명세 완료
-- [x] 구현 설계 완료
-- [x] 수용 기준 정의 완료
+---
 
-### 7.2 구현 준비
+## 8. 의존성
 
-- [x] 의존성 확인 완료
-- [x] 제약 사항 검토 완료
-- [ ] TSK-02-01 완료 대기
+| Task | 상태 | 관계 |
+|------|------|------|
+| TSK-02-01 | [dd] | spec 파일 기본 구조 제공 |
+| TSK-02-03 | [ ] | 데이터 파일 설정 후 통합 |
+| TSK-02-04 | [ ] | 빌드 테스트로 검증 |
 
 ---
 
 ## 변경 이력
 
-| 버전 | 일자 | 작성자 | 변경 내용 |
-|------|------|--------|----------|
-| 1.0 | 2025-12-30 | Claude | 최초 작성 |
+| 버전 | 날짜 | 변경 내용 |
+|------|------|-----------|
+| 1.0 | 2025-12-30 | 초기 통합설계 작성 |
