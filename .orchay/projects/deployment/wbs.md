@@ -158,7 +158,7 @@
 ### TSK-02-04: 로컬 빌드 테스트 (Linux)
 - category: development
 - domain: qa
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
