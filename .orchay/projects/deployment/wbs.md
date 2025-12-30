@@ -20,7 +20,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: detail-design [dd]
+- status: implement [im]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -45,7 +45,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: detail_design [dd]
+- status: [ap]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -69,7 +69,7 @@
 
 - category: development
 - domain: backend
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -100,7 +100,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -125,7 +125,7 @@
 
 - category: development
 - domain: backend
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -149,7 +149,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: medium
 - assignee: -
 - schedule: 2025-12-29
@@ -173,7 +173,7 @@
 
 - category: development
 - domain: qa
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -197,7 +197,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: low
 - assignee: -
 - schedule: 2025-12-30
@@ -229,7 +229,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
@@ -255,7 +255,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
@@ -279,7 +279,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: detail-design [dd]
+- status: [ap]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
@@ -311,7 +311,7 @@
 
 - category: infrastructure
 - domain: docs
-- status: detail-design [dd]
+- status: [ap]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-01
@@ -336,7 +336,7 @@
 
 - category: development
 - domain: qa
-- status: detail-design [dd]
+- status: [ap]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-02

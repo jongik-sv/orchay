@@ -33,9 +33,11 @@ import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
+from typing import Any, cast
 
 # 플랫폼별 설치 안내
-INSTALL_GUIDE = {
+INSTALL_GUIDE: dict[str, dict[str, str]] = {
     "wezterm": {
         "Windows": "winget install wez.wezterm",
         "Linux": "sudo apt install wezterm  # https://wezfurlong.org/wezterm/install/linux.html",
@@ -61,7 +63,7 @@ def check_dependency(cmd: str) -> bool:
 
 def check_all_dependencies() -> list[str]:
     """모든 의존성 체크 후 누락된 것들 반환."""
-    missing = []
+    missing: list[str] = []
     for dep in ["wezterm", "claude", "uv"]:
         if not check_dependency(dep):
             missing.append(dep)
@@ -79,10 +81,44 @@ def print_install_guide(missing: list[str]) -> None:
     print()
 
 
+def _get_project_dir() -> Path:
+    """pyproject.toml이 위치한 프로젝트 디렉토리 반환.
+
+    Returns:
+        Path: orchay 패키지 루트 디렉토리 (pyproject.toml 위치)
+
+    Note:
+        - 일반 실행: __file__ (src/orchay/launcher.py) 기준 3단계 상위
+        - PyInstaller frozen: 실행 파일 위치 기준
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller frozen 환경: 실행 파일 위치
+        return Path(sys.executable).parent
+    else:
+        # 일반 실행: src/orchay/launcher.py → orchay/
+        # __file__: orchay/src/orchay/launcher.py
+        # parent[0]: orchay/src/orchay/
+        # parent[1]: orchay/src/
+        # parent[2]: orchay/ (프로젝트 루트)
+        return Path(__file__).resolve().parent.parent.parent
+
+
 def get_orchay_cmd() -> str:
-    """orchay 실행 명령 반환 (uv run 사용)."""
-    launcher_dir = os.path.dirname(os.path.abspath(__file__))
-    return f"uv run --project {launcher_dir} python -m orchay"
+    """orchay 실행 명령 반환.
+
+    Returns:
+        str: orchay 실행 명령 문자열
+
+    Note:
+        - 일반 실행: uv run --project {project_dir} python -m orchay
+        - PyInstaller frozen: 직접 실행 (uv 없이)
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller frozen 환경: 직접 실행
+        return str(Path(sys.executable))
+    else:
+        project_dir = _get_project_dir()
+        return f"uv run --project {project_dir} python -m orchay"
 
 
 def show_orchay_help() -> int:
@@ -129,6 +165,9 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
 
     launcher 전용: --scheduler-cols, --worker-cols, --font-size
     orchay 전달: project, -w, -m, --dry-run 등
+
+    Returns:
+        tuple: (launcher_args, orchay_args)
     """
     parser = argparse.ArgumentParser(add_help=False)
     # launcher 전용 옵션 (WezTerm 레이아웃 관련)
@@ -196,8 +235,50 @@ def main() -> int:
     # launcher 전용 인자와 나머지 분리
     launcher_args, orchay_args = parse_args()
 
-    # orchay_args에서 -w 값 추출 (WezTerm 레이아웃용)
-    workers = 3  # 기본값
+    # 1. 파일 설정 로드 (.orchay/settings/orchay.yaml)
+    file_config: dict[str, Any] = {}
+    cwd = os.getcwd()
+    for parent in [cwd, *[str(p) for p in Path(cwd).parents]]:
+        yaml_path = Path(parent) / ".orchay" / "settings" / "orchay.yaml"
+        if yaml_path.exists():
+            try:
+                import yaml
+
+                with open(yaml_path, encoding="utf-8") as f:
+                    file_config = yaml.safe_load(f) or {}
+                print(f"[launcher] 설정 로드: {yaml_path}")
+            except Exception as e:
+                print(f"[launcher] 설정 로드 실패: {e}")
+            break
+
+    # 파일에서 workers 로드
+    workers_config = file_config.get("workers", 3)
+    workers = int(workers_config) if isinstance(workers_config, (int, str)) else 3
+
+    # 파일에서 launcher 설정 로드 (CLI 기본값 override)
+    launcher_config_raw = file_config.get("launcher", {})
+    if isinstance(launcher_config_raw, dict):
+        launcher_config = cast(dict[str, Any], launcher_config_raw)
+        width_val = launcher_config.get("width")
+        if isinstance(width_val, (int, float)):
+            launcher_args.width = int(width_val)
+        height_val = launcher_config.get("height")
+        if isinstance(height_val, (int, float)):
+            launcher_args.height = int(height_val)
+        max_rows_val = launcher_config.get("max_rows")
+        if isinstance(max_rows_val, (int, float)):
+            launcher_args.max_rows = int(max_rows_val)
+        scheduler_cols_val = launcher_config.get("scheduler_cols")
+        if isinstance(scheduler_cols_val, (int, float)):
+            launcher_args.scheduler_cols = int(scheduler_cols_val)
+        worker_cols_val = launcher_config.get("worker_cols")
+        if isinstance(worker_cols_val, (int, float)):
+            launcher_args.worker_cols = int(worker_cols_val)
+        font_size_val = launcher_config.get("font_size")
+        if isinstance(font_size_val, (int, float)):
+            launcher_args.font_size = float(font_size_val)
+
+    # 2. CLI 인자로 override (-w 또는 --workers)
     for i, arg in enumerate(orchay_args):
         if arg in ("-w", "--workers") and i + 1 < len(orchay_args):
             with contextlib.suppress(ValueError):
