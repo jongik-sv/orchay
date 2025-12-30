@@ -147,16 +147,19 @@ def _get_bundled_file(filename: str) -> Path:
 
     Note:
         - PyInstaller One-file 모드: sys._MEIPASS (임시 추출 폴더)
-        - PyInstaller One-folder 모드: sys.executable.parent
+        - PyInstaller One-folder 모드: exe폴더/_internal/ (PyInstaller 6.x)
         - 일반 실행: 프로젝트 루트
     """
     if getattr(sys, "frozen", False):
         # PyInstaller frozen 환경
-        # One-file 모드: _MEIPASS가 임시 추출 폴더
-        # One-folder 모드: _MEIPASS가 실행 파일 폴더
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
+            # _MEIPASS가 있으면 그 경로 사용 (One-file 또는 One-folder 6.x)
             return Path(meipass) / filename
+        # fallback: 실행 파일 옆의 _internal 폴더
+        internal_path = Path(sys.executable).parent / "_internal" / filename
+        if internal_path.exists():
+            return internal_path
         return Path(sys.executable).parent / filename
     else:
         # 일반 실행: 프로젝트 루트

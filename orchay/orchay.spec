@@ -102,23 +102,31 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
-# One-file 모드 (단일 실행 파일 배포)
+# One-folder 모드 (폴더 배포)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='orchay',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    upx_exclude=upx_exclude,  # TSK-02-05: UPX 압축 제외 목록 적용
+    upx=False,
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=upx_exclude,
+    name='orchay',
 )
