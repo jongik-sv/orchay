@@ -20,7 +20,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: implement [im]
+- status: verify [vf]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -45,7 +45,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: [ap]
+- status: implement [im]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
