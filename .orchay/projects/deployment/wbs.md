@@ -63,7 +63,7 @@
 ### TSK-01-03: __main__.py 수정
 - category: development
 - domain: backend
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
