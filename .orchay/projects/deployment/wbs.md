@@ -69,7 +69,7 @@
 
 - category: development
 - domain: backend
-- status: [ ]
+- status: detail-design [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
