@@ -257,8 +257,8 @@ config.cursor_blink_rate = 500
 config.enable_csi_u_key_encoding = false
 -- Platform-specific default shell
 if wezterm.target_triple:find('windows') then
-  -- Windows: PowerShell with UTF-8
-  config.default_prog = { 'powershell.exe', '-NoLogo', '-Command', '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; claude --dangerously-skip-permissions' }
+  -- Windows: PowerShell with UTF-8 (일반 쉘로 시작, claude는 launcher가 실행)
+  config.default_prog = { 'powershell.exe', '-NoLogo' }
 else
   -- Linux/macOS: default shell (bash/zsh)
   -- config.default_prog은 설정하지 않으면 기본 로그인 셸 사용

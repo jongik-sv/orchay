@@ -178,26 +178,6 @@ def show_orchay_help() -> int:
         return result.returncode
 
 
-def _create_layout_config(workers: int) -> list[int]:
-    """Worker 수에 따른 레이아웃 구성 반환.
-
-    Args:
-        workers: Worker pane 개수 (1-6)
-
-    Returns:
-        list[int]: 각 열의 Worker 수 (예: [3] = 1열 3개, [2,2] = 2열 각 2개)
-    """
-    layout_map: dict[int, list[int]] = {
-        1: [1],
-        2: [2],
-        3: [3],
-        4: [2, 2],
-        5: [3, 2],
-        6: [3, 3],
-    }
-    return layout_map[min(workers, 6)]
-
-
 def kill_mux_server() -> None:
     """기존 mux-server 종료 및 완전히 종료될 때까지 대기."""
     log.debug("kill_mux_server() called")
@@ -241,214 +221,6 @@ def kill_mux_server() -> None:
     log.debug("Waiting 1s for processes to terminate...")
     time.sleep(1)
     log.debug("kill_mux_server() completed")
-
-
-# =============================================================================
-# Windows 전용: gui-startup 이벤트 방식
-# =============================================================================
-
-
-def launch_wezterm_windows(
-    cwd: str,
-    workers: int,
-    full_orchay_cmd_list: list[str],
-    launcher_args: argparse.Namespace,
-) -> int:
-    """Windows 전용 WezTerm 레이아웃 생성.
-
-    Windows에서는 CLI 소켓 연결 문제가 있어 gui-startup 이벤트를 사용합니다.
-    설정 파일을 생성하고 WezTerm을 시작하면, ~/.wezterm.lua의 gui-startup
-    이벤트에서 레이아웃을 생성합니다.
-
-    Args:
-        cwd: 현재 작업 디렉토리
-        workers: Worker pane 개수
-        full_orchay_cmd_list: 스케줄러 실행 명령 리스트
-        launcher_args: launcher 설정 인자
-
-    Returns:
-        int: 종료 코드 (0: 성공)
-
-    Note:
-        - CLI 소켓 연결 문제 참고: https://github.com/wezterm/wezterm/issues/4456
-        - gui-startup 이벤트 문서: https://wezterm.org/config/lua/gui-events/gui-startup.html
-    """
-    import json
-
-    # 1. 설정 파일 생성 (~/.config/wezterm/orchay-startup.json)
-    wezterm_config_dir = Path.home() / ".config" / "wezterm"
-    wezterm_config_dir.mkdir(parents=True, exist_ok=True)
-    startup_file = wezterm_config_dir / "orchay-startup.json"
-
-    startup_config = {
-        "cwd": cwd,
-        "workers": workers,
-        "scheduler_cmd": " ".join(full_orchay_cmd_list),
-    }
-
-    with open(startup_file, "w", encoding="utf-8") as f:
-        json.dump(startup_config, f, ensure_ascii=False)
-
-    log.info(f"Created startup config: {startup_file}")
-    log.info(f"  cwd={cwd}")
-    log.info(f"  workers={workers}")
-    log.info(f"  scheduler_cmd={' '.join(full_orchay_cmd_list)}")
-
-    # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
-    wezterm_launch_args = ["wezterm", "start", "--cwd", cwd]
-    log.debug(f"Popen: {wezterm_launch_args}")
-    proc = subprocess.Popen(
-        wezterm_launch_args,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-    )
-    log.debug(f"WezTerm process started, PID: {proc.pid}")
-
-    log.info("=" * 60)
-    log.info("Launcher completed - WezTerm gui-startup will create layout")
-    log.info("=" * 60)
-    return 0
-
-
-# =============================================================================
-# Linux/macOS 전용: CLI 방식
-# =============================================================================
-
-
-def launch_wezterm_linux(
-    cwd: str,
-    workers: int,
-    full_orchay_cmd_list: list[str],
-    launcher_args: argparse.Namespace,
-) -> int:
-    """Linux/macOS 전용 WezTerm 레이아웃 생성.
-
-    Linux에서는 CLI 소켓 연결이 안정적이므로 wezterm cli 명령을 사용합니다.
-
-    Args:
-        cwd: 현재 작업 디렉토리
-        workers: Worker pane 개수
-        full_orchay_cmd_list: 스케줄러 실행 명령 리스트
-        launcher_args: launcher 설정 인자
-
-    Returns:
-        int: 종료 코드 (0: 성공)
-    """
-    wezterm_cmd = "wezterm"
-
-    # 1. WezTerm 시작
-    wezterm_launch_args = [wezterm_cmd]
-    log.debug(f"Popen: {wezterm_launch_args}")
-    proc = subprocess.Popen(wezterm_launch_args, start_new_session=True)
-    log.debug(f"WezTerm process started, PID: {proc.pid}")
-    log.info("Waiting for WezTerm to start (2s)...")
-    time.sleep(2)
-    log.debug("Wait complete")
-
-    # 2. 창 크기 조절 (wmctrl 사용)
-    if shutil.which("wmctrl"):
-        resize_cmd = [
-            "wmctrl", "-r", ":ACTIVE:", "-e",
-            f"0,0,0,{launcher_args.width},{launcher_args.height}"
-        ]
-        log.debug(f"Resize command: {resize_cmd}")
-        resize_result = subprocess.run(resize_cmd, capture_output=True, text=True)
-        log.debug(f"Resize result: returncode={resize_result.returncode}")
-
-    # 3. 레이아웃 생성
-    layout = _create_layout_config(workers)
-    column_first_panes: list[int] = []
-    column_panes: list[list[int]] = [[] for _ in layout]
-
-    log.info(f"Creating layout: {'/'.join(map(str, layout))}")
-
-    # 3-1. 각 열의 첫 번째 Worker 생성 (수평 분할)
-    for col in range(len(layout)):
-        if col == 0:
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", "0",
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
-            ]
-        else:
-            target_pane = column_first_panes[col - 1]
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", str(target_pane),
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
-            ]
-
-        log.debug(f"Split command (col {col}): {split_cmd}")
-        result = subprocess.run(split_cmd, capture_output=True, text=True)
-        log.debug(f"Split result: returncode={result.returncode}, stdout={result.stdout}")
-
-        if result.returncode != 0:
-            log.error(f"열 {col + 1} 생성 실패: {result.stderr}")
-            break
-
-        try:
-            pane_id = int(result.stdout.strip())
-            column_first_panes.append(pane_id)
-            column_panes[col].append(pane_id)
-            log.debug(f"Created pane {pane_id} for column {col}")
-        except ValueError:
-            log.error(f"pane ID 파싱 실패: {result.stdout}")
-            break
-
-    # 3-2. 각 열 내에서 수직 분할 (균등 분할)
-    log.debug("Starting vertical splits...")
-    for col, workers_in_col in enumerate(layout):
-        if col >= len(column_first_panes):
-            break
-        current_pane_id = column_first_panes[col]
-
-        for row in range(1, workers_in_col):
-            remaining = workers_in_col - row
-            percent = int(remaining / (remaining + 1) * 100)
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--bottom", "--percent", str(percent),
-                "--pane-id", str(current_pane_id),
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
-            ]
-            log.debug(f"Vertical split command (col {col}, row {row}): {split_cmd}")
-            result = subprocess.run(split_cmd, capture_output=True, text=True)
-            log.debug(f"Vertical split result: returncode={result.returncode}")
-
-            if result.returncode != 0:
-                log.error(f"pane 생성 실패: {result.stderr}")
-            else:
-                with contextlib.suppress(ValueError):
-                    current_pane_id = int(result.stdout.strip())
-                    column_panes[col].append(current_pane_id)
-
-    # 4. Worker 번호 로그
-    worker_num = 1
-    for col_panes in column_panes:
-        for pane_id in col_panes:
-            log.info(f"Worker {worker_num}: pane {pane_id}")
-            worker_num += 1
-
-    log.debug("Waiting 1s before sending scheduler command...")
-    time.sleep(1)
-
-    # 5. 스케줄러 명령 전송
-    log.info("Sending scheduler command to pane 0...")
-    orchay_cmd_str = " ".join(full_orchay_cmd_list)
-    full_cmd_str = f"cd {shlex.quote(cwd)} && {orchay_cmd_str}\n"
-
-    send_text_cmd = [
-        wezterm_cmd, "cli", "send-text", "--pane-id", "0", "--no-paste", full_cmd_str
-    ]
-    log.debug(f"Send text command: {send_text_cmd}")
-    result = subprocess.run(send_text_cmd, capture_output=True, text=True)
-    log.debug(f"Send text result: returncode={result.returncode}")
-
-    if result.returncode != 0:
-        log.error(f"Error sending command: {result.stderr}")
-    else:
-        log.info("Scheduler started successfully")
-
-    log.info("=" * 60)
-    log.info("Launcher completed successfully")
-    log.info("=" * 60)
-    return 0
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
@@ -626,13 +398,149 @@ def main() -> int:
     log.info(f"  Max rows per column: {launcher_args.max_rows}")
     log.info(f"  Command: {' '.join(full_orchay_cmd_list)}")
 
-    # 플랫폼별 분기
-    # - Windows: gui-startup 이벤트 방식 (CLI 소켓 연결 문제 회피)
-    # - Linux/macOS: CLI 방식 (안정적)
+    # wezterm 명령
+    wezterm_cmd = "wezterm"
+
+    # WezTerm 시작 (독립 세션으로 분리하여 launcher 종료 시 영향 안 받음)
+    # Windows에서는 리스트 형식을 더 선호함
+    wezterm_launch_args = [wezterm_cmd]
+    log.debug(f"Popen: {wezterm_launch_args}")
+    proc = subprocess.Popen(wezterm_launch_args, start_new_session=True)
+    log.debug(f"WezTerm process started, PID: {proc.pid}")
+    log.info("Waiting for WezTerm to start (2s)...")
+    time.sleep(2)
+    log.debug("Wait complete")
+
+    # 창 크기 조절 (wmctrl 사용 - Linux 전용)
+    if platform.system() != "Windows" and shutil.which("wmctrl"):
+        resize_cmd = ["wmctrl", "-r", ":ACTIVE:", "-e", f"0,0,0,{launcher_args.width},{launcher_args.height}"]
+        log.debug(f"Resize command: {resize_cmd}")
+        resize_result = subprocess.run(resize_cmd, capture_output=True, text=True)
+        log.debug(f"Resize result: returncode={resize_result.returncode}, stderr={resize_result.stderr}")
+
+    # 레이아웃 생성:
+    # Workers 1-3:                    Workers 4-6:
+    # +----------+--------+           +----------+--------+--------+
+    # |          | W1     |           |          | W1     | W4     |
+    # | Sched    +--------+           | Sched    +--------+--------+
+    # |          | W2     |           |          | W2     | W5     |
+    # |          +--------+           |          +--------+--------+
+    # |          | W3     |           |          | W3     | W6     |
+    # +----------+--------+           +----------+--------+--------+
+
+    # Claude Code 명령 (권한 확인 스킵)
+    claude_cmd = "claude --dangerously-skip-permissions"
+
+    # 배치 레이아웃: workers -> [열1개수, 열2개수]
+    # 1-3: 세로 1열, 4: 2/2, 5: 3/2, 6: 3/3, 7+: 최대 6개
+    layout_map: dict[int, list[int]] = {
+        1: [1],
+        2: [2],
+        3: [3],
+        4: [2, 2],
+        5: [3, 2],
+        6: [3, 3],
+    }
+    workers = min(workers, 6)  # 최대 6개
+    layout = layout_map[workers]
+
+    column_first_panes: list[int] = []  # 각 열의 첫 번째 pane ID
+    column_panes: list[list[int]] = [[] for _ in layout]  # 각 열의 모든 pane ID
+
+    log.info(f"Creating layout: {'/'.join(map(str, layout))}")
+
+    # 1단계: 각 열의 첫 번째 worker 생성 (수평 분할)
+    for col in range(len(layout)):
+        if col == 0:
+            split_cmd = [
+                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", "0",
+                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+            ]
+        else:
+            target_pane = column_first_panes[col - 1]
+            split_cmd = [
+                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", str(target_pane),
+                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+            ]
+
+        log.debug(f"Split command (col {col}): {split_cmd}")
+        result = subprocess.run(split_cmd, capture_output=True, text=True)
+        log.debug(f"Split result: returncode={result.returncode}, stdout={result.stdout}, stderr={result.stderr}")
+        if result.returncode != 0:
+            log.error(f"열 {col + 1} 생성 실패: {result.stderr}")
+            break
+
+        try:
+            pane_id = int(result.stdout.strip())
+            column_first_panes.append(pane_id)
+            column_panes[col].append(pane_id)
+            log.debug(f"Created pane {pane_id} for column {col}")
+        except ValueError:
+            log.error(f"pane ID 파싱 실패: {result.stdout}")
+            break
+
+    # 2단계: 각 열 내에서 수직 분할 (균등 분할)
+    log.debug("Starting vertical splits...")
+    for col, workers_in_col in enumerate(layout):
+        if col >= len(column_first_panes):
+            break
+        current_pane_id = column_first_panes[col]
+
+        for row in range(1, workers_in_col):
+            # 균등 분할을 위한 비율 계산
+            # 예: 3개 분할 시 첫 분할은 67% (2/3), 두 번째는 50% (1/2)
+            remaining = workers_in_col - row
+            percent = int(remaining / (remaining + 1) * 100)
+            split_cmd = [
+                wezterm_cmd, "cli", "split-pane", "--bottom", "--percent", str(percent),
+                "--pane-id", str(current_pane_id),
+                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+            ]
+            log.debug(f"Vertical split command (col {col}, row {row}): {split_cmd}")
+            result = subprocess.run(split_cmd, capture_output=True, text=True)
+            log.debug(f"Vertical split result: returncode={result.returncode}")
+            if result.returncode != 0:
+                log.error(f"pane 생성 실패: {result.stderr}")
+            else:
+                with contextlib.suppress(ValueError):
+                    current_pane_id = int(result.stdout.strip())
+                    column_panes[col].append(current_pane_id)
+
+    # Worker 번호 출력 (왼쪽 위부터 아래로, 그 다음 오른쪽)
+    worker_num = 1
+    for col_panes in column_panes:
+        for pane_id in col_panes:
+            log.info(f"Worker {worker_num}: pane {pane_id}")
+            worker_num += 1
+
+    log.debug("Waiting 1s before sending scheduler command...")
+    time.sleep(1)
+
+    # pane 0에 스케줄러 명령 전송
+    log.info("Sending scheduler command to pane 0...")
+    # pane 0은 홈 디렉토리에서 시작하므로, cd로 프로젝트 디렉토리로 이동 후 명령 실행
+    orchay_cmd_str = " ".join(full_orchay_cmd_list)
     if platform.system() == "Windows":
-        return launch_wezterm_windows(cwd, workers, full_orchay_cmd_list, launcher_args)
+        # PowerShell: cd path; command (세미콜론으로 연결)
+        full_cmd_str = f"cd {cwd}; {orchay_cmd_str}\n"
     else:
-        return launch_wezterm_linux(cwd, workers, full_orchay_cmd_list, launcher_args)
+        # Linux/macOS: cd path && command
+        full_cmd_str = f"cd {shlex.quote(cwd)} && {orchay_cmd_str}\n"
+    send_text_cmd = [
+        wezterm_cmd, "cli", "send-text", "--pane-id", "0", "--no-paste", full_cmd_str
+    ]
+    log.debug(f"Send text command: {send_text_cmd}")
+    result = subprocess.run(send_text_cmd, capture_output=True, text=True)
+    log.debug(f"Send text result: returncode={result.returncode}, stdout={result.stdout}, stderr={result.stderr}")
+    if result.returncode != 0:
+        log.error(f"Error sending command: {result.stderr}")
+    else:
+        log.info("Scheduler started successfully")
+
+    log.info("=" * 60)
+    log.info("Launcher completed successfully")
+    log.info("=" * 60)
+    return 0
 
 
 if __name__ == "__main__":
