@@ -31,4 +31,4 @@ launcher:
   max_rows: 3 # 열당 최대 worker 수
   scheduler_cols: 100 # 스케줄러 pane 너비 columns
   worker_cols: 120 # Worker pane 너비 columns
-  font_size: 9 # 폰트 크기2
+  font_size: 9 # 폰트 크기

@@ -342,7 +342,22 @@ class Orchestrator:
         # Worker 상태 업데이트 (TaskQueue 할당은 이미 완료됨)
         await dispatch_task(worker, task, self.mode)
 
-        # /clear 전송 (옵션)
+        # 워크플로우 명령 결정 (먼저 확인하여 /clear 낭비 방지)
+        # 형식: /wf:{workflow} {project}/{task_id}
+        # Task 상태에 따라 다음 workflow 결정
+        next_workflow = get_next_workflow_command(task)
+
+        # transition이 없으면 dispatch 안 함 (/clear도 전송하지 않음)
+        if next_workflow is None:
+            console.print(
+                f"[red]Error:[/] {task.id} ({task.status.value}) - "
+                f"다음 transition을 찾을 수 없음 (category: {task.category.value})"
+            )
+            task.assigned_worker = None
+            worker.reset()
+            return
+
+        # /clear 전송 (옵션) - workflow 명령 직전에 한번만
         if self.config.dispatch.clear_before_dispatch:
             try:
                 await wezterm_send_text(worker.pane_id, "/clear")
@@ -352,21 +367,6 @@ class Orchestrator:
                 await wezterm_send_text(worker.pane_id, " ")  # 추천 프롬프트 제거
             except Exception as e:
                 logger.warning(f"Worker {worker.id} /clear 실패: {e}")
-
-        # 워크플로우 명령 전송
-        # 형식: /wf:{workflow} {project}/{task_id}
-        # Task 상태에 따라 다음 workflow 결정
-        next_workflow = get_next_workflow_command(task)
-
-        # transition이 없으면 dispatch 안 함
-        if next_workflow is None:
-            console.print(
-                f"[red]Error:[/] {task.id} ({task.status.value}) - "
-                f"다음 transition을 찾을 수 없음 (category: {task.category.value})"
-            )
-            task.assigned_worker = None
-            worker.reset()
-            return
 
         command = f"/wf:{next_workflow} {self.project_name}/{task.id}"
 

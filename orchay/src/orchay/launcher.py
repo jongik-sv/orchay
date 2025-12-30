@@ -38,16 +38,23 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-# 로그 파일 설정 (즉시 플러시, PID 포함)
-LOG_FILE = Path.home() / f"launcher_debug_{os.getpid()}.log"
+# 로그 파일 설정 (.orchay/logs/ 폴더에 저장)
+def _get_log_file() -> Path:
+    """프로젝트 루트의 .orchay/logs/launcher.log 경로 반환."""
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        orchay_dir = parent / ".orchay"
+        if orchay_dir.is_dir():
+            logs_dir = orchay_dir / "logs"
+            logs_dir.mkdir(exist_ok=True)
+            return logs_dir / "launcher.log"
+    # .orchay 없으면 현재 폴더에 생성
+    return cwd / "launcher.log"
+
+LOG_FILE = _get_log_file()
 
 # 즉시 플러시되는 파일 핸들러
 class FlushFileHandler(logging.FileHandler):
-    def emit(self, record: logging.LogRecord) -> None:
-        super().emit(record)
-        self.flush()
-
-class FlushStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
     def emit(self, record: logging.LogRecord) -> None:
         super().emit(record)
         self.flush()
@@ -56,12 +63,11 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        FlushFileHandler(LOG_FILE, mode="a", encoding="utf-8"),
-        FlushStreamHandler(sys.stdout),
+        FlushFileHandler(LOG_FILE, mode="w", encoding="utf-8"),  # 덮어쓰기 모드
     ],
 )
 log = logging.getLogger("launcher")
-log.info(f"=== NEW LOG SESSION === PID: {os.getpid()}, Log file: {LOG_FILE}")
+log.info(f"=== LAUNCHER START === PID: {os.getpid()}")
 
 # 플랫폼별 설치 안내
 INSTALL_GUIDE: dict[str, dict[str, str]] = {
@@ -261,6 +267,21 @@ def main() -> int:
     log.info(f"Log file: {LOG_FILE}")
     log.info("=" * 60)
 
+    # 서브커맨드 감지: run, exec, history는 cli.py로 위임
+    # launcher는 WezTerm 레이아웃을 생성하는 경우에만 실행 (서브커맨드 없이 호출)
+    cli_subcommands = {"run", "exec", "history"}
+    if len(sys.argv) > 1 and sys.argv[1] in cli_subcommands:
+        log.info(f"Delegating to cli.py: {sys.argv[1]}")
+        try:
+            from orchay.cli import cli_main
+        except ModuleNotFoundError:
+            # 직접 실행 시 (python launcher.py) - 패키지 경로 추가
+            src_dir = Path(__file__).resolve().parent.parent  # orchay/src/
+            if str(src_dir) not in sys.path:
+                sys.path.insert(0, str(src_dir))
+            from orchay.cli import cli_main
+        return cli_main()
+
     # 의존성 체크
     log.debug("Checking dependencies...")
     missing = check_all_dependencies()
@@ -344,11 +365,12 @@ def main() -> int:
     cwd = os.getcwd()
 
     # 0번 pane에서 실행할 명령 구성
+    # launcher가 pane 0에 보낼 때 "run" 서브커맨드를 추가 → cli.py가 처리 → main.py 실행
     orchay_base_cmd = get_orchay_cmd().split()
     # 주의: cd와 &&는 쉘 기능이므로, wezterm cli에서 직접 실행하기 보다
     # wezterm 시작 시 --cwd를 사용하거나, send-text에서 처리해야 함.
     # 여기서는 orchay 실행 인자만 모음.
-    full_orchay_cmd_list = orchay_base_cmd + orchay_args
+    full_orchay_cmd_list = orchay_base_cmd + ["run"] + orchay_args
 
     log.info("Killing existing WezTerm processes...")
     kill_mux_server()

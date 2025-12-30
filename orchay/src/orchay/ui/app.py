@@ -404,7 +404,7 @@ class OrchayApp(App[None]):
         Binding("f5", "reload", "Reload"),
         Binding("f6", "show_history", "History"),
         Binding("f7", "toggle_mode", "Mode"),
-        Binding("f9", "pause", "Pause"),
+        Binding("f9", "pause", "Start"),  # 초기값: Start (start_paused 기본 가정, __init__에서 업데이트)
         Binding("f10", "quit", "Exit"),
         Binding("q", "quit", "Quit"),
         Binding("escape", "close_modal", "Close", show=False),
@@ -981,17 +981,33 @@ class OrchayApp(App[None]):
             refresh: True면 refresh_bindings() 호출 (마운트 후에만 가능)
         """
         label = self._get_f9_label()
+        logging.debug(f"[F9] _paused={self._paused}, _ever_started={self._ever_started}, label={label}")
 
-        # BINDINGS 리스트에서 F9 찾아서 교체
+        # BINDINGS 리스트에서 F9 찾아서 교체 (클래스 레벨)
         for i, binding in enumerate(type(self).BINDINGS):
             if isinstance(binding, Binding) and binding.key == "f9":
                 type(self).BINDINGS[i] = Binding("f9", "pause", label)
+                logging.debug(f"[F9] Updated BINDINGS[{i}] to '{label}'")
                 break
 
         if refresh:
             try:
+                # 인스턴스 바인딩도 업데이트
+                new_binding = Binding("f9", "pause", label)
+                self._bindings.bind(
+                    new_binding.key,
+                    new_binding.action,
+                    new_binding.description,
+                    show=new_binding.show,
+                    key_display=new_binding.key_display,
+                    priority=new_binding.priority,
+                )
+                # Footer에 바인딩 변경 알림
                 self.refresh_bindings()
-            except Exception:
+                footer = self.query_one(Footer)
+                footer.refresh(layout=True)
+            except Exception as e:
+                logging.debug(f"[F9] refresh failed: {e}")
                 pass  # 아직 마운트 전이면 무시
 
     def action_pause(self) -> None:

@@ -111,6 +111,7 @@ async def filter_executable_tasks(
         BR-05: develop/quick: 구현 단계에서 의존성 검사
         BR-06: force 모드: 의존성 무시
         BR-07: 우선순위 정렬: critical > high > medium > low
+        BR-08: transition이 없는 Task 제외 (수동 완료 대상)
     """
     # 전체 Task를 딕셔너리로 변환 (의존성 검사용)
     all_tasks_dict = {t.id: t for t in tasks}
@@ -128,6 +129,10 @@ async def filter_executable_tasks(
 
         # BR-03: 이미 할당된 Task 제외
         if task.assigned_worker is not None:
+            continue
+
+        # BR-08: transition이 없는 Task 제외 (수동 완료 대상)
+        if get_next_workflow_command(task) is None:
             continue
 
         # 모드별 필터링
