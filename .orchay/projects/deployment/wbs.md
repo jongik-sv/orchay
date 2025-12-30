@@ -91,7 +91,7 @@
 ### TSK-02-01: PyInstaller spec 파일 생성
 - category: infrastructure
 - domain: devops
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
