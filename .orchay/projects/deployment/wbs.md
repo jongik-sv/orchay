@@ -311,7 +311,7 @@
 
 - category: infrastructure
 - domain: docs
-- status: [ ]
+- status: detail-design [dd]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-01
