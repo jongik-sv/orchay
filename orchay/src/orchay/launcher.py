@@ -280,10 +280,21 @@ def launch_wezterm_windows(
     wezterm_config_dir.mkdir(parents=True, exist_ok=True)
     startup_file = wezterm_config_dir / "orchay-startup.json"
 
+    # 스케줄러 pane 비율 계산 (scheduler_cols / (scheduler_cols + worker_cols))
+    scheduler_cols = launcher_args.scheduler_cols
+    worker_cols = launcher_args.worker_cols
+    scheduler_ratio = scheduler_cols / (scheduler_cols + worker_cols)
+
     startup_config = {
         "cwd": cwd,
         "workers": workers,
         "scheduler_cmd": " ".join(full_orchay_cmd_list),
+        # launcher 설정 추가
+        "width": launcher_args.width,
+        "height": launcher_args.height,
+        "max_rows": launcher_args.max_rows,
+        "scheduler_ratio": round(scheduler_ratio, 2),  # 스케줄러 pane 비율
+        "font_size": launcher_args.font_size,
     }
 
     with open(startup_file, "w", encoding="utf-8") as f:
@@ -295,7 +306,10 @@ def launch_wezterm_windows(
     log.info(f"  scheduler_cmd={' '.join(full_orchay_cmd_list)}")
 
     # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
-    wezterm_launch_args = ["wezterm", "start", "--cwd", cwd]
+    # --config-file로 orchay 전용 설정 파일 사용 (사용자 ~/.wezterm.lua 불필요)
+    # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
+    config_file = _get_project_dir() / "wezterm-orchay-windows.lua"
+    wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
     log.debug(f"Popen: {wezterm_launch_args}")
     proc = subprocess.Popen(
         wezterm_launch_args,
