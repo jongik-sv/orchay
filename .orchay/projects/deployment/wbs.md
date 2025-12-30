@@ -197,7 +197,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: [ ]
+- status: detail-design [dd]
 - priority: low
 - assignee: -
 - schedule: 2025-12-30
@@ -309,7 +309,7 @@
 
 ### TSK-04-01: README 설치 가이드 작성
 
-- category: documentation
+- category: infrastructure
 - domain: docs
 - status: [ ]
 - priority: medium
