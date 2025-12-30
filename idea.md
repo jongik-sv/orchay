@@ -28,14 +28,6 @@ python C:\project\orchay_flutter\orchay\launcher.py
 
   - script, settings, templates
 
-  python ./orchay/launcher.py orchay_web -w 3 --web --port 8080 --font-size 9
-
-PS C:\project\jjiban_flutter> python C:\project\jjiban_flutter\orchay\launcher.py orchay_web -w 3
-
-http://localhost:3000/wbs
-
-orchay_web 과 프로젝트 합치고 orchay의 웹 기능은 삭제하자. 각자 잘하는것만 하자.
-
 1. Development (개발 워크플로우)
 
 가장 완전한 개발 프로세스
@@ -123,20 +115,4 @@ FORCE: ["start", "approve", "build", "done"],
 
 IMPLEMENTED_STATUSES = {IMPLEMENT, VERIFY, DONE} # [im], [vf], [xx]
 
-모드 선택 가이드
-
-| 상황                                 | 추천 모드 |
-| ------------------------------------ | --------- |
-| 설계 문서만 생성                     | design    |
-| 빠른 개발 (리뷰 생략)                | quick     |
-| 전체 개발 사이클 (리뷰, 테스트 포함) | develop   |
-| 의존성 무시하고 강제 실행            | force     |
-
-CLI 사용법
-
-python -m orchay orchay -m design # 설계 모드
-python -m orchay orchay -m quick # 빠른 모드 (기본값)
-python -m orchay orchay -m develop # 전체 개발 모드
-python -m orchay orchay -m force # 강제 실행 모드
-
-python orchay/src/orchay/launcher.py run deployment
+python orchay/src/orchay/launcher.py deployment

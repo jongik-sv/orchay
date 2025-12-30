@@ -101,6 +101,8 @@ parallel-processing: true
 ### 6. 상태 전환 (자동)
 
 ```bash
+# {project}: 입력에서 파싱 (예: deployment/TSK-01-01 → deployment)
+# 프로젝트 미명시 시 wf-common-lite.md 규칙에 따라 자동 결정
 npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 ```
 - 성공: `{ "success": true, "newStatus": "dd" }`

@@ -156,10 +156,26 @@ def get_orchay_cmd() -> str:
 
 def show_orchay_help() -> int:
     """orchay --help 실행."""
-    # orchay_cmd는 'uv run ...' 형태의 문자열이므로 리스트로 분할
-    cmd_list = get_orchay_cmd().split() + ["--help"]
-    result = subprocess.run(cmd_list)
-    return result.returncode
+    if getattr(sys, "frozen", False):
+        # PyInstaller frozen 환경: 직접 도움말 출력 (무한 재귀 방지)
+        print("orchay - WezTerm-based Task scheduler")
+        print()
+        print("Usage:")
+        print("  orchay [PROJECT] [OPTIONS]     WezTerm 레이아웃으로 스케줄러 실행")
+        print("  orchay run PROJECT [OPTIONS]   스케줄러 직접 실행 (CLI)")
+        print("  orchay exec <command>          실행 상태 관리")
+        print()
+        print("Options:")
+        print("  -w, --workers N    Worker 수 (기본: 3)")
+        print("  -m, --mode MODE    실행 모드 (design, quick, develop, force)")
+        print("  --dry-run          상태만 표시, 실행 안함")
+        print("  -h, --help         도움말 표시")
+        return 0
+    else:
+        # 일반 실행: uv run으로 orchay 호출
+        cmd_list = get_orchay_cmd().split() + ["--help"]
+        result = subprocess.run(cmd_list)
+        return result.returncode
 
 
 def kill_mux_server() -> None:

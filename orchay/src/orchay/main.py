@@ -146,12 +146,46 @@ class Orchestrator:
 
         console.print("\n[yellow]스케줄러 종료[/]")
 
+    def _merge_tasks(self, new_tasks: list[Task]) -> None:
+        """WBS 파싱 결과를 기존 Task 리스트에 병합.
+
+        런타임 상태(assigned_worker)는 보존하고 WBS 필드만 업데이트합니다.
+
+        Args:
+            new_tasks: WBS 파싱으로 얻은 새 Task 리스트
+        """
+        # 기존 Task를 ID로 매핑
+        existing_map = {t.id: t for t in self.tasks}
+        new_ids = {t.id for t in new_tasks}
+
+        # 1. 삭제된 Task 제거 (WBS에서 사라진 것)
+        self.tasks = [t for t in self.tasks if t.id in new_ids]
+
+        # 2. 기존 Task 업데이트 또는 새 Task 추가
+        for new_task in new_tasks:
+            if new_task.id in existing_map:
+                # 기존 Task: WBS 필드만 업데이트, 런타임 상태 보존
+                existing = existing_map[new_task.id]
+                existing.title = new_task.title
+                existing.status = new_task.status
+                existing.priority = new_task.priority
+                existing.category = new_task.category
+                existing.depends = new_task.depends
+                existing.blocked_by = new_task.blocked_by
+                # assigned_worker는 절대 건드리지 않음!
+            else:
+                # 새 Task: 리스트에 추가
+                self.tasks.append(new_task)
+
+        logger.debug(f"Task 병합 완료: {len(self.tasks)}개")
+
     async def _tick(self) -> None:
         """단일 스케줄링 사이클."""
         logger.debug("_tick 시작")
 
-        # 1. WBS 재파싱 (기존 Task 객체 업데이트, 런타임 상태 유지)
-        self.tasks = await self.parser.parse()
+        # 1. WBS 재파싱 후 기존 Task에 병합 (런타임 상태 보존)
+        new_tasks = await self.parser.parse()
+        self._merge_tasks(new_tasks)
 
         # 2. stopAtState에 도달한 Task 정리
         self._cleanup_completed_tasks()
@@ -171,6 +205,9 @@ class Orchestrator:
         # 5. idle Worker에 Task 분배 (일시정지 상태가 아닐 때만)
         logger.debug(f"_tick: executable={len(executable)}개, paused={self._paused}")
         if not self._paused:
+            # 현재 Worker들이 실행 중인 Task ID 집합 (중복 방지용)
+            running_task_ids = {w.current_task for w in self.workers if w.current_task}
+
             for worker in self.workers:
                 if not executable:
                     break
@@ -180,10 +217,19 @@ class Orchestrator:
                 )
                 if worker.state == WorkerState.IDLE and not worker.is_manually_paused:
                     task = executable.pop(0)
+
+                    # 중복 실행 방지: 다른 Worker가 이미 실행 중인 Task인지 확인
+                    if task.id in running_task_ids:
+                        logger.warning(
+                            f"중복 실행 방지: {task.id}는 이미 다른 Worker에서 실행 중"
+                        )
+                        continue
+
                     # Race condition 방지: dispatch 전에 즉시 할당 상태 설정
                     task.assigned_worker = worker.id
                     worker.state = WorkerState.BUSY
                     worker.current_task = task.id
+                    running_task_ids.add(task.id)  # 중복 방지 집합에 추가
                     logger.info(f"Dispatch: {task.id} -> Worker {worker.id}")
                     await self._dispatch_to_worker(worker, task)
 

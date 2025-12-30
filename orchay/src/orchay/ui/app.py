@@ -310,8 +310,14 @@ class WorkerPanel(Static):
             # 수동 일시정지 표시
             manual_pause_marker = " 🛑" if w.is_manually_paused else ""
 
-            # Worker 정보 라인
-            task_info = f"{w.current_task} ({w.current_step})" if w.current_task else "-"
+            # Worker 정보 라인 - current_step을 명령어 형식으로 표시
+            if w.current_task and w.current_step:
+                cmd = f"/wf:{w.current_step}"
+                task_info = f"{w.current_task} ({cmd})"
+            elif w.current_task:
+                task_info = w.current_task
+            else:
+                task_info = "-"
             status_text = self._get_status_text(w)
 
             line = Text()
@@ -600,7 +606,7 @@ class OrchayApp(App[None]):
         table.add_column("Category", width=14)
         table.add_column("Priority", width=10)
         table.add_column("Title", width=25)
-        table.add_column("Depends", width=15)
+        table.add_column("Depends")  # 자동 너비 (최소 20자, 내용에 따라 확장)
 
         # 모달 위젯 숨김
         try:
@@ -813,7 +819,8 @@ class OrchayApp(App[None]):
             status_color = self._get_status_color(task.status)
             # Title과 Depends를 별도 컬럼으로
             title = task.title[:23] + ".." if len(task.title) > 25 else task.title
-            deps = ", ".join(task.depends) if task.depends else "-"
+            deps_raw = ", ".join(task.depends) if task.depends else "-"
+            deps = deps_raw.ljust(20)  # 최소 20자 보장
 
             # 작업 중인 Task 표시
             task_id_display = task.id

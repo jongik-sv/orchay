@@ -63,6 +63,8 @@ subagent:
 
 4. **상태 전환**
    ```bash
+   # {project}: 입력에서 파싱 (예: deployment/TSK-01-01 → deployment)
+   # 프로젝트 미명시 시 wf-common-lite.md 규칙에 따라 자동 결정
    npx tsx .orchay/script/transition.ts {Task-ID} approve -p {project} --force
    ```
    - `--force`: manual 모드에서 확인 없이 실행
@@ -71,6 +73,8 @@ subagent:
 
 1. **자동 승인** (스크립트가 조건 검증)
    ```bash
+   # {project}: 입력에서 파싱 (예: deployment/TSK-01-01 → deployment)
+   # 프로젝트 미명시 시 wf-common-lite.md 규칙에 따라 자동 결정
    npx tsx .orchay/script/transition.ts {Task-ID} approve -p {project}
    ```
    - 스크립트가 `project.json`의 `approvalMode` 확인
