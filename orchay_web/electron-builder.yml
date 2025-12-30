@@ -69,6 +69,7 @@ linux:
   icon: resources/icon.png
   category: Development
   artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  maintainer: Orchay Team <yoo7032@gmail.com>
 
 # GitHub 릴리스 설정
 publish:
