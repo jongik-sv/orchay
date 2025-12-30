@@ -9,6 +9,7 @@
 ---
 
 ## WP-01: 엔트리포인트 변경
+
 - status: planned
 - priority: critical
 - schedule: 2025-12-29 ~ 2025-12-29
@@ -16,9 +17,10 @@
 - note: launcher.py를 기본 엔트리포인트로 설정
 
 ### TSK-01-01: launcher.py 패키지 이동
+
 - category: infrastructure
 - domain: infra
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -26,6 +28,7 @@
 - depends: -
 
 #### PRD 요구사항
+
 - prd-ref: PRD 3.1 엔트리포인트 변경
 - requirements:
   - launcher.py를 orchay/src/orchay/로 이동
@@ -39,9 +42,10 @@
 ---
 
 ### TSK-01-02: pyproject.toml 엔트리포인트 변경
+
 - category: infrastructure
 - domain: infra
-- status: 상세설계 [dd]
+- status: detail_design [dd]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -49,6 +53,7 @@
 - depends: TSK-01-01
 
 #### PRD 요구사항
+
 - prd-ref: PRD 9.2 pyproject.toml 변경
 - requirements:
   - [project.scripts] 섹션의 orchay 엔트리포인트 변경
@@ -60,10 +65,11 @@
 
 ---
 
-### TSK-01-03: __main__.py 수정
+### TSK-01-03: **main**.py 수정
+
 - category: development
 - domain: backend
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -71,7 +77,8 @@
 - depends: TSK-01-01
 
 #### PRD 요구사항
-- prd-ref: PRD 9.4 __main__.py 변경
+
+- prd-ref: PRD 9.4 **main**.py 변경
 - requirements:
   - launcher.main() 호출로 변경
   - cli.cli_main() 대신 launcher.main() import
@@ -82,6 +89,7 @@
 ---
 
 ## WP-02: PyInstaller 로컬 빌드 환경
+
 - status: planned
 - priority: high
 - schedule: 2025-12-29 ~ 2025-12-30
@@ -89,9 +97,10 @@
 - note: PyInstaller spec 파일 및 로컬 빌드 검증
 
 ### TSK-02-01: PyInstaller spec 파일 생성
+
 - category: infrastructure
 - domain: devops
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -99,6 +108,7 @@
 - depends: TSK-01-02
 
 #### PRD 요구사항
+
 - prd-ref: PRD 4.5 spec 파일 구성
 - requirements:
   - orchay.spec 파일 생성
@@ -112,9 +122,10 @@
 ---
 
 ### TSK-02-02: Hidden Imports 분석 및 설정
+
 - category: development
 - domain: backend
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -122,6 +133,7 @@
 - depends: TSK-02-01
 
 #### PRD 요구사항
+
 - prd-ref: PRD 4.6 Hidden Imports
 - requirements:
   - 동적 import 모듈 분석 (pydantic, textual, watchdog)
@@ -134,6 +146,7 @@
 ---
 
 ### TSK-02-03: 데이터 파일 및 리소스 번들링
+
 - category: infrastructure
 - domain: devops
 - status: [ ]
@@ -144,6 +157,7 @@
 - depends: TSK-02-01
 
 #### PRD 요구사항
+
 - prd-ref: PRD 4.7 데이터 파일
 - requirements:
   - workflows.json 포함
@@ -156,9 +170,10 @@
 ---
 
 ### TSK-02-04: 로컬 빌드 테스트 (Linux)
+
 - category: development
 - domain: qa
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -166,6 +181,7 @@
 - depends: TSK-02-01, TSK-02-02, TSK-02-03
 
 #### PRD 요구사항
+
 - prd-ref: PRD 4.1 로컬 빌드
 - requirements:
   - Linux에서 PyInstaller 빌드 실행
@@ -178,6 +194,7 @@
 ---
 
 ### TSK-02-05: UPX 압축 설정 (선택)
+
 - category: infrastructure
 - domain: devops
 - status: [ ]
@@ -188,6 +205,7 @@
 - depends: TSK-02-04
 
 #### PRD 요구사항
+
 - prd-ref: PRD 4.9 UPX 압축
 - requirements:
   - UPX 설치 및 경로 설정
@@ -200,6 +218,7 @@
 ---
 
 ## WP-03: GitHub Actions 빌드 파이프라인
+
 - status: planned
 - priority: high
 - schedule: 2025-12-30 ~ 2025-12-31
@@ -207,9 +226,10 @@
 - note: 크로스 플랫폼 빌드 자동화
 
 ### TSK-03-01: PyInstaller 빌드 워크플로우
+
 - category: infrastructure
 - domain: devops
-- status: 상세설계 [dd]
+- status: [ ]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
@@ -217,6 +237,7 @@
 - depends: TSK-02-04
 
 #### PRD 요구사항
+
 - prd-ref: PRD 5.1 실행 파일 빌드 및 릴리스
 - requirements:
   - .github/workflows/release.yml 생성
@@ -225,12 +246,13 @@
   - GitHub Releases에 아티팩트 업로드
   - spec 파일 기반 빌드 (TSK-02-01에서 생성)
 - acceptance:
-  - v* 태그 푸시 → 3개 플랫폼 빌드 성공
+  - v\* 태그 푸시 → 3개 플랫폼 빌드 성공
   - GitHub Releases에 orchay, orchay.exe, orchay (macOS) 업로드
 
 ---
 
 ### TSK-03-02: PyPI 배포 워크플로우
+
 - category: infrastructure
 - domain: devops
 - status: [ ]
@@ -241,18 +263,20 @@
 - depends: TSK-02-04
 
 #### PRD 요구사항
+
 - prd-ref: PRD 5.2 PyPI 배포
 - requirements:
   - .github/workflows/pypi.yml 생성
   - Trusted Publishing 설정 (id-token: write)
   - 태그 푸시 시 자동 배포
 - acceptance:
-  - v* 태그 푸시 → PyPI 배포 성공
+  - v\* 태그 푸시 → PyPI 배포 성공
   - `pipx install orchay` 동작
 
 ---
 
 ### TSK-03-03: PyPI Trusted Publishing 설정
+
 - category: infrastructure
 - domain: devops
 - status: [ ]
@@ -263,6 +287,7 @@
 - depends: TSK-03-02
 
 #### PRD 요구사항
+
 - prd-ref: PRD 5.3 PyPI Trusted Publishing 설정
 - requirements:
   - PyPI 계정 생성
@@ -275,6 +300,7 @@
 ---
 
 ## WP-04: 문서화 및 테스트
+
 - status: planned
 - priority: medium
 - schedule: 2026-01-01 ~ 2026-01-02
@@ -282,6 +308,7 @@
 - note: 설치 가이드 및 통합 테스트
 
 ### TSK-04-01: README 설치 가이드 작성
+
 - category: documentation
 - domain: docs
 - status: [ ]
@@ -292,6 +319,7 @@
 - depends: TSK-03-01, TSK-03-02
 
 #### PRD 요구사항
+
 - prd-ref: PRD 10. README 설치 안내
 - requirements:
   - 실행 파일 다운로드 방법 안내
@@ -305,6 +333,7 @@
 ---
 
 ### TSK-04-02: 배포 테스트
+
 - category: development
 - domain: qa
 - status: [ ]
@@ -315,6 +344,7 @@
 - depends: TSK-03-01, TSK-03-02
 
 #### PRD 요구사항
+
 - requirements:
   - Windows에서 orchay.exe 실행 테스트
   - Linux에서 orchay 실행 테스트
@@ -328,10 +358,10 @@
 
 ## 완료 조건
 
-| 조건 | 상태 |
-|------|------|
-| `orchay` 명령으로 launcher 실행 | ⬜ |
-| GitHub Releases에 3개 플랫폼 바이너리 | ⬜ |
-| PyPI에 orchay 패키지 등록 | ⬜ |
-| `pipx install orchay` 동작 | ⬜ |
-| README 설치 가이드 완성 | ⬜ |
+| 조건                                  | 상태 |
+| ------------------------------------- | ---- |
+| `orchay` 명령으로 launcher 실행       | ⬜   |
+| GitHub Releases에 3개 플랫폼 바이너리 | ⬜   |
+| PyPI에 orchay 패키지 등록             | ⬜   |
+| `pipx install orchay` 동작            | ⬜   |
+| README 설치 가이드 완성               | ⬜   |

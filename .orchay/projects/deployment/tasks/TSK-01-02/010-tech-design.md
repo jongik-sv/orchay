@@ -1,58 +1,54 @@
 # 기술 설계: TSK-01-02 pyproject.toml 엔트리포인트 변경
 
-## 문서 정보
+## 1. 개요
 
-| 항목 | 내용 |
-|------|------|
-| Task ID | TSK-01-02 |
-| 카테고리 | infrastructure |
-| 상태 | 상세설계 [dd] |
-| 작성일 | 2025-12-30 |
-| PRD 참조 | PRD 9.2 pyproject.toml 변경 |
+### 1.1 목적
 
----
+`pyproject.toml`의 `[project.scripts]` 섹션을 수정하여 orchay 명령어가 기존 `orchay.cli:cli_main` 대신 `orchay.launcher:main`을 호출하도록 변경합니다.
 
-## 1. 목적
+### 1.2 배경
 
-pyproject.toml의 `[project.scripts]` 섹션을 수정하여 orchay 명령어가 launcher.main()을 호출하도록 변경합니다.
+현재 orchay는 CLI 모듈을 직접 호출하지만, 배포 시스템 구축을 위해 launcher.py를 기본 엔트리포인트로 사용해야 합니다. launcher는 WezTerm 레이아웃 생성, 의존성 체크 등의 초기화 로직을 포함합니다.
+
+### 1.3 PRD 참조
+
+- **섹션**: PRD 9.2 pyproject.toml 변경
+- **의존 Task**: TSK-01-01 (launcher.py 패키지 이동)
 
 ---
 
 ## 2. 현재 상태
 
-### 2.1 현재 엔트리포인트 설정
+### 2.1 현재 pyproject.toml 설정
 
 ```toml
-# orchay/pyproject.toml (현재)
 [project.scripts]
 orchay = "orchay.cli:cli_main"
 ```
 
-### 2.2 현재 동작 흐름
+### 2.2 현재 실행 흐름
 
 ```
-orchay 명령 → orchay.cli:cli_main() → 스케줄러 CLI 직접 실행
+orchay 명령 → orchay.cli:cli_main() → argparse → 스케줄러 실행
 ```
 
 ### 2.3 문제점
 
-- launcher.py의 WezTerm 레이아웃 생성 로직이 호출되지 않음
-- 사용자가 별도로 launcher.py를 실행해야 함
-- PyInstaller 빌드 시 엔트리포인트 불일치
+- launcher의 초기화 로직(WezTerm 실행, 레이아웃 생성)이 우회됨
+- PyInstaller 빌드 시 엔트리포인트 불일치 발생 가능
 
 ---
 
 ## 3. 목표 상태
 
-### 3.1 변경될 엔트리포인트 설정
+### 3.1 변경될 pyproject.toml 설정
 
 ```toml
-# orchay/pyproject.toml (변경 후)
 [project.scripts]
 orchay = "orchay.launcher:main"
 ```
 
-### 3.2 목표 동작 흐름
+### 3.2 목표 실행 흐름
 
 ```
 orchay 명령 → orchay.launcher:main() → WezTerm 레이아웃 생성 → 스케줄러 실행
@@ -62,7 +58,7 @@ orchay 명령 → orchay.launcher:main() → WezTerm 레이아웃 생성 → 스
 
 ## 4. 구현 계획
 
-### 4.1 변경 사항
+### 4.1 변경 파일
 
 | 파일 | 변경 내용 |
 |------|----------|
@@ -82,64 +78,68 @@ orchay = "orchay.cli:cli_main"
 orchay = "orchay.launcher:main"
 ```
 
-### 4.3 의존성
+### 4.3 전제 조건
 
-- TSK-01-01 완료 필수: launcher.py가 `orchay/src/orchay/`로 이동되어야 함
-- launcher.py에 `main()` 함수가 정의되어 있어야 함
-
----
-
-## 5. 수용 기준
-
-| 번호 | 기준 | 검증 방법 |
-|------|------|----------|
-| AC-1 | `uv pip install -e .` 성공 | 명령어 실행 후 오류 없음 |
-| AC-2 | `orchay` 명령 실행 시 launcher.main() 호출 | WezTerm 레이아웃 생성 확인 |
-| AC-3 | `python -m orchay` 동일하게 동작 | 동일 결과 확인 |
+- TSK-01-01 완료 필수 (launcher.py가 `src/orchay/`에 위치)
+- `orchay.launcher` 모듈에 `main()` 함수 존재
 
 ---
 
-## 6. 테스트 계획
+## 5. 검증 계획
 
-### 6.1 설치 테스트
+### 5.1 설치 검증
 
 ```bash
 cd orchay
 uv pip install -e .
 ```
 
-### 6.2 실행 테스트
+**예상 결과**: 성공, 오류 없음
+
+### 5.2 명령어 검증
 
 ```bash
-# 엔트리포인트 실행
 orchay --help
+```
 
-# 모듈 직접 실행
+**예상 결과**: launcher.main() 호출, 도움말 출력
+
+### 5.3 모듈 실행 검증
+
+```bash
 python -m orchay --help
 ```
 
-### 6.3 동작 검증
-
-```bash
-# WezTerm 레이아웃 생성 확인
-orchay -w 3 --dry-run
-```
+**예상 결과**: 동일한 동작
 
 ---
 
-## 7. 롤백 계획
+## 6. 수용 기준
 
-문제 발생 시 원래 설정으로 복원:
+| 기준 | 검증 방법 |
+|------|----------|
+| `uv pip install -e .` 성공 | 설치 명령 실행 |
+| `orchay` 명령 시 launcher.main() 호출 | 명령 실행 및 동작 확인 |
+| `python -m orchay` 동일하게 동작 | 모듈 실행 테스트 |
 
-```toml
-[project.scripts]
-orchay = "orchay.cli:cli_main"
-```
+---
+
+## 7. 위험 요소
+
+### 7.1 의존성 위험
+
+- **위험**: TSK-01-01 미완료 시 import 오류 발생
+- **대응**: TSK-01-01 완료 후 진행
+
+### 7.2 호환성 위험
+
+- **위험**: 기존 cli_main() 호출 스크립트 영향
+- **대응**: 내부 사용만 해당, 외부 호환성 문제 없음
 
 ---
 
 ## 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
-|------|------|-----------|
-| 1.0 | 2025-12-30 | 초기 설계 문서 작성 |
+|------|------|----------|
+| 1.0 | 2025-12-30 | 초기 기술 설계 작성 |
