@@ -1,100 +1,147 @@
-# TSK-02-01: PyInstaller spec 파일 생성
+# TSK-02-01: PyInstaller spec 파일 생성 - 기술설계
 
-## 문서 정보
-
-| 항목 | 내용 |
-|------|------|
-| Task ID | TSK-02-01 |
-| Category | infrastructure |
-| Status | 상세설계 [dd] |
-| PRD 참조 | PRD 4.5 spec 파일 구성 |
-| 작성일 | 2025-12-30 |
+> **Category**: infrastructure
+> **Domain**: devops
+> **Status**: detail-design [dd]
+> **PRD Reference**: PRD 4.5 spec 파일 설정
 
 ---
 
-## 1. 목적
+## 1. 개요
 
-PyInstaller를 사용하여 orchay를 단일 실행 파일로 빌드하기 위한 spec 파일을 생성합니다. spec 파일은 빌드 설정을 코드로 관리하여 일관된 빌드 결과를 보장합니다.
+### 1.1 목적
+
+PyInstaller를 사용하여 orchay를 단일 실행 파일로 빌드하기 위한 spec 파일을 생성합니다. spec 파일은 빌드 설정을 명시적으로 관리하고, 히든 임포트, 데이터 파일, 최적화 옵션 등을 제어합니다.
+
+### 1.2 범위
+
+| 포함 | 제외 |
+|------|------|
+| orchay.spec 파일 생성 | Hidden Imports 상세 분석 (TSK-02-02) |
+| 기본 hidden imports 설정 | 데이터 파일 상세 설정 (TSK-02-03) |
+| 콘솔 모드 설정 | 로컬 빌드 테스트 (TSK-02-04) |
+| 불필요 모듈 제외 설정 | UPX 압축 설정 (TSK-02-05) |
 
 ---
 
 ## 2. 현재 상태
 
-- orchay는 현재 `uv run --project orchay python -m orchay` 방식으로만 실행 가능
-- Python 및 가상환경 설정이 필요하여 일반 사용자 진입 장벽이 높음
-- PyInstaller 빌드 설정이 존재하지 않음
+### 2.1 빌드 환경
+
+- PyInstaller 미설치
+- spec 파일 없음
+- 명령행 빌드만 가능: `pyinstaller --onefile --name orchay src/orchay/__main__.py`
+
+### 2.2 의존성 현황
+
+```
+orchay 주요 의존성:
+├── pydantic (런타임 검증)
+├── textual (TUI 프레임워크)
+├── rich (콘솔 출력)
+├── watchdog (파일 감시)
+├── typer (CLI)
+└── asyncio (비동기)
+```
+
+### 2.3 엔트리포인트
+
+- **현재**: `orchay/src/orchay/__main__.py`
+- **의존**: TSK-01-02 (pyproject.toml 엔트리포인트 변경) 완료 필요
 
 ---
 
 ## 3. 목표 상태
 
-- `orchay/orchay.spec` 파일 생성
-- spec 파일 기반 빌드로 단일 실행 파일(`dist/orchay`) 생성 가능
-- 모든 런타임 의존성(hidden imports, data files) 포함
-
----
-
-## 4. 구현 계획
-
-### 4.1 spec 파일 위치
+### 3.1 생성 파일
 
 ```
 orchay/
-├── orchay.spec          # 생성할 spec 파일
-├── pyproject.toml
-└── src/orchay/
-    └── __main__.py      # 엔트리포인트
+└── orchay.spec          ← 신규 생성
 ```
 
-### 4.2 Hidden Imports 설정
+### 3.2 spec 파일 구성
 
-동적으로 로딩되어 PyInstaller가 자동 감지하지 못하는 모듈:
-
-| 패키지 | 히든 임포트 | 이유 |
-|--------|------------|------|
-| Pydantic | `pydantic`, `pydantic.deprecated.decorator`, `pydantic_core` | 런타임 검증 |
-| Textual | `textual`, `textual.widgets` | 동적 위젯 로딩 |
-| Rich | `rich`, `rich.console` | 콘솔 포맷터 |
-| Watchdog | `watchdog`, `watchdog.observers`, `watchdog.events` | 플랫폼별 구현 |
-
-### 4.3 Data Files 설정
-
-현재 orchay는 외부 데이터 파일이 없으나, 향후 확장을 위해 datas 옵션 준비:
-
-```python
-datas = [
-    # 향후 추가 예정
-    # ('src/orchay/templates', 'templates'),
-]
-```
-
-### 4.4 제외 모듈 설정
-
-불필요한 대형 패키지를 제외하여 실행 파일 크기 최적화:
-
-- matplotlib, numpy, pandas, scipy
-- PIL, cv2
-- tkinter, PyQt5, PyQt6, PySide2, PySide6
-
-### 4.5 콘솔 모드 설정
-
-orchay는 CLI 도구이므로 `console=True` 설정 유지.
-
-### 4.6 UPX 압축 설정
-
-- `upx=True`: 30-50% 크기 감소 (UPX 설치 시)
-- Windows에서 가장 효과적
+| 항목 | 설정 |
+|------|------|
+| 엔트리포인트 | `src/orchay/__main__.py` |
+| 출력 형식 | 단일 파일 (onefile) |
+| 실행 모드 | 콘솔 (CLI 도구) |
+| 히든 임포트 | pydantic, textual, rich, watchdog 관련 |
+| 제외 모듈 | matplotlib, numpy, pandas, GUI 프레임워크 |
+| UPX 압축 | 활성화 (기본값) |
 
 ---
 
-## 5. spec 파일 구조
+## 4. 기술 요구사항
+
+### 4.1 Hidden Imports 기본 목록
+
+```python
+hidden_imports = [
+    # Pydantic
+    'pydantic',
+    'pydantic.deprecated.decorator',
+    'pydantic_core',
+
+    # Textual
+    'textual',
+    'textual.widgets',
+
+    # Rich
+    'rich',
+    'rich.console',
+
+    # Watchdog
+    'watchdog',
+    'watchdog.observers',
+    'watchdog.events',
+]
+```
+
+### 4.2 제외 모듈
+
+```python
+excludes = [
+    # 불필요한 대형 패키지
+    'matplotlib',
+    'numpy',
+    'pandas',
+    'scipy',
+    'PIL',
+    'cv2',
+
+    # GUI 프레임워크
+    'tkinter',
+    'PyQt5',
+    'PyQt6',
+    'PySide2',
+    'PySide6',
+]
+```
+
+### 4.3 빌드 옵션
+
+| 옵션 | 값 | 설명 |
+|------|-----|------|
+| `name` | `orchay` | 출력 파일명 |
+| `onefile` | True | 단일 실행 파일 |
+| `console` | True | CLI 도구용 콘솔 모드 |
+| `strip` | False | 디버그 정보 유지 (플랫폼별 조정) |
+| `upx` | True | UPX 압축 활성화 |
+
+---
+
+## 5. 구현 계획
+
+### 5.1 spec 파일 구조
 
 ```python
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
+# 히든 임포트 목록
 hidden_imports = [
     'pydantic',
     'pydantic.deprecated.decorator',
@@ -108,6 +155,7 @@ hidden_imports = [
     'watchdog.events',
 ]
 
+# 데이터 파일 (TSK-02-03에서 상세 설정)
 datas = []
 
 a = Analysis(
@@ -155,14 +203,29 @@ exe = EXE(
 )
 ```
 
+### 5.2 빌드 명령어
+
+```bash
+cd orchay
+pyinstaller orchay.spec
+```
+
+### 5.3 결과물 위치
+
+| OS | 경로 |
+|----|------|
+| Windows | `orchay/dist/orchay.exe` |
+| Linux/macOS | `orchay/dist/orchay` |
+
 ---
 
 ## 6. 수용 기준
 
 | 기준 | 검증 방법 |
 |------|----------|
-| spec 파일로 빌드 성공 | `pyinstaller orchay.spec` 실행 후 `dist/orchay` 생성 확인 |
-| 모든 런타임 의존성 포함 | 빌드된 실행 파일 실행 시 ModuleNotFoundError 없음 |
+| spec 파일 존재 | `orchay/orchay.spec` 파일 확인 |
+| 빌드 성공 | `pyinstaller orchay.spec` 실행 후 dist 폴더에 실행 파일 생성 |
+| 모든 런타임 의존성 포함 | 실행 파일 실행 시 ModuleNotFoundError 없음 |
 
 ---
 
@@ -170,12 +233,22 @@ exe = EXE(
 
 | Task | 상태 | 설명 |
 |------|------|------|
-| TSK-01-02 | 필수 선행 | pyproject.toml 엔트리포인트 변경 |
+| TSK-01-02 | [dd] | pyproject.toml 엔트리포인트 변경 필요 |
+
+---
+
+## 8. 후속 작업
+
+| Task | 설명 |
+|------|------|
+| TSK-02-02 | Hidden Imports 상세 분석 및 추가 |
+| TSK-02-03 | 데이터 파일 및 리소스 번들링 |
+| TSK-02-04 | 로컬 빌드 테스트 (Linux) |
 
 ---
 
 ## 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
-|------|------|-----------|
-| 1.0 | 2025-12-30 | 초기 기술 설계 문서 작성 |
+|------|------|----------|
+| 1.0 | 2025-12-30 | 초기 기술설계 작성 |
