@@ -136,6 +136,33 @@ def _get_project_dir() -> Path:
         return Path(__file__).resolve().parent.parent.parent
 
 
+def _get_bundled_file(filename: str) -> Path:
+    """PyInstaller 번들 파일 또는 프로젝트 파일 경로 반환.
+
+    Args:
+        filename: 파일명 (예: wezterm-orchay-windows.lua)
+
+    Returns:
+        Path: 파일 경로
+
+    Note:
+        - PyInstaller One-file 모드: sys._MEIPASS (임시 추출 폴더)
+        - PyInstaller One-folder 모드: sys.executable.parent
+        - 일반 실행: 프로젝트 루트
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller frozen 환경
+        # One-file 모드: _MEIPASS가 임시 추출 폴더
+        # One-folder 모드: _MEIPASS가 실행 파일 폴더
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass) / filename
+        return Path(sys.executable).parent / filename
+    else:
+        # 일반 실행: 프로젝트 루트
+        return _get_project_dir() / filename
+
+
 def get_orchay_cmd() -> str:
     """orchay 실행 명령 반환.
 
@@ -308,7 +335,7 @@ def launch_wezterm_windows(
     # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
     # --config-file로 orchay 전용 설정 파일 사용 (사용자 ~/.wezterm.lua 불필요)
     # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
-    config_file = _get_project_dir() / "wezterm-orchay-windows.lua"
+    config_file = _get_bundled_file("wezterm-orchay-windows.lua")
     wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
     log.debug(f"Popen: {wezterm_launch_args}")
     proc = subprocess.Popen(
