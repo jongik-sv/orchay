@@ -45,7 +45,8 @@
 
 - category: infrastructure
 - domain: infra
-- status: implement [im]
+- status: verify [vf]
+- test-result: pass
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
