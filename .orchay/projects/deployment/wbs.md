@@ -149,7 +149,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: [ ]
+- status: detail-design [dd]
 - priority: medium
 - assignee: -
 - schedule: 2025-12-29
