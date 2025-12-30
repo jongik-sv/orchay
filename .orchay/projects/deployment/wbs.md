@@ -173,7 +173,7 @@
 
 - category: development
 - domain: qa
-- status: [ ]
+- status: detail-design [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
@@ -229,7 +229,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: [ ]
+- status: detail-design [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-30
