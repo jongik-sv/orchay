@@ -2,7 +2,9 @@
   "name": "orchay",
   "version": "0.1.0",
   "description": "AI 기반 프로젝트 관리 도구",
+  "author": "Orchay Team",
   "type": "module",
+  "main": "dist-electron/main/index.js",
   "files": [
     ".output/"
   ],
@@ -19,7 +21,14 @@
     "test:coverage": "vitest run --coverage --exclude 'tests/api/**'",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "electron:dev": "concurrently \"nuxt dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "nuxt build && electron-vite build",
+    "electron:preview": "npm run electron:build && cross-env ELECTRON_DEV=false electron .",
+    "dist:win": "npm run electron:build && electron-builder --win --config",
+    "dist:mac": "npm run electron:build && electron-builder --mac --config",
+    "dist:linux": "npm run electron:build && electron-builder --linux --config",
+    "dist:all": "npm run electron:build && electron-builder -mwl --config"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -31,13 +40,20 @@
     "@vitejs/plugin-vue": "^6.0.3",
     "@vitest/coverage-v8": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^5.0.0",
+    "get-port-please": "^3.1.2",
     "happy-dom": "^20.0.11",
     "nuxt": "^3.14.0",
     "typescript": "^5.6.0",
     "vitest": "^3.2.4",
     "vue": "^3.5.0",
     "vue-router": "^4.4.0",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.0",
+    "wait-on": "^8.0.3"
   },
   "dependencies": {
     "@nuxtjs/mdc": "^0.19.1",

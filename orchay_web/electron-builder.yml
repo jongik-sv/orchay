@@ -1,0 +1,76 @@
+appId: com.orchay.desktop
+productName: orchay_web
+copyright: Copyright (c) 2024
+electronVersion: "33.2.1"
+
+directories:
+  output: dist-electron/release
+  buildResources: resources
+
+# 포함할 파일
+files:
+  - dist-electron/main/**/*
+  - dist-electron/preload/**/*
+  - package.json
+
+# 서버 빌드 결과물을 extraResources로 복사
+extraResources:
+  - from: .output
+    to: server
+    filter:
+      - "**/*"
+
+# Windows 설정
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.ico
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+# NSIS 인스톨러 설정
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# macOS 설정
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: resources/icon.icns
+  category: public.app-category.developer-tools
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+# DMG 설정
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Linux 설정
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  icon: resources/icon.png
+  category: Development
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+
+# GitHub 릴리스 설정
+publish:
+  provider: github
+  releaseType: release

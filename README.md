@@ -10,6 +10,8 @@ wbs.md를 모니터링하여 실행 가능한 Task를 추출하고, 여러 Claud
 orchay/
 ├── orchay/          # 스케줄러 코어 (Python)
 ├── orchay_web/      # 웹 대시보드 (Nuxt 3)
+├── orchay-init/     # 프로젝트 초기화 CLI (npm)
+├── .claude/         # Claude Code 설정 템플릿
 └── .orchay/         # 프로젝트 설정 및 WBS 파일
 ```
 
@@ -17,8 +19,22 @@ orchay/
 |------|------|----------|
 | [orchay](./orchay/) | Task 스케줄러 코어 | Python, Textual, FastAPI |
 | [orchay_web](./orchay_web/) | 웹 대시보드 | Nuxt 3, PrimeVue, Tailwind |
+| [orchay-init](./orchay-init/) | 프로젝트 초기화 CLI | Node.js |
 
 ## 빠른 시작
+
+### 0. 프로젝트 초기화 (새 프로젝트)
+
+다른 프로젝트에 orchay 구조를 추가하려면:
+
+```bash
+cd your-project
+npx orchay-init
+```
+
+생성되는 구조:
+- `.claude/` - Claude Code 에이전트, 슬래시 명령어
+- `.orchay/` - 워크플로우 설정, 템플릿, 프로젝트 폴더
 
 ### 1. 설치
 

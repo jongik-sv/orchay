@@ -2,7 +2,7 @@
 # CLI 인자로 override 가능 (예: --workers 5)
 
 # Worker 설정
-workers: 2 # 동시 실행 Worker pane 수 (1-6)
+workers: 6 # 동시 실행 Worker pane 수 (1-6)
 interval: 10 # 상태 모니터링 간격 (초)
 
 # 출력 설정

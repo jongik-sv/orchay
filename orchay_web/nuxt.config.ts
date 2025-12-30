@@ -5,6 +5,11 @@ export default defineNuxtConfig({
   // 소스 코드 디렉토리 (개발 코드 분리)
   srcDir: 'app',
 
+  // Electron 호환: 상대 경로 사용
+  app: {
+    baseURL: './'
+  },
+
   // 서버 디렉토리 (srcDir과 별도로 프로젝트 루트 사용)
   serverDir: 'server',
 

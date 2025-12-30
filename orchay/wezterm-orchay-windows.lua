@@ -90,72 +90,115 @@ wezterm.on('gui-startup', function(cmd)
   -- Worker pane 비율 계산 (1 - scheduler_ratio)
   local worker_ratio = 1 - scheduler_ratio
 
-  -- 열 수 계산 (max_rows 기준)
+  -- ==========================================================================
+  -- Worker 분배 계산 (균형 분배)
+  -- ==========================================================================
+  -- 목표 레이아웃:
+  -- Workers 1-3: 1열          Workers 4-6: 2열
+  -- +--------+------+         +--------+------+------+
+  -- |        | W1   |         |        | W1   | W4   |
+  -- | Sched  +------+         | Sched  +------+------+
+  -- |        | W2   |         |        | W2   | W5   |
+  -- |        +------+         |        +------+------+
+  -- |        | W3   |         |        | W3   | W6   |
+  -- +--------+------+         +--------+------+------+
+  --
+  -- 분배 규칙:
+  -- - 4 workers: [2, 2] (균등)
+  -- - 5 workers: [3, 2] (첫 열에 1개 더)
+  -- - 6 workers: [3, 3] (균등)
+
   local columns = math.ceil(workers / max_rows)
+
+  -- 균형 분배: 각 열에 가능한 균등하게 배분
   local workers_per_column = {}
-  local remaining_workers = workers
+  local base_per_col = math.floor(workers / columns)
+  local extra = workers % columns
+
   for col = 1, columns do
-    local in_this_col = math.min(remaining_workers, max_rows)
-    table.insert(workers_per_column, in_this_col)
-    remaining_workers = remaining_workers - in_this_col
+    -- 앞쪽 열부터 extra 개만큼 1씩 추가
+    if col <= extra then
+      table.insert(workers_per_column, base_per_col + 1)
+    else
+      table.insert(workers_per_column, base_per_col)
+    end
   end
 
-  -- Worker pane 목록 저장 (나중에 명령 전송용)
+  -- ==========================================================================
+  -- Pane 분할 (단순화된 버전)
+  -- ==========================================================================
+  -- WezTerm split('Right', size=0.5):
+  --   - 원본 pane이 왼쪽에 남고 (50%)
+  --   - 새 pane이 오른쪽에 생성 (50%)
+  --
+  -- WezTerm split('Bottom', size=0.5):
+  --   - 원본 pane이 위쪽에 남고 (50%)
+  --   - 새 pane이 아래쪽에 생성 (50%)
+
   local worker_panes = {}
 
-  -- 첫 번째 열의 첫 번째 Worker pane 생성 (오른쪽에)
-  local first_worker = scheduler_pane:split {
+  -- 1단계: Worker 영역 생성 (scheduler 오른쪽)
+  local worker_area = scheduler_pane:split {
     direction = 'Right',
-    size = worker_ratio,  -- orchay.yaml 설정 적용
+    size = worker_ratio,
     cwd = cwd,
   }
-  table.insert(worker_panes, first_worker)
 
-  -- 첫 번째 열 내 나머지 Workers (세로 분할)
-  local prev_pane = first_worker
-  for row = 2, workers_per_column[1] do
-    local remaining = workers_per_column[1] - row + 1
-    local size = remaining / (remaining + 1)
-    local worker_pane = prev_pane:split {
-      direction = 'Bottom',
-      size = size,
-      cwd = cwd,
-    }
-    table.insert(worker_panes, worker_pane)
-    prev_pane = worker_pane
-  end
+  -- 2단계: 열과 행 분할
+  if columns == 1 then
+    -- 1열: 세로로만 분할
+    local col_panes = { worker_area }
+    local rows = workers_per_column[1]
 
-  -- 추가 열 생성 (workers > max_rows인 경우)
-  if columns > 1 then
-    local col_first_pane = first_worker
-    for col = 2, columns do
-      -- 열 분할 비율 계산
-      local col_remaining = columns - col + 1
-      local col_size = col_remaining / (col_remaining + 1)
-
-      -- 새 열의 첫 번째 pane (오른쪽에)
-      local new_col_pane = col_first_pane:split {
-        direction = 'Right',
-        size = col_size,
+    -- 세로 분할: 위에서 아래로
+    for row = 1, rows - 1 do
+      local remaining_rows = rows - row
+      local size = remaining_rows / (remaining_rows + 1)
+      local bottom_pane = col_panes[row]:split {
+        direction = 'Bottom',
+        size = size,
         cwd = cwd,
       }
-      table.insert(worker_panes, new_col_pane)
+      table.insert(col_panes, bottom_pane)
+    end
 
-      -- 열 내 나머지 Workers (세로 분할)
-      prev_pane = new_col_pane
-      for row = 2, workers_per_column[col] do
-        local remaining = workers_per_column[col] - row + 1
-        local size = remaining / (remaining + 1)
-        local worker_pane = prev_pane:split {
+    for _, pane in ipairs(col_panes) do
+      table.insert(worker_panes, pane)
+    end
+
+  else
+    -- 2열: 먼저 좌우 분할, 그 다음 각 열 세로 분할
+    -- 2열일 때 size=0.5면 원본(왼쪽)이 50%, 새것(오른쪽)이 50%
+    local col2_area = worker_area:split {
+      direction = 'Right',
+      size = 0.5,
+      cwd = cwd,
+    }
+    local col1_area = worker_area  -- 원본이 col1 (왼쪽)
+
+    local col_areas = { col1_area, col2_area }
+
+    -- 각 열에서 세로 분할
+    for col = 1, 2 do
+      local col_pane = col_areas[col]
+      local rows = workers_per_column[col]
+      local col_panes = { col_pane }
+
+      -- 세로 분할: 위에서 아래로
+      for row = 1, rows - 1 do
+        local remaining_rows = rows - row
+        local size = remaining_rows / (remaining_rows + 1)
+        local bottom_pane = col_panes[row]:split {
           direction = 'Bottom',
           size = size,
           cwd = cwd,
         }
-        table.insert(worker_panes, worker_pane)
-        prev_pane = worker_pane
+        table.insert(col_panes, bottom_pane)
       end
 
-      col_first_pane = new_col_pane
+      for _, pane in ipairs(col_panes) do
+        table.insert(worker_panes, pane)
+      end
     end
   end
 
