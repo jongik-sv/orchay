@@ -93,7 +93,6 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
-        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
         { "from": "[im]", "to": "[vf]", "command": "verify" }
       ],
@@ -108,7 +107,6 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
-        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "fix" },
         { "from": "[im]", "to": "[vf]", "command": "verify" }
       ],
@@ -123,7 +121,6 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
-        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
         { "from": "[im]", "to": "[vf]", "command": "verify" }
       ],

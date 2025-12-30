@@ -41,4 +41,5 @@ export interface FlatNode {
   type: WbsNodeType;
   title: string;
   attributes: NodeAttributes;
+  rawContent: string;  // 원본 마크다운 내용 (요구사항 등)
 }

@@ -9,6 +9,7 @@ dependencies = [
     "rich>=14.0",
     "watchdog>=4.0",
     "pydantic>=2.0",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -20,7 +21,7 @@ dev = [
 ]
 
 [project.scripts]
-orchay = "orchay.cli:cli_main"
+orchay = "orchay.launcher:main"
 
 [build-system]
 requires = ["hatchling"]

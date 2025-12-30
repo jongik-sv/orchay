@@ -126,13 +126,19 @@ def parse_done_signal(text: str) -> DoneInfo | None:
 WorkerState = Literal["dead", "done", "paused", "error", "blocked", "idle", "busy"]
 
 
-async def detect_worker_state(pane_id: int) -> tuple[WorkerState, DoneInfo | None]:
+async def detect_worker_state(
+    pane_id: int,
+    has_active_task: bool = False,
+) -> tuple[WorkerState, DoneInfo | None]:
     """Worker 상태를 감지합니다.
 
     pane 출력을 분석하여 상태를 판단합니다.
 
     Args:
         pane_id: WezTerm pane ID
+        has_active_task: Worker가 현재 Task를 실행 중인지 여부.
+            True면 프롬프트로 idle 감지하지 않음 (ORCHAY_DONE만으로 완료 판정).
+            False면 프롬프트로 idle 감지 허용 (시작 시, Task 완료 후).
 
     Returns:
         (상태, DoneInfo 또는 None) 튜플
@@ -158,31 +164,34 @@ async def detect_worker_state(pane_id: int) -> tuple[WorkerState, DoneInfo | Non
         if pattern.search(output):
             return "paused", None
 
-    # 3. 프롬프트 패턴 체크
-    # 마지막 5줄에 프롬프트가 있으면 idle로 판정
+    # 3. 작업 중 패턴 체크 (명시적 busy 상태)
+    # Claude Code가 작업 중일 때 나타나는 패턴이 있으면 busy
+    # "esc to interrupt", "ctrl+t to hide" 등은 작업 중에만 표시됨
+    for pattern in BUSY_PATTERNS:
+        if pattern.search(output):
+            return "busy", None
+
+    # 4. 에러 패턴
+    for pattern in ERROR_PATTERNS:
+        if pattern.search(output):
+            return "error", None
+
+    # 5. 질문/입력 대기 패턴
+    for pattern in BLOCKED_PATTERNS:
+        if pattern.search(output):
+            return "blocked", None
+
+    # 6. 프롬프트 패턴 체크
+    # - Task 실행 중(has_active_task=True): 프롬프트로 idle 감지 안 함
+    # - Task 없음(has_active_task=False): 프롬프트로 idle 감지 허용
+    # - 시작 후 3초 이내: 무조건 프롬프트로 idle 감지 (Worker 초기화용)
     elapsed = time.time() - _startup_time
-    if elapsed >= _IDLE_DETECTION_DELAY:
+    if elapsed < _IDLE_DETECTION_DELAY or not has_active_task:
         last_lines = output.strip().split("\n")[-5:]
         last_text = "\n".join(last_lines)
         for pattern in PROMPT_PATTERNS:
             if pattern.search(last_text):
                 return "idle", None
-
-    # 4. 작업 중 패턴 체크 (명시적 busy 상태)
-    # Claude Code가 작업 중일 때 나타나는 패턴이 있으면 busy
-    for pattern in BUSY_PATTERNS:
-        if pattern.search(output):
-            return "busy", None
-
-    # 5. 에러 패턴
-    for pattern in ERROR_PATTERNS:
-        if pattern.search(output):
-            return "error", None
-
-    # 6. 질문/입력 대기 패턴
-    for pattern in BLOCKED_PATTERNS:
-        if pattern.search(output):
-            return "blocked", None
 
     # 7. 기본값: 작업 중
     return "busy", None

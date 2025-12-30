@@ -176,7 +176,7 @@ python -m orchay [PROJECT] [OPTIONS]
 
 ```
 usage: orchay [-h] [-w WORKERS] [-i INTERVAL]
-              [-m {design,quick,develop,force}] [--dry-run] [-v] [--no-tui]
+              [-m {design,quick,develop,force}] [--dry-run] [-v]
               [--web | --web-only] [--port PORT]
               [project]
 
@@ -189,15 +189,12 @@ options:
   -m, --mode MODE       실행 모드: design, quick, develop, force (기본: quick)
   --dry-run             분배 없이 상태만 표시
   -v, --verbose         상세 로그 출력
-  --no-tui              TUI 없이 CLI 모드로 실행
 
 웹서버 옵션:
-  --web                 웹서버 포함 실행 (TUI/CLI + 웹 동시)
+  --web                 웹서버 포함 실행 (TUI + 웹 동시)
   --web-only            웹서버만 실행 (스케줄링 비활성화)
   --port PORT           웹서버 포트 (기본: 8080)
 ```
-
-> **Note:** 기본적으로 TUI(Textual UI) 모드로 실행됩니다. CLI 모드가 필요하면 `--no-tui` 옵션을 사용하세요.
 
 ### 사용 예시
 
@@ -207,9 +204,6 @@ uv run python -m orchay orchay
 
 # dry-run 모드 (분배 없이 상태만 표시)
 uv run python -m orchay orchay --dry-run
-
-# CLI 모드로 실행 (TUI 없이)
-uv run python -m orchay orchay --no-tui
 
 # orchay-flutter 프로젝트 실행
 uv run python -m orchay orchay-flutter

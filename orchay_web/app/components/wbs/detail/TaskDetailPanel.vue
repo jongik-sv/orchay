@@ -79,6 +79,11 @@
         <WbsDetailTaskRequirements
           :task="selectedTask"
           @update:requirements="handleUpdateRequirements"
+          @update:acceptance="handleUpdateAcceptance"
+          @update:techSpec="handleUpdateTechSpec"
+          @update:apiSpec="handleUpdateApiSpec"
+          @update:uiSpec="handleUpdateUiSpec"
+          @update:prdRef="handleUpdatePrdRef"
         />
 
         <!-- 관련 문서 (TSK-05-02) -->
@@ -355,6 +360,66 @@ function handleUpdateRequirements(requirements: string[]) {
     requirements,
     { requirements },
     '요구사항이 업데이트되었습니다.'
+  )
+}
+
+/**
+ * acceptance 수정 핸들러
+ */
+function handleUpdateAcceptance(acceptance: string[]) {
+  handleUpdate(
+    'acceptance',
+    acceptance,
+    { acceptance },
+    '인수 조건이 업데이트되었습니다.'
+  )
+}
+
+/**
+ * techSpec 수정 핸들러
+ */
+function handleUpdateTechSpec(techSpec: string[]) {
+  handleUpdate(
+    'techSpec',
+    techSpec,
+    { techSpec },
+    '기술 스펙이 업데이트되었습니다.'
+  )
+}
+
+/**
+ * apiSpec 수정 핸들러
+ */
+function handleUpdateApiSpec(apiSpec: string[]) {
+  handleUpdate(
+    'apiSpec',
+    apiSpec,
+    { apiSpec },
+    'API 스펙이 업데이트되었습니다.'
+  )
+}
+
+/**
+ * uiSpec 수정 핸들러
+ */
+function handleUpdateUiSpec(uiSpec: string[]) {
+  handleUpdate(
+    'uiSpec',
+    uiSpec,
+    { uiSpec },
+    'UI 스펙이 업데이트되었습니다.'
+  )
+}
+
+/**
+ * prdRef 수정 핸들러
+ */
+function handleUpdatePrdRef(prdRef: string) {
+  handleUpdate(
+    'prdRef',
+    prdRef,
+    { prdRef },
+    'PRD 참조가 업데이트되었습니다.'
   )
 }
 

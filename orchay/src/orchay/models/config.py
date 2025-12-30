@@ -76,6 +76,7 @@ class HistoryConfig(BaseModel):
 class ExecutionConfig(BaseModel):
     """실행 모드 설정."""
 
+    start_paused: bool = Field(default=False, description="시작 시 일시정지 상태")
     mode: Literal["design", "quick", "develop", "force"] = Field(
         default="quick",
         description="실행 모드: design, quick, develop, force",
@@ -88,6 +89,7 @@ class Config(BaseModel):
 
     workers: int = Field(default=3, ge=1, le=10, description="Worker pane 수")
     interval: int = Field(default=5, ge=1, le=60, description="모니터링 간격 (초)")
+    verbose: bool = Field(default=False, description="상세 로그 출력")
     category: str | None = Field(default=None, description="카테고리 필터")
     project: str | None = Field(default=None, description="프로젝트 경로")
     detection: DetectionConfig = Field(default_factory=DetectionConfig)

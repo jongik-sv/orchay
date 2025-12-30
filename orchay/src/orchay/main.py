@@ -7,10 +7,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import contextlib
 import logging
 import os
-import signal
 import sys
 import traceback
 from datetime import datetime
@@ -20,7 +18,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from orchay.models import Config, ExecutionConfig, Task, TaskStatus, Worker, WorkerState
+from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
 from orchay.scheduler import (
     ExecutionMode,
     dispatch_task,
@@ -56,7 +54,7 @@ class Orchestrator:
         self.tasks: list[Task] = []
         self.mode = ExecutionMode(config.execution.mode)
         self._running = False
-        self._paused = False
+        self._paused = config.execution.start_paused
 
     async def initialize(self) -> bool:
         """오케스트레이터 초기화.
@@ -263,7 +261,9 @@ class Orchestrator:
                     )
                     continue  # 상태 체크 건너뛰기
 
-            state, done_info = await detect_worker_state(worker.pane_id)
+            # Worker가 현재 Task를 실행 중인지 여부 전달
+            has_active_task = worker.current_task is not None
+            state, done_info = await detect_worker_state(worker.pane_id, has_active_task)
 
             # 상태 매핑
             state_map = {
@@ -279,21 +279,22 @@ class Orchestrator:
 
             # done 상태 처리: Task 할당 해제
             if new_state == WorkerState.DONE:
-                # 이미 DONE 상태면 중복 처리 방지 (다음 tick에서 idle로 전환됨)
                 if worker.state == WorkerState.DONE:
-                    continue
+                    # DONE 상태가 연속 감지 → IDLE로 강제 전환
+                    # (ORCHAY_DONE 신호가 화면에 남아있어도 두 번째 tick에서 전환)
+                    worker.reset()
+                else:
+                    # 처음 DONE 감지: Task 할당 해제
+                    task_id = done_info.task_id if done_info else worker.current_task
+                    if task_id:
+                        task = next((t for t in self.tasks if t.id == task_id), None)
+                        if task:
+                            task.assigned_worker = None
 
-                # Task 할당 해제
-                task_id = done_info.task_id if done_info else worker.current_task
-                if task_id:
-                    task = next((t for t in self.tasks if t.id == task_id), None)
-                    if task:
-                        task.assigned_worker = None
-
-                # DONE 상태로 유지 (다음 tick에서 신호가 사라지면 idle로 전환)
-                worker.state = WorkerState.DONE
-                worker.current_task = None
-                worker.current_step = None
+                    # DONE 상태로 유지 (다음 tick에서 IDLE로 전환됨)
+                    worker.state = WorkerState.DONE
+                    worker.current_task = None
+                    worker.current_step = None
 
             elif new_state == WorkerState.IDLE:
                 # DONE → IDLE 전환: ORCHAY_DONE 신호가 사라짐
@@ -326,11 +327,13 @@ class Orchestrator:
 
     async def _dispatch_to_worker(self, worker: Worker, task: Task) -> None:
         """Worker에 Task를 분배."""
-        # 명령 전송 전 Worker 실제 상태 확인
-        actual_state, _ = await detect_worker_state(worker.pane_id)
-        if actual_state != "idle":
+        # 명령 전송 전 Worker 실제 상태 확인 (dispatch 전이므로 has_active_task=False)
+        actual_state, _ = await detect_worker_state(worker.pane_id, has_active_task=False)
+        # idle 또는 done 상태일 때만 dispatch 가능
+        # done: 이전 작업 완료 후 ORCHAY_DONE 신호가 화면에 남아있는 상태
+        if actual_state not in ("idle", "done"):
             logger.warning(
-                f"Worker {worker.id} dispatch 취소: 실제 상태가 {actual_state} (idle 아님)"
+                f"Worker {worker.id} dispatch 취소: 실제 상태가 {actual_state} (idle/done 아님)"
             )
             task.assigned_worker = None
             worker.reset()
@@ -468,11 +471,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="상세 로그 출력",
     )
-    parser.add_argument(
-        "--no-tui",
-        action="store_true",
-        help="TUI 없이 CLI 모드로 실행",
-    )
 
     return parser.parse_args()
 
@@ -512,7 +510,7 @@ def get_project_paths(project_name: str) -> tuple[Path, Path]:
 
 
 def setup_logging(verbose: bool = False) -> Path | None:
-    """로깅 설정 (콘솔 + 파일).
+    """로깅 설정 (파일만).
 
     Args:
         verbose: 상세 로그 출력 여부
@@ -533,13 +531,7 @@ def setup_logging(verbose: bool = False) -> Path | None:
     # 기존 핸들러 제거 (중복 방지)
     root_logger.handlers.clear()
 
-    # 콘솔 핸들러
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
-
-    # 파일 핸들러 (.orchay/logs/orchay.log)
+    # 파일 핸들러만 (.orchay/logs/orchay.log)
     log_file = None
     try:
         base_dir = find_orchay_root()
@@ -558,10 +550,8 @@ def setup_logging(verbose: bool = False) -> Path | None:
             file_handler.setLevel(logging.DEBUG)  # 파일은 항상 DEBUG 레벨
             file_handler.setFormatter(formatter)
             root_logger.addHandler(file_handler)
-
-            logger.info(f"로그 파일: {log_file}")
-    except Exception as e:
-        logger.warning(f"파일 로깅 설정 실패: {e}")
+    except Exception:
+        pass  # 파일 로깅 실패 시 무시
 
     return log_file
 
@@ -570,15 +560,27 @@ async def async_main() -> int:
     """비동기 메인 함수."""
     args = parse_args()
 
-    # 로깅 설정 (콘솔 + 파일)
-    setup_logging(args.verbose)
+    # 1. 파일 기반 설정 로드 (.orchay/settings/orchay.yaml)
+    from orchay.utils.config import load_config
 
-    # Config 생성
-    config = Config(
-        workers=args.workers,
-        interval=args.interval,
-        execution=ExecutionConfig(mode=args.mode),
-    )
+    try:
+        config = load_config()
+    except Exception as e:
+        logger.warning(f"설정 파일 로드 실패, 기본값 사용: {e}")
+        config = Config()
+
+    # 2. CLI 인자로 override (명시적 지정 시)
+    if args.workers != 3:  # 기본값이 아닌 경우
+        config.workers = args.workers
+    if args.interval != 5:
+        config.interval = args.interval
+    if args.mode != "quick":
+        config.execution.mode = args.mode
+    if args.verbose:
+        config.verbose = True
+
+    # 로깅 설정 (파일만, 콘솔 로깅 비활성화)
+    setup_logging(config.verbose)
 
     # 프로젝트 경로 계산
     wbs_path, base_dir = get_project_paths(args.project)
@@ -596,40 +598,20 @@ async def async_main() -> int:
         orchestrator.print_status()
         return 0
 
-    # TUI 모드 (기본)
-    if not args.no_tui:
-        from orchay.ui.app import OrchayApp
+    # TUI 모드
+    from orchay.ui.app import OrchayApp
 
-        app = OrchayApp(
-            config=config,
-            tasks=orchestrator.tasks,
-            worker_list=orchestrator.workers,
-            mode=args.mode,
-            project=args.project,
-            interval=args.interval,
-            orchestrator=orchestrator,
-        )
+    app = OrchayApp(
+        config=config,
+        tasks=orchestrator.tasks,
+        worker_list=orchestrator.workers,
+        mode=config.execution.mode,
+        project=args.project,
+        interval=config.interval,
+        orchestrator=orchestrator,
+    )
 
-        await app.run_async()
-        return 0
-
-    # CLI 모드 (--no-tui)
-    # 시그널 핸들러 설정
-    def signal_handler() -> None:
-        orchestrator.stop()
-
-    loop = asyncio.get_event_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        with contextlib.suppress(NotImplementedError):
-            # Windows에서는 add_signal_handler가 지원되지 않음
-            loop.add_signal_handler(sig, signal_handler)
-
-    # 메인 루프 실행
-    try:
-        await orchestrator.run()
-    except KeyboardInterrupt:
-        orchestrator.stop()
-
+    await app.run_async()
     return 0
 
 

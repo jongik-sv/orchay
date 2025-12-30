@@ -11,7 +11,7 @@ from orchay.worker import detect_worker_state, parse_done_signal
 
 @pytest.fixture(autouse=True)
 def reset_startup_time() -> None:
-    """테스트에서 idle 감지가 즉시 동작하도록 startup_time을 과거로 설정."""
+    """테스트에서 기본적으로 시작 후 3초 이후 상태로 설정."""
     orchay.worker._startup_time = time.time() - 100  # 100초 전으로 설정
 
 
@@ -104,17 +104,53 @@ class TestDetectWorkerState:
     """detect_worker_state 테스트."""
 
     @pytest.mark.asyncio
-    async def test_detect_idle(self) -> None:
-        """UT-005: idle 상태 감지."""
+    async def test_detect_idle_at_startup(self) -> None:
+        """UT-005: idle 상태 감지 (시작 시 3초 이내에만 프롬프트로 감지)."""
+        # 시작 시(3초 이내)에만 프롬프트로 idle 감지
+        orchay.worker._startup_time = time.time()  # 방금 시작한 상태
         with (
             patch("orchay.worker.pane_exists") as mock_pane_exists,
             patch("orchay.worker.wezterm_get_text") as mock_get_text,
         ):
             mock_pane_exists.return_value = True
-            mock_get_text.return_value = "작업 완료\n> "  # 파일에 작업 없음
+            mock_get_text.return_value = "작업 완료\n> "  # 프롬프트로 idle 감지
 
             state, done_info = await detect_worker_state(pane_id=1)
 
+            assert state == "idle"
+            assert done_info is None
+
+    @pytest.mark.asyncio
+    async def test_detect_busy_with_prompt_when_task_active(self) -> None:
+        """Task 실행 중에는 프롬프트만으로 idle 감지하지 않음."""
+        with (
+            patch("orchay.worker.pane_exists") as mock_pane_exists,
+            patch("orchay.worker.wezterm_get_text") as mock_get_text,
+        ):
+            mock_pane_exists.return_value = True
+            mock_get_text.return_value = "작업 완료\n> "  # 프롬프트만 있음
+
+            # has_active_task=True: Task 실행 중
+            state, done_info = await detect_worker_state(pane_id=1, has_active_task=True)
+
+            # Task 실행 중에는 프롬프트만으로 idle 판정 안 함, busy 반환
+            assert state == "busy"
+            assert done_info is None
+
+    @pytest.mark.asyncio
+    async def test_detect_idle_with_prompt_when_no_task(self) -> None:
+        """Task 없을 때는 프롬프트로 idle 감지 허용."""
+        with (
+            patch("orchay.worker.pane_exists") as mock_pane_exists,
+            patch("orchay.worker.wezterm_get_text") as mock_get_text,
+        ):
+            mock_pane_exists.return_value = True
+            mock_get_text.return_value = "작업 완료\n> "  # 프롬프트만 있음
+
+            # has_active_task=False: Task 없음 (기본값)
+            state, done_info = await detect_worker_state(pane_id=1, has_active_task=False)
+
+            # Task 없으면 프롬프트로 idle 감지
             assert state == "idle"
             assert done_info is None
 

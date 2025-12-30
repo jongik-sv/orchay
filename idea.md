@@ -138,3 +138,5 @@ python -m orchay orchay -m design # 설계 모드
 python -m orchay orchay -m quick # 빠른 모드 (기본값)
 python -m orchay orchay -m develop # 전체 개발 모드
 python -m orchay orchay -m force # 강제 실행 모드
+
+python orchay/src/orchay/launcher.py run deployment

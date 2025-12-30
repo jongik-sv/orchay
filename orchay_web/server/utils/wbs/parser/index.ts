@@ -67,6 +67,7 @@ export function parseWbsMarkdown(markdown: string): WbsNode[] {
       // 이전 노드가 있으면 저장
       if (currentNode) {
         currentNode.attributes = parseNodeAttributes(currentAttributeLines);
+        currentNode.rawContent = currentAttributeLines.join('\n');
         flatNodes.push(currentNode);
       }
 
@@ -77,6 +78,7 @@ export function parseWbsMarkdown(markdown: string): WbsNode[] {
         title: header.title,
         level: header.level,
         attributes: {},
+        rawContent: '',
       };
       currentAttributeLines = [];
     } else if (currentNode) {
@@ -88,6 +90,7 @@ export function parseWbsMarkdown(markdown: string): WbsNode[] {
   // 마지막 노드 저장
   if (currentNode) {
     currentNode.attributes = parseNodeAttributes(currentAttributeLines);
+    currentNode.rawContent = currentAttributeLines.join('\n');
     flatNodes.push(currentNode);
   }
 

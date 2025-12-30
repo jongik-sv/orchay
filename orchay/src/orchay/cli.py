@@ -79,11 +79,6 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="상세 로그 출력",
     )
-    run_parser.add_argument(
-        "--no-tui",
-        action="store_true",
-        help="TUI 없이 CLI 모드로 실행",
-    )
 
     # exec 서브커맨드 (실행 상태 관리)
     exec_parser = subparsers.add_parser(

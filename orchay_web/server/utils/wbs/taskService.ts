@@ -47,6 +47,7 @@ export interface TaskUpdateRequest {
   tags?: string[];
   depends?: string[];
   ref?: string;
+  requirements?: string[];
 }
 
 /**
@@ -311,6 +312,7 @@ export async function getTaskDetail(taskId: string, projectId?: string): Promise
     documents,
     availableActions,
     completed: task.completed,  // TSK-08-07: 단계별 완료 타임스탬프
+    rawContent: task.rawContent || '',  // 요구사항 원본 마크다운
   };
 }
 
@@ -388,6 +390,7 @@ export async function updateTask(
   if (updates.tags !== undefined) foundTask.task.tags = updates.tags;
   if (updates.depends !== undefined) foundTask.task.depends = updates.depends;
   if (updates.ref !== undefined) foundTask.task.ref = updates.ref;
+  if (updates.requirements !== undefined) foundTask.task.requirements = updates.requirements;
 
   // WBS 저장
   try {

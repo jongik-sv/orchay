@@ -5,6 +5,7 @@ Textual 프레임워크 기반 터미널 UI 구현.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from rich.text import Text
@@ -13,8 +14,8 @@ if TYPE_CHECKING:
     from orchay.main import Orchestrator
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import DataTable, Footer, Header, Input, Static
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static
 
 from orchay.command import CommandHandler
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
@@ -24,6 +25,32 @@ from orchay.utils.active_tasks import (
     resume_worker,
     set_scheduler_state,
 )
+
+
+class TUILogHandler(logging.Handler):
+    """TUI 로그 패널로 로그를 출력하는 커스텀 핸들러."""
+
+    def __init__(self, app: OrchayApp) -> None:
+        super().__init__()
+        self._app = app
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """로그 레코드를 TUI에 출력."""
+        try:
+            level_map = {
+                logging.DEBUG: "debug",
+                logging.INFO: "info",
+                logging.WARNING: "warning",
+                logging.ERROR: "error",
+                logging.CRITICAL: "error",
+            }
+            level = level_map.get(record.levelno, "info")
+            # 짧은 로거명 사용 (orchay.main → main)
+            name = record.name.split(".")[-1] if "." in record.name else record.name
+            message = f"[{name}] {record.getMessage()}"
+            self._app.call_from_thread(self._app.write_log, message, level)
+        except Exception:
+            pass  # TUI가 아직 준비되지 않았거나 종료 중일 수 있음
 
 
 class SchedulerStateIndicator(Static):
@@ -370,7 +397,7 @@ class OrchayApp(App[None]):
     TITLE = "orchay - Task Scheduler"
     CSS_PATH = "styles.tcss"
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("f1", "show_help", "Help"),
+        Binding("f12", "show_help", "Help"),
         Binding("f2", "show_status", "Status"),
         Binding("f3", "show_queue", "Queue"),
         Binding("f4", "show_workers", "Workers"),
@@ -416,8 +443,9 @@ class OrchayApp(App[None]):
         self._mode = mode
         self._project = project
         self._interval = interval
-        self._paused = False
-        self._scheduler_state = "running"
+        self._paused = self.config.execution.start_paused
+        self._scheduler_state = "paused" if self._paused else "running"
+        self._ever_started = not self._paused  # start_paused면 아직 시작 안함
         self._queue_interactive = False
         self._workers_interactive = False
         self._help_visible = False
@@ -428,6 +456,15 @@ class OrchayApp(App[None]):
         self._real_orchestrator: Orchestrator | None = orchestrator  # type: ignore[assignment]
         self._orchestrator: Any = orchestrator or self._create_mock_orchestrator()
         self._command_handler = CommandHandler(self._orchestrator)
+
+        # Worker 상태 추적 (로그용)
+        self._prev_worker_states: dict[int, tuple[WorkerState, str | None]] = {}
+
+        # TUI 로그 핸들러 (on_mount에서 등록)
+        self._log_handler: TUILogHandler | None = None
+
+        # F9 바인딩 초기 레이블 설정 (compose 전에 설정해야 Footer에 반영됨)
+        self._update_f9_binding()
 
     def _create_mock_orchestrator(self) -> object:
         """Mock Orchestrator 생성."""
@@ -527,15 +564,21 @@ class OrchayApp(App[None]):
                 yield Static("Schedule Queue", id="queue-title")
                 yield DataTable(id="queue-table")
 
-            # Worker 패널
+            # Worker 패널 (스크롤 가능)
             with Vertical(id="workers-section"):
                 yield Static("Workers", id="workers-title")
-                yield WorkerPanel()
+                with VerticalScroll(id="workers-scroll"):
+                    yield WorkerPanel()
 
             # 진행률
             with Vertical(id="progress-section"):
                 yield Static("Progress", id="progress-title")
                 yield ProgressPanel()
+
+            # 로그 영역
+            with Vertical(id="log-section"):
+                yield Static("Logs", id="log-title")
+                yield RichLog(id="log-panel", highlight=True, markup=True)
 
             # 명령어 입력
             with Horizontal(id="input-section"):
@@ -573,11 +616,27 @@ class OrchayApp(App[None]):
         self._update_worker_panel()
         self._update_progress()
 
+        # TUI 로그 핸들러 등록 (모든 로그를 TUI로 출력)
+        self._log_handler = TUILogHandler(self)
+        self._log_handler.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(self._log_handler)
+
         # 자동 갱신 타이머 시작
         self.set_interval(self._interval, self._on_auto_refresh)
 
+        # F9 바인딩 초기 레이블 설정
+        self._update_f9_binding()
+
+        # 시작 로그
+        self.write_log("orchay TUI 시작", "info")
+
     def on_unmount(self) -> None:
         """앱 종료 시 정리."""
+        # TUI 로그 핸들러 제거
+        if self._log_handler is not None:
+            logging.getLogger().removeHandler(self._log_handler)
+            self._log_handler = None
+
         if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "stop"):
             self._real_orchestrator.stop()
 
@@ -593,11 +652,13 @@ class OrchayApp(App[None]):
         # 명령어 실행
         result = await self._command_handler.process_command(command)
 
-        # 결과 표시
+        # 결과 표시 및 로그
         if result.success:
             self.notify(result.message)
+            self.write_log(f"[CMD] {command}: {result.message}", "info")
         else:
             self.notify(result.message, severity="error")
+            self.write_log(f"[CMD] {command}: {result.message}", "error")
 
         # Input 클리어
         event.input.clear()
@@ -608,16 +669,41 @@ class OrchayApp(App[None]):
 
     def _on_auto_refresh(self) -> None:
         """자동 갱신 콜백."""
+        # 일시정지 상태가 아닐 때만 스케줄링 사이클 실행
         if not self._paused:
-            # 실제 Orchestrator가 있으면 스케줄링 사이클 실행 (중복 실행 방지)
             if self._real_orchestrator is not None and not self._tick_running:
                 self._tick_running = True
                 self.run_worker(self._run_orchestrator_tick())
-            self._sync_from_orchestrator()
-            self._update_queue_table()
-            self._update_worker_panel()
-            self._update_header_info()
-            self._update_progress()
+
+        # UI 업데이트는 항상 실행 (일시정지 상태에서도 워커 상태 표시)
+        self._sync_from_orchestrator()
+        self._update_queue_table()
+        self._update_worker_panel()
+        self._update_header_info()
+        self._update_progress()
+
+    def write_log(self, message: str, level: str = "info") -> None:
+        """로그 패널에 메시지 작성.
+
+        Args:
+            message: 로그 메시지
+            level: 로그 레벨 (info, warning, error, debug)
+        """
+        try:
+            log_panel = self.query_one("#log-panel", RichLog)
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            level_colors = {
+                "debug": "dim",
+                "info": "cyan",
+                "warning": "yellow",
+                "error": "red bold",
+            }
+            color = level_colors.get(level, "white")
+            log_panel.write(f"[dim]{timestamp}[/] [{color}]{level.upper():5}[/] {message}")
+        except Exception:
+            pass
 
     async def _run_orchestrator_tick(self) -> None:
         """Orchestrator 스케줄링 사이클 실행."""
@@ -634,6 +720,64 @@ class OrchayApp(App[None]):
                 self._tasks = self._real_orchestrator.tasks
             if hasattr(self._real_orchestrator, "workers"):
                 self._worker_list = self._real_orchestrator.workers
+                self._log_worker_changes()
+
+    def _log_worker_changes(self) -> None:
+        """Worker 상태 변화 로그."""
+        for worker in self._worker_list:
+            prev = self._prev_worker_states.get(worker.id)
+            curr = (worker.state, worker.current_task)
+
+            if prev is None:
+                # 최초 기록
+                self._prev_worker_states[worker.id] = curr
+                continue
+
+            prev_state, prev_task = prev
+            curr_state, curr_task = curr
+
+            # 상태 변화 감지
+            if prev_state != curr_state:
+                if curr_state == WorkerState.BUSY and curr_task:
+                    self.write_log(
+                        f"Worker {worker.id}: {prev_state.value} → {curr_state.value} "
+                        f"(task: {curr_task})",
+                        "info",
+                    )
+                elif curr_state == WorkerState.DONE:
+                    self.write_log(
+                        f"Worker {worker.id}: Task 완료 ({prev_task})",
+                        "info",
+                    )
+                elif curr_state == WorkerState.ERROR:
+                    self.write_log(
+                        f"Worker {worker.id}: 오류 발생",
+                        "error",
+                    )
+                elif curr_state == WorkerState.PAUSED:
+                    self.write_log(
+                        f"Worker {worker.id}: Rate limit 감지",
+                        "warning",
+                    )
+                elif curr_state == WorkerState.BLOCKED:
+                    self.write_log(
+                        f"Worker {worker.id}: 입력 대기 중",
+                        "warning",
+                    )
+                elif curr_state == WorkerState.IDLE and prev_state == WorkerState.BUSY:
+                    self.write_log(
+                        f"Worker {worker.id}: Idle (이전: {prev_task})",
+                        "debug",
+                    )
+
+            # Task 변경 감지 (dispatch)
+            elif prev_task != curr_task and curr_task is not None:
+                self.write_log(
+                    f"Worker {worker.id}: Dispatch → {curr_task}",
+                    "info",
+                )
+
+            self._prev_worker_states[worker.id] = curr
 
     def _count_queue(self) -> int:
         """대기 중인 Task 수."""
@@ -661,20 +805,36 @@ class OrchayApp(App[None]):
             key=lambda t: priority_order.get(t.priority.value, 99),
         )
 
-        for i, task in enumerate(sorted_tasks[:10], 1):
+        # 현재 작업 중인 Task 찾기 (첫 번째)
+        active_row: int | None = None
+        running_task_ids = {w.current_task for w in self._worker_list if w.current_task}
+
+        for i, task in enumerate(sorted_tasks, 1):
             status_color = self._get_status_color(task.status)
             # Title과 Depends를 별도 컬럼으로
             title = task.title[:23] + ".." if len(task.title) > 25 else task.title
             deps = ", ".join(task.depends) if task.depends else "-"
+
+            # 작업 중인 Task 표시
+            task_id_display = task.id
+            if task.id in running_task_ids:
+                task_id_display = f"▶ {task.id}"
+                if active_row is None:
+                    active_row = i - 1  # 0-indexed
+
             table.add_row(
                 str(i),
-                task.id,
+                task_id_display,
                 Text(task.status.value, style=status_color),  # type: ignore[arg-type]
                 task.category.value,
                 task.priority.value,
                 title,
                 deps,
             )
+
+        # 작업 중인 Task로 스크롤
+        if active_row is not None and table.row_count > 0:
+            table.move_cursor(row=active_row)
 
     def _update_worker_panel(self) -> None:
         """Worker 패널 업데이트."""
@@ -751,6 +911,11 @@ class OrchayApp(App[None]):
 
     def action_show_workers(self) -> None:
         """Worker 인터랙티브 UI 표시/토글."""
+        # 워커가 없으면 경고
+        if not self._worker_list:
+            self.notify("No workers available", severity="warning")
+            return
+
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
             panel.interactive = not panel.interactive
@@ -767,7 +932,7 @@ class OrchayApp(App[None]):
                 # Input 포커스 해제 (P 키 등이 Input으로 가지 않도록)
                 command_input.disabled = True
                 self.set_focus(None)
-                self.notify("Workers: ↑↓로 선택, P로 일시정지/재개")
+                self.notify(f"Workers ({len(self._worker_list)}): ↑↓ 선택, P 일시정지, R 리셋")
             else:
                 # Input 다시 활성화
                 command_input.disabled = False
@@ -775,10 +940,8 @@ class OrchayApp(App[None]):
                 busy = sum(1 for w in self._worker_list if w.state == WorkerState.BUSY)
                 paused = sum(1 for w in self._worker_list if w.is_manually_paused)
                 self.notify(f"Workers: {idle} idle, {busy} busy, {paused} paused")
-        except Exception:
-            idle = sum(1 for w in self._worker_list if w.state == WorkerState.IDLE)
-            busy = sum(1 for w in self._worker_list if w.state == WorkerState.BUSY)
-            self.notify(f"Workers: {len(self._worker_list)} total, {idle} idle, {busy} busy")
+        except Exception as e:
+            self.notify(f"Workers error: {e}", severity="error")
 
     def action_reload(self) -> None:
         """WBS 재로드."""
@@ -796,10 +959,46 @@ class OrchayApp(App[None]):
         self.mode = modes[next_idx]
         self.notify(f"Mode changed to: {self._mode}")
 
+    def _get_f9_label(self) -> str:
+        """F9 바인딩 레이블 결정.
+
+        Returns:
+            - "Start": 처음 시작 전 (start_paused 모드)
+            - "Pause": 실행 중
+            - "Resume": 일시 중지 상태
+        """
+        if not self._ever_started:
+            return "Start"
+        elif self._paused:
+            return "Resume"
+        else:
+            return "Pause"
+
+    def _update_f9_binding(self, refresh: bool = True) -> None:
+        """F9 바인딩 레이블 동적 업데이트.
+
+        Args:
+            refresh: True면 refresh_bindings() 호출 (마운트 후에만 가능)
+        """
+        label = self._get_f9_label()
+
+        # BINDINGS 리스트에서 F9 찾아서 교체
+        for i, binding in enumerate(type(self).BINDINGS):
+            if isinstance(binding, Binding) and binding.key == "f9":
+                type(self).BINDINGS[i] = Binding("f9", "pause", label)
+                break
+
+        if refresh:
+            try:
+                self.refresh_bindings()
+            except Exception:
+                pass  # 아직 마운트 전이면 무시
+
     def action_pause(self) -> None:
         """스케줄러 일시정지 토글."""
         self._paused = not self._paused
         self._scheduler_state = "paused" if self._paused else "running"
+        self._ever_started = True  # 한번이라도 토글하면 시작한 것으로 간주
 
         # Orchestrator와 동기화
         if self._real_orchestrator is not None:
@@ -814,6 +1013,9 @@ class OrchayApp(App[None]):
             indicator.state = self._scheduler_state
         except Exception:
             pass
+
+        # F9 바인딩 레이블 업데이트
+        self._update_f9_binding()
 
         status = "paused" if self._paused else "resumed"
         self.notify(f"Scheduler {status}")
@@ -899,6 +1101,15 @@ class OrchayApp(App[None]):
 
     def action_toggle_worker_pause(self) -> None:
         """선택된 Worker의 일시정지 토글."""
+        # Workers 모드가 아니면 먼저 활성화
+        if not self._workers_interactive:
+            if not self._worker_list:
+                self.notify("No workers available", severity="warning")
+                return
+            # Workers 모드 활성화
+            self.action_show_workers()
+            return  # 다음 P 키에서 pause 실행
+
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
             worker = panel.selected_worker
@@ -1030,7 +1241,7 @@ class OrchayApp(App[None]):
             pass
 
     async def action_reset_worker(self) -> None:
-        """선택된 Worker를 idle 상태로 리셋."""
+        """선택된 Worker를 idle 상태로 강제 리셋."""
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
             worker = panel.selected_worker
@@ -1038,16 +1249,16 @@ class OrchayApp(App[None]):
                 self.notify("No worker selected", severity="warning")
                 return
 
-            # error 또는 다른 비정상 상태인 경우만 reset
-            if worker.state in (WorkerState.IDLE, WorkerState.BUSY):
-                self.notify(f"Worker {worker.id} is {worker.state.value}, no reset needed")
-                return
-
             # 현재 Task 정보 저장
             current_task = worker.current_task
+            prev_state = worker.state
 
-            # Worker 리셋
+            # Worker 리셋 (상태 무관하게 항상 리셋)
             worker.reset()
+            worker.is_manually_paused = False  # 수동 일시정지도 해제
+
+            # 파일에서도 정리
+            resume_worker(worker.id)
 
             # Task의 할당 해제
             if current_task and self._real_orchestrator is not None:
@@ -1057,7 +1268,7 @@ class OrchayApp(App[None]):
                 if task:
                     task.assigned_worker = None
 
-            self.notify(f"Worker {worker.id} reset to idle")
+            self.notify(f"Worker {worker.id} force reset: {prev_state.value} → idle")
             self._update_worker_panel()
         except Exception as e:
             self.notify(f"Reset failed: {e}", severity="error")

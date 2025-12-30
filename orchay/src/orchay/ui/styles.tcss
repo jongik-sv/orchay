@@ -33,7 +33,8 @@ Screen {
 
 /* 스케줄 큐 섹션 */
 #queue-section {
-    height: 40%;
+    height: 1fr;
+    min-height: 10;
     border: solid $primary;
     margin-bottom: 1;
 }
@@ -62,9 +63,10 @@ DataTable > .datatable--cursor {
     color: $text;
 }
 
-/* Worker 섹션 */
+/* Worker 섹션 (최대 6줄, 스크롤 가능) */
 #workers-section {
-    height: 30%;
+    height: 10;
+    max-height: 10;
     border: solid $success;
     margin-bottom: 1;
 }
@@ -77,15 +79,21 @@ DataTable > .datatable--cursor {
     text-style: bold;
 }
 
-#workers-panel {
+#workers-scroll {
     height: 100%;
-    padding: 1;
+    scrollbar-size: 1 1;
+}
+
+#workers-panel {
+    height: auto;
+    padding: 0 1;
 }
 
 /* 진행률 섹션 */
 #progress-section {
     height: 5;
     border: solid $warning;
+    margin-bottom: 1;
 }
 
 #progress-title {
@@ -99,6 +107,27 @@ DataTable > .datatable--cursor {
 #progress-panel {
     height: 100%;
     padding: 1;
+}
+
+/* 로그 섹션 */
+#log-section {
+    height: 8;
+    border: solid $secondary;
+    margin-bottom: 1;
+}
+
+#log-title {
+    height: 1;
+    padding: 0 1;
+    background: $secondary-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+#log-panel {
+    height: 100%;
+    padding: 0 1;
+    scrollbar-size: 1 1;
 }
 
 /* 상태별 스타일 */

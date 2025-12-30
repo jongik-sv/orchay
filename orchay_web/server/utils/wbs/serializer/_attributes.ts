@@ -58,6 +58,43 @@ export function serializeAttributes(node: WbsNode): string[] {
     }
   }
 
+  // acceptance (배열이 비어있지 않으면)
+  if (node.attributes?.acceptance && node.attributes.acceptance.length > 0) {
+    lines.push(`- acceptance:`);
+    for (const item of node.attributes.acceptance) {
+      lines.push(`  - ${item}`);
+    }
+  }
+
+  // tech-spec (배열이 비어있지 않으면)
+  if (node.attributes?.['tech-spec'] && node.attributes['tech-spec'].length > 0) {
+    lines.push(`- tech-spec:`);
+    for (const item of node.attributes['tech-spec']) {
+      lines.push(`  - ${item}`);
+    }
+  }
+
+  // api-spec (배열이 비어있지 않으면)
+  if (node.attributes?.['api-spec'] && node.attributes['api-spec'].length > 0) {
+    lines.push(`- api-spec:`);
+    for (const item of node.attributes['api-spec']) {
+      lines.push(`  - ${item}`);
+    }
+  }
+
+  // ui-spec (배열이 비어있지 않으면)
+  if (node.attributes?.['ui-spec'] && node.attributes['ui-spec'].length > 0) {
+    lines.push(`- ui-spec:`);
+    for (const item of node.attributes['ui-spec']) {
+      lines.push(`  - ${item}`);
+    }
+  }
+
+  // prd-ref
+  if (node.attributes?.['prd-ref']) {
+    lines.push(`- prd-ref: ${node.attributes['prd-ref']}`);
+  }
+
   // ref
   if (node.ref) {
     lines.push(`- ref: ${node.ref}`);
