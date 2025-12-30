@@ -25,13 +25,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact: orchay-linux-x64
-            archive: tar.gz
           - os: windows-latest
             artifact: orchay-windows-x64
-            archive: zip
           - os: macos-latest
             artifact: orchay-macos-x64
-            archive: tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -67,23 +64,22 @@ jobs:
         working-directory: orchay
         run: pyinstaller orchay.spec
 
-      - name: Create archive (Linux/macOS)
+      # One-file 모드: 단일 실행 파일 이름 변경
+      - name: Rename artifact (Linux/macOS)
         if: runner.os != 'Windows'
         working-directory: orchay/dist
-        run: |
-          tar -czvf ${{ matrix.artifact }}.${{ matrix.archive }} orchay/
+        run: mv orchay ${{ matrix.artifact }}
 
-      - name: Create archive (Windows)
+      - name: Rename artifact (Windows)
         if: runner.os == 'Windows'
         working-directory: orchay/dist
-        run: |
-          Compress-Archive -Path orchay -DestinationPath ${{ matrix.artifact }}.${{ matrix.archive }}
+        run: Rename-Item -Path orchay.exe -NewName "${{ matrix.artifact }}.exe"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: orchay/dist/${{ matrix.artifact }}.${{ matrix.archive }}
+          path: orchay/dist/${{ matrix.artifact }}*
           retention-days: 7
 
   release:
@@ -109,8 +105,8 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
-            artifacts/orchay-linux-x64/orchay-linux-x64.tar.gz
-            artifacts/orchay-windows-x64/orchay-windows-x64.zip
-            artifacts/orchay-macos-x64/orchay-macos-x64.tar.gz
+            artifacts/orchay-linux-x64/orchay-linux-x64
+            artifacts/orchay-windows-x64/orchay-windows-x64.exe
+            artifacts/orchay-macos-x64/orchay-macos-x64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
