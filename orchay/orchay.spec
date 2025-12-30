@@ -16,45 +16,47 @@ Usage:
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 # Hidden imports - 동적 import 모듈들
+# TSK-02-02: Hidden Imports 분석 및 설정
+# - pydantic v2 관련 모듈 (pydantic_core, annotated_types)
+# - 타입 확장 모듈 (typing_extensions, typing_inspection)
+# - 동적 로딩 의존성 (watchdog.observers, textual.widgets)
 hiddenimports = [
-    # Pydantic (동적 모델 로딩)
+    # Pydantic v2 (동적 모델 로딩)
     *collect_submodules('pydantic'),
     *collect_submodules('pydantic_core'),
+    'annotated_types',  # pydantic v2 필수 의존성
+
+    # 타입 확장 (pydantic/textual 런타임 필수)
+    'typing_extensions',
+    'typing_inspection',
 
     # Textual (TUI 프레임워크)
     *collect_submodules('textual'),
+    *collect_submodules('textual._layout'),
+    *collect_submodules('textual._compositor'),
 
     # Rich (콘솔 출력)
     *collect_submodules('rich'),
 
     # Watchdog (파일 감시)
     *collect_submodules('watchdog'),
+    'watchdog.observers.polling',  # 폴링 백엔드 (Linux fallback)
 
     # YAML 파서
     'yaml',
+    'yaml.loader',
+    'yaml.dumper',
 
-    # orchay 내부 모듈
-    'orchay',
-    'orchay.launcher',
-    'orchay.main',
-    'orchay.cli',
-    'orchay.scheduler',
-    'orchay.wbs_parser',
-    'orchay.worker',
-    'orchay.command',
-    'orchay.recovery',
-    'orchay.models',
-    'orchay.models.task',
-    'orchay.models.worker',
-    'orchay.models.config',
-    'orchay.utils',
-    'orchay.utils.wezterm',
-    'orchay.utils.active_tasks',
-    'orchay.utils.config',
-    'orchay.utils.history',
-    'orchay.ui',
-    'orchay.ui.app',
-    'orchay.ui.widgets',
+    # asyncio 관련 (런타임 동적 로딩)
+    'asyncio',
+    'asyncio.base_events',
+    'asyncio.events',
+
+    # logging 핸들러
+    'logging.handlers',
+
+    # orchay 내부 모듈 (collect_submodules로 통합)
+    *collect_submodules('orchay'),
 ]
 
 # Data files - 패키지에 포함되어야 하는 리소스
@@ -62,6 +64,10 @@ datas = [
     # Textual CSS 및 데이터 파일
     *collect_data_files('textual'),
     *collect_data_files('rich'),
+
+    # orchay 패키지 리소스 (TSK-02-03: 데이터 파일 및 리소스 번들링)
+    # - styles.tcss: Textual TUI 스타일 파일
+    ('src/orchay/ui/styles.tcss', 'orchay/ui'),
 ]
 
 # Analysis 설정
