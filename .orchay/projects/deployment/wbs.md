@@ -114,7 +114,7 @@
 ### TSK-02-02: Hidden Imports 분석 및 설정
 - category: development
 - domain: backend
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: high
 - assignee: -
 - schedule: 2025-12-29
