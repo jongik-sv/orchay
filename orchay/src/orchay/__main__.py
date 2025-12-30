@@ -2,7 +2,7 @@
 
 import sys
 
-from orchay.cli import cli_main
+from orchay.launcher import main
 
 if __name__ == "__main__":
-    sys.exit(cli_main())
+    sys.exit(main())
