@@ -41,7 +41,7 @@
 ### TSK-01-02: pyproject.toml 엔트리포인트 변경
 - category: infrastructure
 - domain: infra
-- status: [ ]
+- status: 상세설계 [dd]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
