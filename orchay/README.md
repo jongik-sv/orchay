@@ -26,7 +26,7 @@ orchay는 다음 도구들이 필요합니다:
 
 Python 설치 없이 바로 사용할 수 있습니다.
 
-1. [GitHub Releases](https://github.com/your-username/orchay/releases/latest)에서 플랫폼에 맞는 파일 다운로드:
+1. [GitHub Releases](https://github.com/jongik-sv/orchay/releases/latest)에서 플랫폼에 맞는 파일 다운로드:
    - **Linux**: `orchay-linux-x64.tar.gz`
    - **Windows**: `orchay-windows-x64.zip`
    - **macOS**: `orchay-macos-x64.tar.gz`
@@ -101,7 +101,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
 # Windows: irm https://astral.sh/uv/install.ps1 | iex
 
 # 소스 클론 및 실행
-git clone https://github.com/your-username/orchay.git
+git clone https://github.com/jongik-sv/orchay.git
 cd orchay
 uv run python -m orchay --help
 ```
@@ -116,8 +116,9 @@ uv run python -m orchay --help
 # 1. WezTerm 설치
 winget install wez.wezterm
 
-# 2. Claude Code 설치 (Native)
-irm https://claude.ai/install.ps1 | iex
+# 2. Claude Code 설치
+# 공식 가이드: https://docs.anthropic.com/en/docs/claude-code/getting-started
+npm install -g @anthropic-ai/claude-code
 
 # 새 터미널 열고 orchay 실행
 cd {프로젝트 폴더}
@@ -132,9 +133,9 @@ curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/sh
 echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
 sudo apt update && sudo apt install wezterm
 
-# 2. Claude Code 설치 (Native)
-curl -fsSL https://claude.ai/install.sh | bash
-source ~/.bashrc  # 또는 source ~/.zshrc
+# 2. Claude Code 설치
+# 공식 가이드: https://docs.anthropic.com/en/docs/claude-code/getting-started
+npm install -g @anthropic-ai/claude-code
 
 # orchay 실행
 cd {프로젝트 폴더}
@@ -147,9 +148,9 @@ orchay project_name
 # 1. WezTerm 설치
 brew install --cask wezterm
 
-# 2. Claude Code 설치 (Native)
-curl -fsSL https://claude.ai/install.sh | bash
-source ~/.zshrc
+# 2. Claude Code 설치
+# 공식 가이드: https://docs.anthropic.com/en/docs/claude-code/getting-started
+npm install -g @anthropic-ai/claude-code
 
 # orchay 실행
 cd {프로젝트 폴더}
