@@ -1,25 +1,39 @@
-# 010 기술 설계: TSK-01-01 launcher.py 패키지 이동
+# 기술설계: TSK-01-01 launcher.py 패키지 이동
 
-> **Task ID**: TSK-01-01
-> **Category**: infrastructure
-> **Status**: 상세설계 [dd]
-> **PRD Ref**: PRD 3.1 엔트리포인트 변경
-> **작성일**: 2025-12-29
+## 문서 정보
+
+| 항목 | 내용 |
+|------|------|
+| Task ID | TSK-01-01 |
+| Task명 | launcher.py 패키지 이동 |
+| Category | infrastructure |
+| 상태 | 상세설계 [dd] |
+| 작성일 | 2025-12-30 |
 
 ---
 
-## 1. 목적
+## 1. 개요
 
-launcher.py를 패키지 외부 독립 스크립트에서 `orchay/src/orchay/` 내부로 이동하여:
-- PyInstaller 단일 실행 파일 빌드 지원
-- `python -m orchay` 실행 시 launcher 기능 통합
-- 패키지 설치 후 `orchay` 명령 직접 실행 가능
+### 1.1 목적
+
+launcher.py를 패키지 외부 독립 스크립트에서 `orchay/src/orchay/` 내부 모듈로 이동하여, PyInstaller 빌드 및 pipx 배포 시 엔트리포인트로 활용할 수 있도록 구조를 개선합니다.
+
+### 1.2 PRD 참조
+
+- **PRD 3.1**: 엔트리포인트 변경
+
+### 1.3 범위
+
+| 범위 | 내용 |
+|------|------|
+| 포함 | launcher.py 이동, get_orchay_cmd() 경로 로직 수정, 상대 경로 조정 |
+| 제외 | pyproject.toml 수정 (TSK-01-02), __main__.py 수정 (TSK-01-03) |
 
 ---
 
 ## 2. 현재 상태
 
-### 2.1 파일 위치
+### 2.1 현재 파일 구조
 
 ```
 orchay/
@@ -27,137 +41,135 @@ orchay/
 ├── pyproject.toml           ← entry point: orchay.cli:cli_main
 └── src/orchay/
     ├── cli.py               ← 현재 엔트리포인트
-    └── __main__.py          ← cli.cli_main() 호출
+    ├── main.py
+    └── __main__.py
 ```
 
-### 2.2 현재 실행 방식
+### 2.2 현재 get_orchay_cmd() 구현
 
-```bash
-# launcher.py 직접 실행 (패키지 외부)
-python launcher.py
-
-# 또는 CLI 통해 스케줄러만 실행
-uv run --project orchay python -m orchay
+```python
+def get_orchay_cmd() -> str:
+    """orchay 실행 명령 반환 (uv run 사용)."""
+    launcher_dir = os.path.dirname(os.path.abspath(__file__))
+    return f"uv run --project {launcher_dir} python -m orchay"
 ```
 
-### 2.3 현재 launcher.py 주요 기능
-
-| 함수 | 기능 |
-|------|------|
-| `check_dependencies()` | wezterm, claude, uv 설치 확인 |
-| `kill_mux_server()` | 기존 WezTerm mux-server 종료 |
-| `get_orchay_cmd()` | orchay 스케줄러 실행 명령 생성 |
-| `main()` | WezTerm 레이아웃 생성 + 스케줄러 시작 |
+**문제점**:
+- `__file__`이 `orchay/launcher.py`를 가리킴
+- `launcher_dir`이 `orchay/` 디렉토리가 됨
+- 패키지 내부로 이동 시 경로가 `orchay/src/orchay/`가 되어 잘못된 경로 참조
 
 ---
 
 ## 3. 목표 상태
 
-### 3.1 파일 구조
+### 3.1 목표 파일 구조
 
 ```
 orchay/
-├── pyproject.toml           ← entry point: orchay.launcher:main
+├── pyproject.toml           ← (TSK-01-02) entry point: orchay.launcher:main
 └── src/orchay/
     ├── launcher.py          ← 새 위치 (이동됨)
     ├── cli.py               ← 스케줄러 CLI (내부 호출)
-    └── __main__.py          ← launcher.main() 호출
+    ├── main.py
+    └── __main__.py          ← (TSK-01-03) launcher.main() 호출
 ```
 
-### 3.2 목표 실행 방식
+### 3.2 수정된 get_orchay_cmd() 구현
 
-```bash
-# 모든 방식이 동일하게 launcher.main() 호출
-orchay                    # entry point 통해
-python -m orchay          # __main__.py 통해
-./dist/orchay             # PyInstaller 빌드 실행 파일
+```python
+def get_orchay_cmd() -> str:
+    """orchay 실행 명령 반환 (uv run 사용)."""
+    # 패키지 루트 디렉토리 찾기 (src/orchay → orchay)
+    package_dir = Path(__file__).parent  # src/orchay
+    project_dir = package_dir.parent.parent  # orchay (pyproject.toml 위치)
+    return f"uv run --project {project_dir} python -m orchay"
 ```
 
 ---
 
 ## 4. 구현 계획
 
-### 4.1 파일 이동
+### 4.1 작업 순서
 
-**작업**: `orchay/launcher.py` → `orchay/src/orchay/launcher.py`
+| 순서 | 작업 | 상세 |
+|------|------|------|
+| 1 | 파일 이동 | `orchay/launcher.py` → `orchay/src/orchay/launcher.py` |
+| 2 | import 경로 수정 | pathlib.Path 사용으로 변경 |
+| 3 | get_orchay_cmd() 수정 | 프로젝트 디렉토리 경로 계산 로직 변경 |
+| 4 | 타입 힌트 추가 | Pyright strict 모드 대응 |
+| 5 | 테스트 | import 및 경로 해석 검증 |
 
-```bash
-mv orchay/launcher.py orchay/src/orchay/launcher.py
-```
-
-### 4.2 경로 로직 수정
-
-**파일**: `orchay/src/orchay/launcher.py`
-
-**변경 대상 함수**: `get_orchay_cmd()`
-
-| 항목 | 현재 | 변경 후 |
-|------|------|---------|
-| PROJECT_ROOT | `Path(__file__).parent` (orchay/) | `Path(__file__).parent.parent.parent` (orchay/) |
-| 상대 경로 | `orchay/src/orchay` | 패키지 내부에서 자체 참조 |
-
-**변경 코드**:
+### 4.2 경로 계산 로직
 
 ```python
-def get_orchay_cmd() -> list[str]:
-    """orchay 스케줄러 실행 명령 반환."""
-    # PyInstaller frozen 환경 감지
-    if getattr(sys, 'frozen', False):
-        # 빌드된 실행 파일: 자기 자신 + run 서브커맨드
-        return [sys.executable, "run"]
+from pathlib import Path
 
-    # 개발 환경: uv run 사용
-    project_root = Path(__file__).parent.parent.parent  # orchay/
-    return ["uv", "run", "--project", str(project_root), "python", "-m", "orchay", "run"]
+def _get_project_dir() -> Path:
+    """pyproject.toml이 위치한 프로젝트 디렉토리 반환."""
+    # __file__: orchay/src/orchay/launcher.py
+    # parent[0]: orchay/src/orchay/
+    # parent[1]: orchay/src/
+    # parent[2]: orchay/ (프로젝트 루트)
+    return Path(__file__).parent.parent.parent
+
+def get_orchay_cmd() -> str:
+    """orchay 실행 명령 반환 (uv run 사용)."""
+    project_dir = _get_project_dir()
+    return f"uv run --project {project_dir} python -m orchay"
 ```
 
-### 4.3 Import 경로 조정
+### 4.3 PyInstaller 호환성
 
-**파일**: `orchay/src/orchay/launcher.py`
+PyInstaller frozen 환경에서는 `__file__` 경로가 달라질 수 있으므로 조건 분기 필요:
 
-기존 상대 import 확인 필요:
-- 현재 독립 스크립트로 외부 import 없음
-- 이동 후에도 표준 라이브러리만 사용하므로 변경 불필요
+```python
+import sys
+from pathlib import Path
 
-### 4.4 Type Annotation 확인
-
-Pyright strict 모드 통과를 위해 다음 확인:
-- 모든 함수 반환 타입 명시
-- `subprocess.run` 호출 시 타입 힌트 확인
-
----
-
-## 5. 범위 검증
-
-### 5.1 범위 내 (이 Task에서 수행)
-
-- [x] launcher.py 파일 이동
-- [x] get_orchay_cmd() 경로 로직 수정
-- [x] Pyright strict 모드 통과 확인
-
-### 5.2 범위 외 (다른 Task에서 수행)
-
-- pyproject.toml 엔트리포인트 변경 → TSK-01-02
-- __main__.py 수정 → TSK-01-03
+def _get_project_dir() -> Path:
+    """pyproject.toml이 위치한 프로젝트 디렉토리 반환."""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller frozen: uv 없이 직접 실행
+        # 이 경우 get_orchay_cmd()는 다른 로직 사용
+        return Path(sys.executable).parent
+    else:
+        return Path(__file__).parent.parent.parent
+```
 
 ---
 
-## 6. 수용 기준
+## 5. 수용 기준
 
-| # | 기준 | 검증 방법 |
-|---|------|----------|
-| 1 | launcher.py가 src/orchay/ 내에 위치 | 파일 존재 확인 |
-| 2 | import 오류 없이 모듈 로드 가능 | `python -c "from orchay.launcher import main"` |
-| 3 | Pyright strict 모드 통과 | `pyright src/orchay/launcher.py` |
+| 기준 | 검증 방법 |
+|------|----------|
+| launcher.py가 src/orchay/ 내에 위치 | `ls orchay/src/orchay/launcher.py` |
+| import 오류 없이 모듈 로드 가능 | `python -c "from orchay.launcher import main"` |
+| Pyright strict 모드 통과 | `pyright orchay/src/orchay/launcher.py` |
+| 기존 launcher.py 삭제 | `orchay/launcher.py` 파일 없음 |
 
 ---
 
-## 7. 위험 요소
+## 6. 리스크 및 대응
 
-| 위험 | 영향 | 완화 방안 |
-|------|------|----------|
-| 기존 launcher.py 직접 실행 스크립트 호환성 | 낮음 | 문서에 새로운 실행 방법 안내 |
-| 경로 계산 오류 | 중간 | 단위 테스트로 경로 검증 |
+| 리스크 | 영향 | 대응 |
+|--------|------|------|
+| 경로 계산 오류 | 스케줄러 실행 실패 | 상대 경로 .parent 체인 검증 |
+| 순환 import | 모듈 로드 실패 | launcher → cli 의존성 분리 |
+| Pyright 오류 | 타입 체크 실패 | 명시적 타입 힌트 추가 |
+
+---
+
+## 7. 의존성
+
+### 7.1 선행 작업
+
+- 없음 (첫 번째 Task)
+
+### 7.2 후행 작업
+
+- **TSK-01-02**: pyproject.toml 엔트리포인트 변경
+- **TSK-01-03**: __main__.py 수정
 
 ---
 
@@ -165,4 +177,4 @@ Pyright strict 모드 통과를 위해 다음 확인:
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
-| 1.0 | 2025-12-29 | 초기 기술 설계 작성 |
+| 1.0 | 2025-12-30 | 초기 기술설계 작성 |

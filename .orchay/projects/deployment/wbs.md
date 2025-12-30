@@ -20,7 +20,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: [ ]
+- status: detail-design [dd]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
