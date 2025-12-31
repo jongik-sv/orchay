@@ -374,8 +374,7 @@ class OrchayApp(App[None]):
         Binding("u", "queue_move_up", "Move Up", show=False, priority=True),
         Binding("d", "queue_move_down", "Move Down", show=False, priority=True),
         Binding("t", "queue_move_top", "Top", show=False, priority=True),
-        Binding("s", "queue_skip", "Skip", show=False, priority=True),
-        Binding("y", "queue_retry", "Retry", show=False, priority=True),
+        Binding("s", "queue_toggle_skip", "Skip/Retry", show=False, priority=True),
         Binding("r", "reset_worker", "Reset Worker", show=False, priority=True),
         Binding("p", "toggle_worker_pause", "Pause Worker", show=False, priority=True),
         Binding("1", "select_worker_1", "W1", show=False, priority=True),
@@ -530,7 +529,7 @@ class OrchayApp(App[None]):
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
                 yield Static(
-                    "Schedule Queue  (U:Up  D:Down  T:Top  S:Skip  Y:Retry)",
+                    "Schedule Queue  (U:Up  D:Down  T:Top  S:Skip/Retry)",
                     id="queue-title",
                 )
                 yield DataTable(id="queue-table")
@@ -1200,23 +1199,19 @@ class OrchayApp(App[None]):
             self.notify(result.message)
             self._update_queue_table(preserve_cursor_task_id=task.id)
 
-    async def action_queue_skip(self) -> None:
-        """선택된 Task를 스킵 (S키)."""
+    async def action_queue_toggle_skip(self) -> None:
+        """선택된 Task의 스킵 상태 토글 (S키)."""
         task = self._get_selected_task()
         if task:
-            result = await self._command_handler.skip_task(task.id)
+            # 스킵된 상태면 Retry, 아니면 Skip
+            if task.blocked_by == "skipped":
+                result = await self._command_handler.retry_task(task.id)
+            else:
+                result = await self._command_handler.skip_task(task.id)
             if result.success:
                 self.notify(result.message)
             else:
                 self.notify(result.message, severity="error")
-            self._update_queue_table(preserve_cursor_task_id=task.id)
-
-    async def action_queue_retry(self) -> None:
-        """선택된 Task를 재시도 (Y키)."""
-        task = self._get_selected_task()
-        if task:
-            result = await self._command_handler.retry_task(task.id)
-            self.notify(result.message)
             self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_reset_worker(self) -> None:
