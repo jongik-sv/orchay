@@ -1,6 +1,6 @@
 {
   "name": "orchay-init",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Initialize orchay project structure (.claude and .orchay folders)",
   "bin": {
     "orchay-init": "bin/cli.js"
@@ -24,7 +24,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/orchay.git",
+    "url": "git+https://github.com/jongik-sv/orchay.git",
     "directory": "orchay-init"
   },
   "engines": {
