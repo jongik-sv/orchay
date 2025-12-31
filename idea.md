@@ -138,7 +138,8 @@ python orchay/src/orchay/launcher.py deployment
 - wbs 편집 기능
   - wbs 내용 
   - 수동 승인
-
+- Task 상태
+  - 보류 상태 : 진행을 풀기 전까지 진행이 되지 않는 상태
 
 릴리즈 리스트
 gh release list --repo jongik-sv/orchay

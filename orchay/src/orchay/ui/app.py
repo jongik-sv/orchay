@@ -371,9 +371,6 @@ class OrchayApp(App[None]):
         Binding("down", "worker_select_next", "Down", show=False),
         Binding("enter", "item_select", "Select", show=False),
         # priority=True: DataTable 키바인딩보다 우선
-        Binding("u", "queue_move_up", "Move Up", show=False, priority=True),
-        Binding("d", "queue_move_down", "Move Down", show=False, priority=True),
-        Binding("t", "queue_move_top", "Top", show=False, priority=True),
         Binding("s", "queue_toggle_skip", "Skip/Retry", show=False, priority=True),
         Binding("r", "reset_worker", "Reset Worker", show=False, priority=True),
         Binding("p", "toggle_worker_pause", "Pause Worker", show=False, priority=True),
@@ -529,7 +526,7 @@ class OrchayApp(App[None]):
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
                 yield Static(
-                    "Schedule Queue  (U:Up  D:Down  T:Top  S:Skip/Retry)",
+                    "Schedule Queue  (S:Skip/Retry)",
                     id="queue-title",
                 )
                 yield DataTable(id="queue-table")
@@ -1174,30 +1171,6 @@ class OrchayApp(App[None]):
     def action_select_worker_5(self) -> None:
         """Worker 5 선택."""
         self._select_worker(5)
-
-    async def action_queue_move_up(self) -> None:
-        """선택된 Task를 위로 이동 (U키)."""
-        task = self._get_selected_task()
-        if task:
-            result = await self._command_handler.up_task(task.id)
-            self.notify(result.message)
-            self._update_queue_table(preserve_cursor_task_id=task.id)
-
-    async def action_queue_move_down(self) -> None:
-        """선택된 Task를 아래로 이동 (D키)."""
-        task = self._get_selected_task()
-        if task:
-            result = await self._command_handler.down_task(task.id)
-            self.notify(result.message)
-            self._update_queue_table(preserve_cursor_task_id=task.id)
-
-    async def action_queue_move_top(self) -> None:
-        """선택된 Task를 최우선으로 이동 (T키)."""
-        task = self._get_selected_task()
-        if task:
-            result = await self._command_handler.top_task(task.id)
-            self.notify(result.message)
-            self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_queue_toggle_skip(self) -> None:
         """선택된 Task의 스킵 상태 토글 (S키)."""

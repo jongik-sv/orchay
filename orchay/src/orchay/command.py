@@ -178,8 +178,6 @@ class CommandHandler:
             "resume": self.toggle_pause,
             "stop": self._cmd_stop,
             "start": lambda: self._cmd_start(arg),
-            "up": lambda: self.up_task(arg) if arg else CommandResult.error("Task ID 필요"),
-            "top": lambda: self.top_task(arg) if arg else CommandResult.error("Task ID 필요"),
             "skip": lambda: self.skip_task(arg) if arg else CommandResult.error("Task ID 필요"),
             "retry": lambda: self.retry_task(arg) if arg else CommandResult.error("Task ID 필요"),
             "clear": self._cmd_clear,
@@ -245,73 +243,6 @@ class CommandHandler:
             {"id": "retry", "label": "재시도 (retry)", "description": "스킵된 Task 복구"},
             {"id": "detail", "label": "상세 보기", "description": "Task 상세 정보"},
         ]
-
-    async def up_task(self, task_id: str) -> CommandResult:
-        """Task를 큐에서 한 칸 위로 이동합니다.
-
-        Args:
-            task_id: 이동할 Task ID
-
-        Returns:
-            CommandResult
-        """
-        tasks = self.orchestrator.tasks
-        idx = next((i for i, t in enumerate(tasks) if t.id == task_id), -1)
-
-        if idx == -1:
-            return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
-
-        if idx == 0:
-            return CommandResult.ok(f"{task_id}는 이미 첫 번째입니다")
-
-        # 스왑
-        tasks[idx], tasks[idx - 1] = tasks[idx - 1], tasks[idx]
-        return CommandResult.ok(f"{task_id} → 위로 이동")
-
-    async def down_task(self, task_id: str) -> CommandResult:
-        """Task를 큐에서 한 칸 아래로 이동합니다.
-
-        Args:
-            task_id: 이동할 Task ID
-
-        Returns:
-            CommandResult
-        """
-        tasks = self.orchestrator.tasks
-        idx = next((i for i, t in enumerate(tasks) if t.id == task_id), -1)
-
-        if idx == -1:
-            return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
-
-        if idx >= len(tasks) - 1:
-            return CommandResult.ok(f"{task_id}는 이미 마지막입니다")
-
-        # 스왑
-        tasks[idx], tasks[idx + 1] = tasks[idx + 1], tasks[idx]
-        return CommandResult.ok(f"{task_id} → 아래로 이동")
-
-    async def top_task(self, task_id: str) -> CommandResult:
-        """Task를 큐의 맨 앞으로 이동합니다.
-
-        Args:
-            task_id: 이동할 Task ID
-
-        Returns:
-            CommandResult
-        """
-        tasks = self.orchestrator.tasks
-        idx = next((i for i, t in enumerate(tasks) if t.id == task_id), -1)
-
-        if idx == -1:
-            return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
-
-        if idx == 0:
-            return CommandResult.ok(f"{task_id}는 이미 첫 번째입니다")
-
-        # 맨 앞으로 이동
-        task = tasks.pop(idx)
-        tasks.insert(0, task)
-        return CommandResult.ok(f"{task_id} → 최우선 이동")
 
     async def skip_task(self, task_id: str) -> CommandResult:
         """Task를 스킵합니다 (blocked 처리).
