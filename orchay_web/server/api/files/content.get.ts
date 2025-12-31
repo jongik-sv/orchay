@@ -65,7 +65,9 @@ export default defineEventHandler(async (event): Promise<FileContentResponse | B
   }
 
   // .orchay 폴더 내부인지만 확인 (어느 프로젝트든 상관없이)
-  if (!normalizedPath.includes('/.orchay/')) {
+  // Windows/Unix 경로 모두 지원
+  const hasOrchayPath = normalizedPath.includes('/.orchay/') || normalizedPath.includes('\\.orchay\\');
+  if (!hasOrchayPath) {
     throw createForbiddenError('ACCESS_DENIED', '.orchay 폴더 외부 접근 불가');
   }
 

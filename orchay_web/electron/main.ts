@@ -3,6 +3,7 @@ import path from 'path'
 import { pathToFileURL } from 'url'
 import { getPort } from 'get-port-please'
 import { getServerPath, getDefaultBasePath } from './utils/paths'
+import { loadAppConfig, updateBasePath, getRecentPaths, getSavedBasePath } from './utils/appConfig'
 
 let mainWindow: BrowserWindow | null = null
 let serverPort: number = 3100
@@ -16,11 +17,15 @@ const isDev = process.env.ELECTRON_DEV === 'true' ||
  */
 async function startServer(port: number): Promise<void> {
   const serverPath = getServerPath()
-  const basePath = getDefaultBasePath()
+
+  // 저장된 경로 우선, 없으면 기본값 사용
+  const savedPath = getSavedBasePath()
+  const basePath = savedPath || getDefaultBasePath()
 
   console.log(`[Electron] Starting Nitro server at port ${port}`)
   console.log(`[Electron] Server path: ${serverPath}`)
   console.log(`[Electron] Base path: ${basePath}`)
+  console.log(`[Electron] Saved path: ${savedPath || '(none)'}`)
 
   // 환경변수 설정
   process.env.PORT = String(port)
@@ -119,6 +124,28 @@ function setupIpcHandlers(): void {
   // 현재 base path 조회
   ipcMain.handle('config:getBasePath', () => {
     return process.env.ORCHAY_BASE_PATH || getDefaultBasePath()
+  })
+
+  // base path 설정 (영구 저장 + 환경변수 갱신)
+  ipcMain.handle('config:setBasePath', (_event, newPath: string) => {
+    try {
+      // 1. 영구 저장소에 저장
+      updateBasePath(newPath)
+
+      // 2. 환경변수 갱신 (서버가 같은 프로세스이므로 즉시 적용)
+      process.env.ORCHAY_BASE_PATH = newPath
+
+      console.log(`[Electron] Base path updated: ${newPath}`)
+      return { success: true, path: newPath }
+    } catch (error) {
+      console.error('[Electron] Failed to set base path:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // 최근 경로 목록 조회
+  ipcMain.handle('config:getRecentPaths', () => {
+    return getRecentPaths()
   })
 
   // DevTools 토글

@@ -19,6 +19,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   /**
+   * ORCHAY_BASE_PATH 설정 (영구 저장)
+   */
+  setBasePath: (path: string): Promise<{ success: boolean; path?: string; error?: string }> => {
+    return ipcRenderer.invoke('config:setBasePath', path)
+  },
+
+  /**
+   * 최근 사용한 경로 목록 조회
+   */
+  getRecentPaths: (): Promise<string[]> => {
+    return ipcRenderer.invoke('config:getRecentPaths')
+  },
+
+  /**
    * DevTools 토글 (개발용)
    */
   toggleDevTools: (): Promise<void> => {
@@ -37,6 +51,8 @@ declare global {
     electronAPI?: {
       selectDirectory: () => Promise<string | null>
       getBasePath: () => Promise<string>
+      setBasePath: (path: string) => Promise<{ success: boolean; path?: string; error?: string }>
+      getRecentPaths: () => Promise<string[]>
       toggleDevTools: () => Promise<void>
       isElectron: boolean
     }

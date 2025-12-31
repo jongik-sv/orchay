@@ -13,6 +13,7 @@ import { join, normalize, isAbsolute, resolve, dirname } from 'path';
 import { existsSync } from 'fs';
 import { createBadRequestError } from '../errors/standardError';
 import { decodePathSegment } from '../../../app/utils/urlPath';
+import { pathManager } from '../pathManager';
 
 /**
  * 상위 디렉토리에서 .orchay 폴더 찾기
@@ -75,39 +76,13 @@ function isPathSafe(path: string): boolean {
 
 /**
  * orchay 기본 경로 조회
- * 환경변수 ORCHAY_BASE_PATH 또는 현재 작업 디렉토리
- * CRIT-002: 보안 검증 강화
+ * pathManager 싱글톤 사용 (Hot reload 지원)
  *
  * @returns 기본 경로
  */
 export function getBasePath(): string {
-  const basePath = process.env.ORCHAY_BASE_PATH;
-
-  // 환경변수가 없으면 상위 디렉토리에서 .orchay 찾기
-  if (!basePath) {
-    const orchayRoot = findOrchayRoot();
-    if (orchayRoot) {
-      return orchayRoot;
-    }
-    return process.cwd();
-  }
-
-  // CRIT-002: 강화된 보안 검증
-  if (!isPathSafe(basePath)) {
-    console.warn(`[Security] Unsafe path detected in ORCHAY_BASE_PATH: ${basePath}, using cwd`);
-    return cwd;
-  }
-
-  // 경로 정규화
-  const normalized = normalize(basePath);
-
-  // 절대 경로 검증 (상대 경로 거부)
-  if (!isAbsolute(normalized)) {
-    console.warn(`[Security] Relative path in ORCHAY_BASE_PATH: ${basePath}, using cwd`);
-    return cwd;
-  }
-
-  return normalized;
+  // pathManager 사용 (동적 경로 변경 지원)
+  return pathManager.basePath;
 }
 
 /**

@@ -1,46 +1,7 @@
 import { promises as fs, existsSync } from 'fs';
-import { join, dirname, isAbsolute, resolve } from 'path';
-import { ORCHAY_PATHS, SETTINGS_FILES } from '../../types';
+import { join, dirname } from 'path';
 import { decodePathSegment } from '../../app/utils/urlPath';
-
-/**
- * 상위 디렉토리에서 .orchay 폴더 찾기
- */
-function findOrchayRoot(): string | null {
-  const startDir = process.env.INIT_CWD || process.env.PWD || process.cwd();
-  let current = resolve(startDir);
-  const root = dirname(current);
-
-  while (current !== root) {
-    const orchayPath = join(current, '.orchay');
-    if (existsSync(orchayPath)) {
-      return orchayPath;
-    }
-    current = dirname(current);
-  }
-  return null;
-}
-
-/**
- * ORCHAY 루트 경로 반환
- * 환경 변수 ORCHAY_BASE_PATH가 설정되어 있으면 해당 경로 사용
- */
-function initOrchayRoot(): string {
-  const basePath = process.env.ORCHAY_BASE_PATH;
-  if (basePath && isAbsolute(basePath)) {
-    return join(basePath, '.orchay');
-  }
-
-  // 상위 디렉토리에서 .orchay 찾기
-  const foundRoot = findOrchayRoot();
-  if (foundRoot) {
-    return foundRoot;
-  }
-
-  return '.orchay';
-}
-
-const ORCHAY_ROOT = initOrchayRoot();
+import { pathManager } from './pathManager';
 
 // 커스텀 에러 타입
 export class FileNotFoundError extends Error {
@@ -195,23 +156,24 @@ export async function listDirs(dirPath: string): Promise<string[]> {
 
 /**
  * orchay 루트 경로 반환
+ * PathManager를 통해 동적으로 경로를 반환합니다.
  */
 export function getOrchayRoot(): string {
-  return ORCHAY_ROOT;
+  return pathManager.orchayRoot;
 }
 
 /**
  * 설정 폴더 경로
  */
 export function getSettingsPath(): string {
-  return join(ORCHAY_ROOT, 'settings');
+  return pathManager.settingsPath;
 }
 
 /**
  * 프로젝트 목록 경로
  */
 export function getProjectsPath(): string {
-  return join(ORCHAY_ROOT, 'projects');
+  return pathManager.projectsPath;
 }
 
 /**
@@ -220,7 +182,7 @@ export function getProjectsPath(): string {
 export function getProjectPath(projectId: string): string {
   // URL 인코딩된 한글, 공백, 괄호 등 디코딩 처리
   const decodedId = decodePathSegment(projectId);
-  return join(ORCHAY_ROOT, 'projects', decodedId);
+  return join(pathManager.projectsPath, decodedId);
 }
 
 /**
@@ -269,7 +231,7 @@ export function getSettingFilePath(settingType: string): string {
  * 템플릿 폴더 경로
  */
 export function getTemplatesPath(): string {
-  return join(ORCHAY_ROOT, 'templates');
+  return pathManager.templatesPath;
 }
 
 /**
@@ -281,11 +243,12 @@ export async function ensureOrchayStructure(): Promise<{ success: boolean; creat
   const created: string[] = [];
   const errors: string[] = [];
 
+  // 동적 경로 사용 (pathManager 기반)
   const directories = [
-    ORCHAY_PATHS.ROOT,
-    ORCHAY_PATHS.SETTINGS,
-    ORCHAY_PATHS.TEMPLATES,
-    ORCHAY_PATHS.PROJECTS,
+    pathManager.orchayRoot,
+    pathManager.settingsPath,
+    pathManager.templatesPath,
+    pathManager.projectsPath,
   ];
 
   for (const dir of directories) {
@@ -350,9 +313,9 @@ export async function checkOrchayStructure(): Promise<{
   projects: boolean;
 }> {
   return {
-    root: await dirExists(ORCHAY_PATHS.ROOT),
-    settings: await dirExists(ORCHAY_PATHS.SETTINGS),
-    templates: await dirExists(ORCHAY_PATHS.TEMPLATES),
-    projects: await dirExists(ORCHAY_PATHS.PROJECTS),
+    root: await dirExists(pathManager.orchayRoot),
+    settings: await dirExists(pathManager.settingsPath),
+    templates: await dirExists(pathManager.templatesPath),
+    projects: await dirExists(pathManager.projectsPath),
   };
 }

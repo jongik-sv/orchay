@@ -40,6 +40,7 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const projectStore = useProjectStore()
+const configStore = useConfigStore()
 
 // ============================================================
 // MenuItem 모델
@@ -224,14 +225,26 @@ const menubarPassThrough = computed<MenubarPassThroughOptions>(() => ({
         </a>
       </template>
 
-      <!-- end 슬롯: 프로젝트명 -->
+      <!-- end 슬롯: 홈 디렉토리 변경 버튼 + 프로젝트명 -->
       <template #end>
-        <span
-          data-testid="project-name"
-          :class="projectNameClass"
-        >
-          {{ displayProjectName }}
-        </span>
+        <div class="flex items-center gap-2">
+          <Button
+            v-tooltip.bottom="'홈 디렉토리 변경'"
+            icon="pi pi-folder"
+            severity="secondary"
+            text
+            rounded
+            aria-label="홈 디렉토리 변경"
+            data-testid="change-home-dir-btn"
+            @click="configStore.openChangeDialog"
+          />
+          <span
+            data-testid="project-name"
+            :class="projectNameClass"
+          >
+            {{ displayProjectName }}
+          </span>
+        </div>
       </template>
     </Menubar>
   </header>

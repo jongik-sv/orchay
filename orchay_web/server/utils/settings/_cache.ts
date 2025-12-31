@@ -21,6 +21,20 @@ import {
   DEFAULT_WORKFLOWS,
 } from './defaults';
 import { getSettingsFilePath } from './paths';
+import { pathManager } from '../pathManager';
+
+// ============================================================
+// 경로 변경 리스너 등록
+// ============================================================
+
+/**
+ * PathManager 경로 변경 시 캐시 자동 무효화
+ * 홈 디렉토리가 변경되면 설정 파일도 다른 위치에서 로드해야 함
+ */
+pathManager.onPathChange(() => {
+  console.log('[Settings] Path changed, invalidating cache');
+  refreshCache();
+});
 
 // ============================================================
 // 캐시 상태 관리
