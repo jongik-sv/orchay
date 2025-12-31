@@ -404,9 +404,13 @@ def launch_wezterm_windows(
     log.debug(f"WezTerm PIDs before launch: {pids_before}")
 
     log.debug(f"Popen: {wezterm_launch_args}")
+    # WEZTERM_LOG=warn으로 불필요한 에러 로그 숨김
+    env = os.environ.copy()
+    env["WEZTERM_LOG"] = "warn"
     subprocess.Popen(
         wezterm_launch_args,
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        env=env,
     )
 
     # 잠시 대기 후 새로 생긴 wezterm-gui PID 찾기
@@ -463,7 +467,10 @@ def launch_wezterm_linux(
     # 1. WezTerm 시작
     wezterm_launch_args = [wezterm_cmd]
     log.debug(f"Popen: {wezterm_launch_args}")
-    subprocess.Popen(wezterm_launch_args, start_new_session=True)
+    # WEZTERM_LOG=warn으로 불필요한 에러 로그 숨김
+    env = os.environ.copy()
+    env["WEZTERM_LOG"] = "warn"
+    subprocess.Popen(wezterm_launch_args, start_new_session=True, env=env)
 
     log.info("Waiting for WezTerm to start (2s)...")
     time.sleep(2)
