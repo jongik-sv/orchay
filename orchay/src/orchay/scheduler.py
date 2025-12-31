@@ -181,15 +181,31 @@ def get_workflow_steps(
     return WORKFLOW_STEPS.get(mode, WORKFLOW_STEPS[ExecutionMode.QUICK])
 
 
-# workflows.json 캐시
+# workflows.json 캐시 (데이터, 파일 경로, 수정 시간)
 _workflows_cache: dict[str, Any] | None = None
+_workflows_path: Path | None = None
+_workflows_mtime: float = 0.0
 
 
 def _load_workflows() -> dict[str, Any]:
-    """workflows.json 파일을 로드합니다."""
-    global _workflows_cache
-    if _workflows_cache is not None:
-        return _workflows_cache
+    """workflows.json 파일을 로드합니다.
+
+    파일 수정 시간을 체크하여 변경 시 자동으로 캐시를 갱신합니다.
+    """
+    global _workflows_cache, _workflows_path, _workflows_mtime
+
+    # 캐시된 파일이 있으면 수정 시간 체크
+    if _workflows_cache is not None and _workflows_path is not None:
+        try:
+            current_mtime = _workflows_path.stat().st_mtime
+            if current_mtime == _workflows_mtime:
+                return _workflows_cache
+            # 파일이 변경됨 → 캐시 무효화
+            logger.info(f"workflows.json 변경 감지, 캐시 갱신")
+            _workflows_cache = None
+        except OSError:
+            # 파일 접근 실패 시 캐시 유지
+            return _workflows_cache
 
     # .orchay/settings/workflows.json 찾기
     cwd = Path.cwd()
@@ -199,6 +215,8 @@ def _load_workflows() -> dict[str, Any]:
             try:
                 loaded: dict[str, Any] = json.loads(workflows_path.read_text(encoding="utf-8"))
                 _workflows_cache = loaded
+                _workflows_path = workflows_path
+                _workflows_mtime = workflows_path.stat().st_mtime
                 return loaded
             except Exception as e:
                 logger.warning(f"workflows.json 로드 실패: {e}")
@@ -207,6 +225,15 @@ def _load_workflows() -> dict[str, Any]:
     # 기본값 반환
     _workflows_cache = {}
     return _workflows_cache
+
+
+def reload_workflows() -> None:
+    """workflows.json 캐시를 강제로 갱신합니다."""
+    global _workflows_cache, _workflows_mtime
+    _workflows_cache = None
+    _workflows_mtime = 0.0
+    _load_workflows()
+    logger.info("workflows.json 캐시 강제 갱신 완료")
 
 
 def get_manual_commands(mode: ExecutionMode) -> set[str]:
