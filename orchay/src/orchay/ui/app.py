@@ -18,6 +18,7 @@ from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static
 
 from orchay.command import CommandHandler
+from orchay.scheduler import ExecutionMode
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
 from orchay.ui.widgets import HelpModal, QueueWidget
 from orchay.utils.active_tasks import (
@@ -543,6 +544,9 @@ class OrchayApp(App[None]):
     @mode.setter
     def mode(self, value: str) -> None:
         self._mode = value
+        # Orchestrator 모드 동기화
+        if self._real_orchestrator is not None:
+            self._real_orchestrator.mode = ExecutionMode(value)
         try:
             indicator = self.query_one("#scheduler-state", SchedulerStateIndicator)
             indicator.mode = value

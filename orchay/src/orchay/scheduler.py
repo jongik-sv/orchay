@@ -119,26 +119,34 @@ async def filter_executable_tasks(
 
     result: list[Task] = []
 
+    manual_cmds = get_manual_commands(mode)
+    logger.debug(f"filter: mode={mode.value}, manualCommands={manual_cmds}")
+
     for task in tasks:
         # BR-01: 완료 Task 제외
         if task.status == TaskStatus.DONE:
+            logger.debug(f"  {task.id}: BR-01 제외 (완료)")
             continue
 
         # BR-02: blocked-by 설정된 Task 제외
         if task.blocked_by is not None:
+            logger.debug(f"  {task.id}: BR-02 제외 (blocked_by={task.blocked_by})")
             continue
 
         # BR-03: 이미 할당된 Task 제외
         if task.assigned_worker is not None:
+            logger.debug(f"  {task.id}: BR-03 제외 (assigned={task.assigned_worker})")
             continue
 
         # BR-08: transition이 없는 Task 제외 (수동 완료 대상)
         next_cmd = get_next_workflow_command(task)
         if next_cmd is None:
+            logger.debug(f"  {task.id}: BR-08 제외 (transition 없음, status={task.status.value})")
             continue
 
         # BR-09: 다음 명령어가 수동 실행 대상이면 제외
-        if next_cmd in get_manual_commands(mode):
+        if next_cmd in manual_cmds:
+            logger.debug(f"  {task.id}: BR-09 제외 (수동 명령={next_cmd})")
             continue
 
         # 모드별 필터링
