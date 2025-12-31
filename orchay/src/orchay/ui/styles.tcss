@@ -59,8 +59,7 @@ DataTable > .datatable--header {
 }
 
 DataTable > .datatable--cursor {
-    background: $primary;
-    color: $text;
+    text-style: reverse;
 }
 
 /* Worker 섹션 (6개 Worker + 타이틀 = 8줄) */
