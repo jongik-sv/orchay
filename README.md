@@ -38,7 +38,9 @@ npx orchay-init
 
 ### 1. 설치
 
-#### Windows
+#### 1.1 orchay (스케줄러 CLI)
+
+##### Windows
 
 1. [Releases](https://github.com/jongik-sv/orchay/releases/latest)에서 `orchay-windows-x64.zip` 다운로드
 2. 압축 해제 후 원하는 위치에 복사 (예: `C:\bin\orchay\`)
@@ -56,19 +58,68 @@ echo @"C:\bin\orchay\orchay.exe" %%* > C:\bin\orchay.cmd
 [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";C:\bin", "User")
 ```
 
-#### Linux / macOS
+##### Linux
 
 ```bash
-# 다운로드 및 설치
 curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay-linux-x64.zip -o orchay.zip
 unzip orchay.zip -d ~/.local/
 ln -s ~/.local/orchay-linux-x64/orchay ~/.local/bin/orchay
 ```
 
-#### pipx (개발용)
+##### macOS
+
+```bash
+curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay-macos-x64.zip -o orchay.zip
+unzip orchay.zip -d ~/.local/
+ln -s ~/.local/orchay-macos-x64/orchay ~/.local/bin/orchay
+```
+
+##### pipx (개발용)
 
 ```bash
 pipx install orchay
+```
+
+#### 1.2 orchay_web (웹 대시보드)
+
+##### Windows
+
+[Releases](https://github.com/jongik-sv/orchay/releases/latest)에서 `orchay_web-x.x.x-win-x64.exe` 다운로드 후 실행
+
+##### Linux
+
+```bash
+# AppImage
+curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay_web-0.1.0-linux-x64.AppImage -o orchay_web.AppImage
+chmod +x orchay_web.AppImage
+./orchay_web.AppImage
+
+# 또는 deb 패키지
+curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay_web-0.1.0-linux-x64.deb -o orchay_web.deb
+sudo dpkg -i orchay_web.deb
+```
+
+##### macOS
+
+```bash
+# Intel
+curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay_web-0.1.0-mac-x64.dmg -o orchay_web.dmg
+hdiutil attach orchay_web.dmg
+cp -R /Volumes/orchay_web*/orchay_web.app /Applications/
+hdiutil detach /Volumes/orchay_web*
+
+# Apple Silicon
+curl -L https://github.com/jongik-sv/orchay/releases/latest/download/orchay_web-0.1.0-mac-arm64.dmg -o orchay_web.dmg
+hdiutil attach orchay_web.dmg
+cp -R /Volumes/orchay_web*/orchay_web.app /Applications/
+hdiutil detach /Volumes/orchay_web*
+```
+
+#### 1.3 orchay-init (프로젝트 초기화)
+
+```bash
+cd your-project
+npx orchay-init
 ```
 
 ### 2. 사전 요구사항

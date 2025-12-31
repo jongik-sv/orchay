@@ -117,3 +117,20 @@ IMPLEMENTED_STATUSES = {IMPLEMENT, VERIFY, DONE} # [im], [vf], [xx]
 
 python orchay/src/orchay/launcher.py deployment
 
+추가로 develop 모드일 경우 설계가 끝나고 review, apply를 하고 build가 끝난후 audit, patch를 각각 한번씩 실행하고
+
+## develop 모드
+
+- design -> review -> apply -> approve(사람이 실행) -> build -> audit -> patch -> test -> verify -> done(사람이 실행)
+
+## quick 모드
+
+- design -> approve(사람이 실행) -> build -> verify -> done(사람이 실행)
+
+## force 모드
+
+- design -> approve -> build -> verify -> done(사람이 실행)
+
+## design 모드
+
+- design 까지만
