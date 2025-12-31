@@ -23,6 +23,7 @@ from orchay.scheduler import (
     ExecutionMode,
     dispatch_task,
     filter_executable_tasks,
+    get_manual_commands,
     get_next_workflow_command,
 )
 from orchay.utils.wezterm import (
@@ -323,19 +324,37 @@ class Orchestrator:
             }
             new_state = state_map.get(state, WorkerState.BUSY)
 
-            # done 상태 처리: Task 할당 해제
+            # done 상태 처리: 연속 실행 또는 할당 해제
             if new_state == WorkerState.DONE:
                 if worker.state == WorkerState.DONE:
                     # DONE 상태가 연속 감지 → IDLE로 강제 전환
                     # (ORCHAY_DONE 신호가 화면에 남아있어도 두 번째 tick에서 전환)
                     worker.reset()
                 else:
-                    # 처음 DONE 감지: Task 할당 해제
+                    # 처음 DONE 감지: 연속 실행 체크
                     task_id = done_info.task_id if done_info else worker.current_task
                     if task_id:
                         task = next((t for t in self.tasks if t.id == task_id), None)
                         if task:
-                            task.assigned_worker = None
+                            # WBS 재파싱 (스킬이 변경한 상태 반영)
+                            await self._refresh_task_status(task)
+
+                            next_cmd = get_next_workflow_command(task)
+                            manual_cmds = get_manual_commands(self.mode)
+
+                            if next_cmd and next_cmd not in manual_cmds:
+                                # 자동: 즉시 다음 단계 dispatch (같은 Worker)
+                                logger.info(
+                                    f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
+                                )
+                                await self._dispatch_next_step(worker, task)
+                                continue  # 다음 Worker로 (상태 유지)
+                            else:
+                                # 수동: 할당 해제
+                                task.assigned_worker = None
+                                logger.info(
+                                    f"수동 대기: {task.id} (다음: {next_cmd})"
+                                )
 
                     # DONE 상태로 유지 (다음 tick에서 IDLE로 전환됨)
                     worker.state = WorkerState.DONE
@@ -370,6 +389,65 @@ class Orchestrator:
                     worker.state = new_state
             else:
                 worker.state = new_state
+
+    async def _refresh_task_status(self, task: Task) -> None:
+        """단일 Task의 WBS 상태를 재로드합니다.
+
+        스킬이 WBS 파일을 변경한 후 최신 상태를 반영합니다.
+        """
+        try:
+            new_tasks = await self.parser.parse()
+            for new_task in new_tasks:
+                if new_task.id == task.id:
+                    # 상태 관련 필드만 업데이트
+                    task.status = new_task.status
+                    task.title = new_task.title
+                    task.priority = new_task.priority
+                    task.category = new_task.category
+                    task.depends = new_task.depends
+                    task.blocked_by = new_task.blocked_by
+                    logger.debug(f"Task 상태 갱신: {task.id} → {task.status.value}")
+                    break
+        except Exception as e:
+            logger.warning(f"Task 상태 갱신 실패: {task.id} - {e}")
+
+    async def _dispatch_next_step(self, worker: Worker, task: Task) -> None:
+        """같은 Worker에 다음 워크플로우 단계를 dispatch합니다.
+
+        연속 실행을 위해 DONE 상태 감지 후 즉시 다음 명령어를 전송합니다.
+        """
+        next_workflow = get_next_workflow_command(task)
+        if next_workflow is None:
+            logger.warning(f"다음 워크플로우 없음: {task.id}")
+            task.assigned_worker = None
+            worker.reset()
+            return
+
+        # Worker 상태 업데이트 (BUSY 유지)
+        worker.state = WorkerState.BUSY
+        worker.current_task = task.id
+        worker.dispatch_time = datetime.now()
+        worker.current_step = next_workflow
+
+        # Task 할당 유지
+        task.assigned_worker = worker.id
+
+        # 명령어 전송
+        command = f"/wf:{next_workflow} {self.project_name}/{task.id}"
+        try:
+            await wezterm_send_text(worker.pane_id, command)
+            await asyncio.sleep(1.0)
+            await wezterm_send_text(worker.pane_id, "\r")
+            await asyncio.sleep(1.0)
+            await wezterm_send_text(worker.pane_id, " ")  # 추천 프롬프트 제거
+            console.print(
+                f"[cyan]연속 실행:[/] {task.id} ({task.status.value}) → Worker {worker.id} "
+                f"(/wf:{next_workflow})"
+            )
+        except Exception as e:
+            logger.error(f"Worker {worker.id} 연속 실행 실패: {e}")
+            task.assigned_worker = None
+            worker.reset()
 
     async def _dispatch_to_worker(self, worker: Worker, task: Task) -> None:
         """Worker에 Task를 분배."""
@@ -482,8 +560,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "project",
         nargs="?",
-        default="orchay",
-        help="프로젝트명 (.orchay/projects/{project}/ 사용, 기본: orchay)",
+        default=None,
+        help="프로젝트명 (.orchay/projects/{project}/ 사용)",
     )
     parser.add_argument(
         "-w",
@@ -534,6 +612,34 @@ def find_orchay_root() -> Path | None:
         if (parent / ".orchay").is_dir():
             return parent
     return None
+
+
+def detect_project() -> tuple[str | None, list[str]]:
+    """.orchay/projects/ 폴더에서 프로젝트를 자동 감지.
+
+    Returns:
+        (프로젝트명, 프로젝트 목록) 튜플
+        - 프로젝트가 1개면: (프로젝트명, [프로젝트명])
+        - 그 외: (None, 프로젝트 목록)
+    """
+    base_dir = find_orchay_root()
+    if base_dir is None:
+        return None, []
+
+    projects_dir = base_dir / ".orchay" / "projects"
+    if not projects_dir.exists():
+        return None, []
+
+    # wbs.md가 있는 폴더만 프로젝트로 인식
+    projects = [
+        d.name
+        for d in projects_dir.iterdir()
+        if d.is_dir() and (d / "wbs.md").exists()
+    ]
+
+    if len(projects) == 1:
+        return projects[0], projects
+    return None, projects
 
 
 def get_project_paths(project_name: str) -> tuple[Path, Path]:
@@ -605,6 +711,35 @@ def setup_logging(verbose: bool = False) -> Path | None:
 async def async_main() -> int:
     """비동기 메인 함수."""
     args = parse_args()
+
+    # 프로젝트 인자 처리: 없으면 자동 감지
+    if args.project is None:
+        detected, projects = detect_project()
+        if detected:
+            args.project = detected
+            console.print(f"[green]프로젝트 자동 감지:[/] {detected}\n")
+        else:
+            # 프로젝트 감지 실패 시 안내 메시지 출력
+            base_dir = find_orchay_root()
+            if base_dir is None:
+                console.print("[red]오류:[/] .orchay 폴더를 찾을 수 없습니다.")
+                console.print("프로젝트를 초기화하세요: [cyan]orchay-init <project>[/]")
+                return 1
+
+            projects_dir = base_dir / ".orchay" / "projects"
+            if not projects_dir.exists() or len(projects) == 0:
+                console.print("[red]오류:[/] 프로젝트가 없습니다.")
+                console.print(
+                    f"[dim]{projects_dir}[/] 폴더에 wbs.md 파일을 생성하세요."
+                )
+                return 1
+
+            # 2개 이상인 경우
+            console.print("[yellow]프로젝트를 선택하세요:[/]\n")
+            for p in sorted(projects):
+                console.print(f"  • {p}")
+            console.print("\n[dim]사용법:[/] orchay [cyan]<프로젝트명>[/]")
+            return 1
 
     # 1. 파일 기반 설정 로드 (.orchay/settings/orchay.yaml)
     from orchay.utils.config import load_config

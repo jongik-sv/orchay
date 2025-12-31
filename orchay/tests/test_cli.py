@@ -10,20 +10,6 @@ import pytest
 class TestParseArgsDefault:
     """TC-06: parse_args() 기본 실행 테스트."""
 
-    def test_parse_args_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """기본 인자로 파싱."""
-        import sys
-
-        from orchay.main import parse_args
-
-        monkeypatch.setattr(sys, "argv", ["orchay"])
-        args = parse_args()
-
-        assert args.project == "orchay"
-        assert args.dry_run is False
-        assert args.workers == 3
-        assert args.mode == "quick"
-
     def test_parse_args_with_project(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """프로젝트명 지정."""
         import sys

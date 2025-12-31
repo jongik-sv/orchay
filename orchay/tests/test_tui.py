@@ -85,16 +85,16 @@ async def test_command_input_status() -> None:
 
 
 @pytest.mark.asyncio
-async def test_f1_help() -> None:
-    """E2E-002: F1 키로 도움말 표시."""
+async def test_f12_help() -> None:
+    """E2E-002: F12 키로 도움말 표시."""
     app = OrchayApp(
         tasks=create_test_tasks(),
         worker_list=create_test_workers(),
     )
 
     async with app.run_test() as pilot:
-        # F1 키 입력
-        await pilot.press("f1")
+        # F12 키 입력
+        await pilot.press("f12")
 
         # 도움말 모달 표시 확인
         help_modal = app.query_one("#help-modal", HelpModal)

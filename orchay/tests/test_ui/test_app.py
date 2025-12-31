@@ -273,9 +273,9 @@ async def test_footer_shows_keybindings() -> None:
         assert footer is not None
         # Footer에 바인딩이 설정되어 있는지 확인
         assert len(app.BINDINGS) > 0
-        # F1, F10 바인딩 존재 확인
+        # F12, F10 바인딩 존재 확인
         binding_keys = [b.key for b in app.BINDINGS]
-        assert "f1" in binding_keys
+        assert "f12" in binding_keys
         assert "f10" in binding_keys
 
 

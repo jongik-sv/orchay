@@ -34,6 +34,7 @@
       "stopAfterCommand": "start",
       "stopAtState": "[dd]",
       "dependencyCheck": "ignore",
+      "manualCommands": [],
       "color": "#3b82f6"
     },
     "quick": {
@@ -43,6 +44,7 @@
       "workflowScope": "transitions-only",
       "stopAtState": "[xx]",
       "dependencyCheck": "check-implemented",
+      "manualCommands": ["approve", "done"],
       "color": "#22c55e"
     },
     "develop": {
@@ -52,6 +54,7 @@
       "workflowScope": "full",
       "stopAtState": "[im]",
       "dependencyCheck": "check-implemented",
+      "manualCommands": ["approve", "done"],
       "color": "#8b5cf6"
     },
     "force": {
@@ -61,6 +64,7 @@
       "workflowScope": "transitions-only",
       "stopAtState": "[xx]",
       "dependencyCheck": "ignore",
+      "manualCommands": ["done"],
       "color": "#f59e0b"
     }
   },
@@ -93,8 +97,10 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
+        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
-        { "from": "[im]", "to": "[vf]", "command": "verify" }
+        { "from": "[im]", "to": "[vf]", "command": "verify" },
+        { "from": "[vf]", "to": "[xx]", "command": "done" }
       ],
       "actions": {
         "[dd]": ["review", "apply"],
@@ -107,8 +113,10 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
+        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "fix" },
-        { "from": "[im]", "to": "[vf]", "command": "verify" }
+        { "from": "[im]", "to": "[vf]", "command": "verify" },
+        { "from": "[vf]", "to": "[xx]", "command": "done" }
       ],
       "actions": {
         "[dd]": ["review", "apply"],
@@ -121,8 +129,10 @@
       "states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
         { "from": "[ ]", "to": "[dd]", "command": "start" },
+        { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
-        { "from": "[im]", "to": "[vf]", "command": "verify" }
+        { "from": "[im]", "to": "[vf]", "command": "verify" },
+        { "from": "[vf]", "to": "[xx]", "command": "done" }
       ],
       "actions": {
         "[dd]": ["review", "apply"],

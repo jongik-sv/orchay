@@ -164,20 +164,24 @@ class TestFilterExecutableTasks:
 
     @pytest.mark.asyncio
     async def test_develop_mode_checks_dependencies(self) -> None:
-        """TC-06: develop 모드에서 [dd] 이상 상태의 의존성 검사 확인."""
+        """TC-06: develop 모드에서 [ap] 이상 상태의 의존성 검사 확인.
+
+        Note: [dd] 상태에서는 approve가 수동 명령이므로 Task가 제외됨 (BR-09).
+        [ap] 상태에서 build는 자동이므로 의존성 검사가 이루어짐.
+        """
         tasks = [
             Task(
                 id="TSK-01-01",
                 title="Task 1",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.HIGH,
             ),
             Task(
                 id="TSK-01-02",
                 title="Task 2 (depends on 01)",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.HIGH,
                 depends=["TSK-01-01"],
             ),
@@ -469,20 +473,24 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     async def test_integration_dependency_filtering(self) -> None:
-        """TC-INT-02: 의존성 미충족 Task가 큐에서 제외되는 전체 흐름 확인."""
+        """TC-INT-02: 의존성 미충족 Task가 큐에서 제외되는 전체 흐름 확인.
+
+        Note: [dd] 상태에서는 approve가 수동 명령이므로 Task가 제외됨 (BR-09).
+        [ap] 상태에서 build는 자동이므로 의존성 검사가 이루어짐.
+        """
         tasks = [
             Task(
                 id="TSK-01-01",
                 title="Task 1",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.HIGH,
             ),
             Task(
                 id="TSK-01-02",
                 title="Task 2 (depends on 01)",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.HIGH,
                 depends=["TSK-01-01"],
             ),
@@ -495,30 +503,34 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     async def test_integration_force_mode_switch(self) -> None:
-        """TC-INT-03: force 모드 전환 시 의존성 무시 확인."""
+        """TC-INT-03: force 모드 전환 시 의존성 무시 확인.
+
+        Note: [dd] 상태에서는 approve가 수동 명령이므로 Task가 제외됨 (BR-09).
+        [ap] 상태에서 build는 자동이므로 의존성 검사가 이루어짐.
+        """
         tasks = [
             Task(
                 id="TSK-01-01",
                 title="Task 1",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.HIGH,
             ),
             Task(
                 id="TSK-01-02",
                 title="Task 2 (depends on 01)",
                 category=TaskCategory.DEVELOPMENT,
-                status=TaskStatus.DETAIL_DESIGN,
+                status=TaskStatus.APPROVED,  # [ap] → build (자동)
                 priority=TaskPriority.CRITICAL,
                 depends=["TSK-01-01"],
             ),
         ]
 
-        # develop 모드: TSK-01-02 제외
+        # develop 모드: TSK-01-02 제외 (의존성 미충족)
         queue_develop = await filter_executable_tasks(tasks, ExecutionMode.DEVELOP)
         assert len(queue_develop) == 1
 
-        # force 모드로 전환: 모든 Task 포함
+        # force 모드로 전환: 모든 Task 포함 (의존성 무시)
         queue_force = await filter_executable_tasks(tasks, ExecutionMode.FORCE)
         assert len(queue_force) == 2
         assert queue_force[0].id == "TSK-01-02"  # critical 우선

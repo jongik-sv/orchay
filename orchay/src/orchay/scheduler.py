@@ -112,6 +112,7 @@ async def filter_executable_tasks(
         BR-06: force 모드: 의존성 무시
         BR-07: 우선순위 정렬: critical > high > medium > low
         BR-08: transition이 없는 Task 제외 (수동 완료 대상)
+        BR-09: 다음 명령어가 수동 실행 대상이면 제외
     """
     # 전체 Task를 딕셔너리로 변환 (의존성 검사용)
     all_tasks_dict = {t.id: t for t in tasks}
@@ -132,7 +133,12 @@ async def filter_executable_tasks(
             continue
 
         # BR-08: transition이 없는 Task 제외 (수동 완료 대상)
-        if get_next_workflow_command(task) is None:
+        next_cmd = get_next_workflow_command(task)
+        if next_cmd is None:
+            continue
+
+        # BR-09: 다음 명령어가 수동 실행 대상이면 제외
+        if next_cmd in get_manual_commands(mode):
             continue
 
         # 모드별 필터링
@@ -191,8 +197,9 @@ def _load_workflows() -> dict[str, Any]:
         workflows_path = parent / ".orchay" / "settings" / "workflows.json"
         if workflows_path.exists():
             try:
-                _workflows_cache = json.loads(workflows_path.read_text(encoding="utf-8"))
-                return _workflows_cache
+                loaded: dict[str, Any] = json.loads(workflows_path.read_text(encoding="utf-8"))
+                _workflows_cache = loaded
+                return loaded
             except Exception as e:
                 logger.warning(f"workflows.json 로드 실패: {e}")
                 break
@@ -200,6 +207,21 @@ def _load_workflows() -> dict[str, Any]:
     # 기본값 반환
     _workflows_cache = {}
     return _workflows_cache
+
+
+def get_manual_commands(mode: ExecutionMode) -> set[str]:
+    """모드별 수동 실행이 필요한 명령어 집합을 반환합니다.
+
+    Args:
+        mode: 현재 실행 모드
+
+    Returns:
+        수동 실행이 필요한 명령어 집합 (예: {"approve", "done"})
+    """
+    workflows_data = _load_workflows()
+    execution_modes = workflows_data.get("executionModes", {})
+    mode_config = execution_modes.get(mode.value, {})
+    return set(mode_config.get("manualCommands", []))
 
 
 def _get_workflow_name(category: str) -> str:
