@@ -63,10 +63,9 @@ DataTable > .datatable--cursor {
     color: $text;
 }
 
-/* Worker 섹션 (최대 6줄, 스크롤 가능) */
+/* Worker 섹션 (6개 Worker + 타이틀 = 8줄) */
 #workers-section {
-    height: 10;
-    max-height: 10;
+    height: 9;
     border: solid $success;
     margin-bottom: 1;
 }
@@ -87,26 +86,6 @@ DataTable > .datatable--cursor {
 #workers-panel {
     height: auto;
     padding: 0 1;
-}
-
-/* 진행률 섹션 */
-#progress-section {
-    height: 5;
-    border: solid $warning;
-    margin-bottom: 1;
-}
-
-#progress-title {
-    height: 1;
-    padding: 0 1;
-    background: $warning-darken-2;
-    color: $text;
-    text-style: bold;
-}
-
-#progress-panel {
-    height: 100%;
-    padding: 1;
 }
 
 /* 로그 섹션 */
@@ -176,30 +155,6 @@ DataTable > .datatable--cursor {
     color: #f59e0b;
 }
 
-/* 명령어 입력 섹션 */
-#input-section {
-    height: 3;
-    width: 100%;
-    padding: 0 1;
-    margin-top: 1;
-}
-
-#command-input {
-    width: 100%;
-}
-
-/* 큐 인터랙티브 위젯 */
-#queue-widget {
-    layer: modal;
-    width: 80%;
-    height: auto;
-    max-height: 60%;
-    background: $surface;
-    border: solid $primary;
-    padding: 1;
-    margin: 2 5;
-}
-
 /* 도움말 모달 */
 #help-modal {
     layer: modal;
@@ -212,14 +167,6 @@ DataTable > .datatable--cursor {
     margin: 1 5;
     color: $text;
     overflow-y: auto;
-}
-
-/* 액션 메뉴 */
-#action-menu {
-    width: 40;
-    height: auto;
-    background: $surface;
-    border: solid $warning;
 }
 
 /* Note: Textual does not support media queries.

@@ -87,7 +87,7 @@ class TestDryRunMode:
 
         # dry-run은 분배 없이 상태만 표시
         # 실제 TUI는 시작하지 않아야 함
-        assert config.workers == 3
+        assert config.workers == 0  # 기본값 (0=자동)
         assert config.execution.mode == "quick"
 
 

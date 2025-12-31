@@ -44,7 +44,8 @@ jobs:
 
       - name: Build Electron
         working-directory: orchay_web
-        run: npm run dist:${{ matrix.platform }}
+        # -p never: 빌드 시 GitHub 업로드 비활성화 (release job에서 통합 처리)
+        run: npm run dist:${{ matrix.platform }} -- -p never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

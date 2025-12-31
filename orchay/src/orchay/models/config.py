@@ -87,7 +87,7 @@ class ExecutionConfig(BaseModel):
 class Config(BaseModel):
     """orchay 전체 설정."""
 
-    workers: int = Field(default=3, ge=1, le=10, description="Worker pane 수")
+    workers: int = Field(default=0, ge=0, description="Worker pane 수 (0=자동, 무제한)")
     interval: int = Field(default=5, ge=1, le=60, description="모니터링 간격 (초)")
     verbose: bool = Field(default=False, description="상세 로그 출력")
     category: str | None = Field(default=None, description="카테고리 필터")

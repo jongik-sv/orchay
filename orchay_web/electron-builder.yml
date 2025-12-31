@@ -33,16 +33,21 @@ extraResources:
       - "!**/*.map"
       - "!**/node_modules/**/*.md"
       - "!**/node_modules/**/*.ts"
-      - "!**/node_modules/**/test/**"
-      - "!**/node_modules/**/tests/**"
+      - "!**/node_modules/.github/**"
 
 # Windows 설정
 win:
   target:
+    - target: portable
+      arch: [x64]
     - target: nsis
       arch: [x64]
   icon: resources/icon.ico
   artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+# Portable 설정 (설치 없이 바로 실행)
+portable:
+  artifactName: ${productName}-${version}-portable-${arch}.${ext}
 
 # NSIS 인스톨러 설정
 nsis:

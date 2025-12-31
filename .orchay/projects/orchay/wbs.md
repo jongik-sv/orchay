@@ -12,7 +12,6 @@
 - status: planned
 - priority: critical
 - schedule: 2025-12-28 ~ 2026-01-03
-- progress: 0%
 - note: orchay 최소 동작 버전. 이 WP 완료 후 orchay로 나머지 자동 개발
 
 ### TSK-01-01: 프로젝트 초기화 및 핵심 모델
@@ -156,7 +155,6 @@
 - status: planned
 - priority: high
 - schedule: 2026-01-04 ~ 2026-01-10
-- progress: 0%
 - note: WP-01 완료 후 orchay가 Worker들에게 자동 분배하여 병렬 개발
 
 ### TSK-02-01: 자동 재개 메커니즘

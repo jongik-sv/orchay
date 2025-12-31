@@ -15,7 +15,7 @@ class TestConfigDefaultValues:
     def test_config_default_values(self) -> None:
         """기본값이 올바르게 설정되는지 확인."""
         config = Config()
-        assert config.workers == 3
+        assert config.workers == 0  # 0 = 자동 (무제한)
         assert config.interval == 5
         assert config.execution.mode == "quick"
         assert config.detection.read_lines == 50
@@ -34,15 +34,15 @@ class TestConfigDefaultValues:
 class TestConfigValidation:
     """TC-02: Config Pydantic 검증 테스트."""
 
-    def test_workers_validation_min(self) -> None:
-        """workers 최소값 검증."""
-        with pytest.raises(ValidationError):
-            Config(workers=0)
+    def test_workers_validation_zero_allowed(self) -> None:
+        """workers=0은 자동(무제한)을 의미하므로 허용."""
+        config = Config(workers=0)
+        assert config.workers == 0
 
-    def test_workers_validation_max(self) -> None:
-        """workers 최대값 검증."""
-        with pytest.raises(ValidationError):
-            Config(workers=11)
+    def test_workers_validation_large_allowed(self) -> None:
+        """workers 큰 값도 허용 (제한 없음)."""
+        config = Config(workers=100)
+        assert config.workers == 100
 
     def test_workers_validation_negative(self) -> None:
         """workers 음수 검증."""
@@ -130,7 +130,7 @@ class TestLoadConfigMissing:
         monkeypatch.chdir(tmp_path)
 
         config = load_config()
-        assert config.workers == 3  # 기본값
+        assert config.workers == 0  # 기본값 (0=자동)
         assert config.interval == 5  # 기본값
 
     def test_load_config_no_orchay_folder(
@@ -143,7 +143,7 @@ class TestLoadConfigMissing:
 
         # .orchay 폴더가 없어도 기본값 반환
         config = load_config()
-        assert config.workers == 3
+        assert config.workers == 0  # 기본값 (0=자동)
         assert config.interval == 5
 
 

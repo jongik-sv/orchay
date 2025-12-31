@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
-from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static
+from textual.widgets import DataTable, Footer, Header, RichLog, Static
 
 from orchay.command import CommandHandler
 from orchay.scheduler import ExecutionMode
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
-from orchay.ui.widgets import HelpModal, QueueWidget
+from orchay.ui.widgets import HelpModal
 from orchay.utils.active_tasks import (
     pause_worker,
     resume_worker,
@@ -238,7 +238,6 @@ class WorkerPanel(Static):
         super().__init__()
         self._worker_list: list[Worker] = []
         self._selected_index: int = 0
-        self._interactive: bool = False  # 인터랙티브 모드 여부
         self.id = "workers-panel"
 
     @property
@@ -247,16 +246,6 @@ class WorkerPanel(Static):
         if 0 <= self._selected_index < len(self._worker_list):
             return self._worker_list[self._selected_index]
         return None
-
-    @property
-    def interactive(self) -> bool:
-        """인터랙티브 모드 여부."""
-        return self._interactive
-
-    @interactive.setter
-    def interactive(self, value: bool) -> None:
-        self._interactive = value
-        self.refresh()
 
     def set_workers(self, worker_list: list[Worker]) -> None:
         """Worker 목록 설정."""
@@ -299,12 +288,8 @@ class WorkerPanel(Static):
 
         lines: list[Text] = []
 
-        # 헤더 (인터랙티브 모드일 때만)
-        if self._interactive:
-            lines.append(Text("  Workers (↑↓: 선택  P: Pause/Resume  ESC: 닫기)\n", style="dim"))
-
         for i, w in enumerate(self._worker_list):
-            is_selected = self._interactive and i == self._selected_index
+            is_selected = i == self._selected_index
             color = self.STATE_COLORS.get(w.state, "#6b7280")
             icon = self.STATE_ICONS.get(w.state, "?")
 
@@ -365,39 +350,6 @@ class WorkerPanel(Static):
             return ""
 
 
-class ProgressPanel(Static):
-    """전체 진행률 패널."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.completed = 0
-        self.total = 0
-        self.id = "progress-panel"
-
-    def set_progress(self, completed: int, total: int) -> None:
-        """진행률 설정."""
-        self.completed = completed
-        self.total = total
-        self.refresh()
-
-    @property
-    def percentage(self) -> float:
-        """완료율 (%)."""
-        if self.total == 0:
-            return 0.0
-        return (self.completed / self.total) * 100
-
-    def render(self) -> Text:
-        """진행률 렌더링."""
-        pct = self.percentage
-        bar_width = 40
-        filled = int(bar_width * pct / 100)
-        empty = bar_width - filled
-
-        bar = "█" * filled + "░" * empty
-        return Text(f"  Total: {bar}  {pct:.0f}% ({self.completed}/{self.total} tasks)")
-
-
 class OrchayApp(App[None]):
     """orchay TUI 애플리케이션."""
 
@@ -407,7 +359,6 @@ class OrchayApp(App[None]):
         Binding("f12", "show_help", "Help"),
         Binding("f2", "show_status", "Status"),
         Binding("f3", "show_queue", "Queue"),
-        Binding("f4", "show_workers", "Workers"),
         Binding("f5", "reload", "Reload"),
         Binding("f6", "show_history", "History"),
         Binding("f7", "toggle_mode", "Mode"),
@@ -415,13 +366,14 @@ class OrchayApp(App[None]):
         Binding("f10", "quit", "Exit"),
         Binding("q", "quit", "Quit"),
         Binding("escape", "close_modal", "Close", show=False),
-        Binding("up", "navigate_up", "Up", show=False),
-        Binding("down", "navigate_down", "Down", show=False),
+        Binding("up", "worker_select_prev", "Up", show=False),
+        Binding("down", "worker_select_next", "Down", show=False),
         Binding("enter", "item_select", "Select", show=False),
         Binding("u", "queue_move_up", "Move Up", show=False),
         Binding("t", "queue_move_top", "Top", show=False),
         Binding("s", "queue_skip", "Skip", show=False),
-        Binding("r", "reset_or_retry", "Reset/Retry", show=False),
+        Binding("y", "queue_retry", "Retry", show=False),
+        Binding("r", "reset_worker", "Reset Worker", show=False),
         Binding("p", "toggle_worker_pause", "Pause Worker", show=False),
         Binding("1", "select_worker_1", "W1", show=False),
         Binding("2", "select_worker_2", "W2", show=False),
@@ -453,10 +405,9 @@ class OrchayApp(App[None]):
         self._paused = self.config.execution.start_paused
         self._scheduler_state = "paused" if self._paused else "running"
         self._ever_started = not self._paused  # start_paused면 아직 시작 안함
-        self._queue_interactive = False
-        self._workers_interactive = False
+        self._queue_fullscreen = False
+        self._logs_fullscreen = False
         self._help_visible = False
-        self._action_menu_visible = False
         self._tick_running = False  # tick 중복 실행 방지
 
         # 실제 Orchestrator 또는 Mock
@@ -571,31 +522,24 @@ class OrchayApp(App[None]):
 
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
-                yield Static("Schedule Queue", id="queue-title")
+                yield Static(
+                    "Schedule Queue  (↑↓:Select  U:Up  T:Top  S:Skip  Y:Retry)",
+                    id="queue-title",
+                )
                 yield DataTable(id="queue-table")
 
             # Worker 패널 (스크롤 가능)
             with Vertical(id="workers-section"):
-                yield Static("Workers", id="workers-title")
+                yield Static("Workers  (↑↓:Select  P:Pause  R:Reset)", id="workers-title")
                 with VerticalScroll(id="workers-scroll"):
                     yield WorkerPanel()
 
-            # 진행률
-            with Vertical(id="progress-section"):
-                yield Static("Progress", id="progress-title")
-                yield ProgressPanel()
-
             # 로그 영역
             with Vertical(id="log-section"):
-                yield Static("Logs", id="log-title")
+                yield Static("Logs  (F6:Expand)", id="log-title")
                 yield RichLog(id="log-panel", highlight=True, markup=True)
 
-            # 명령어 입력
-            with Horizontal(id="input-section"):
-                yield Input(placeholder="명령어 입력 (help로 도움말)", id="command-input")
-
         # 모달 위젯들 (기본 숨김)
-        yield QueueWidget(self._tasks)
         yield HelpModal()
 
         yield Footer()
@@ -604,6 +548,7 @@ class OrchayApp(App[None]):
         """마운트 시 초기화."""
         # DataTable 컬럼 설정
         table: DataTable[str] = self.query_one("#queue-table", DataTable)  # type: ignore[assignment]
+        table.cursor_type = "row"  # row 전체 선택 모드
         table.add_column("#", width=3)
         table.add_column("Task ID", width=12)
         table.add_column("Status", width=8)
@@ -614,8 +559,6 @@ class OrchayApp(App[None]):
 
         # 모달 위젯 숨김
         try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            queue_widget.display = False
             help_modal = self.query_one("#help-modal", HelpModal)
             help_modal.display = False
         except Exception:
@@ -624,7 +567,6 @@ class OrchayApp(App[None]):
         # 초기 데이터 로드
         self._update_queue_table()
         self._update_worker_panel()
-        self._update_progress()
 
         # TUI 로그 핸들러 등록 (모든 로그를 TUI로 출력)
         self._log_handler = TUILogHandler(self)
@@ -650,33 +592,6 @@ class OrchayApp(App[None]):
         if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "stop"):
             self._real_orchestrator.stop()
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Input 제출 이벤트 핸들러."""
-        if event.input.id != "command-input":
-            return
-
-        command = event.value.strip()
-        if not command:
-            return
-
-        # 명령어 실행
-        result = await self._command_handler.process_command(command)
-
-        # 결과 표시 및 로그
-        if result.success:
-            self.notify(result.message)
-            self.write_log(f"[CMD] {command}: {result.message}", "info")
-        else:
-            self.notify(result.message, severity="error")
-            self.write_log(f"[CMD] {command}: {result.message}", "error")
-
-        # Input 클리어
-        event.input.clear()
-
-        # UI 업데이트
-        self._update_queue_table()
-        self._update_header_info()
-
     def _on_auto_refresh(self) -> None:
         """자동 갱신 콜백."""
         # 스케줄링 사이클 실행 (pause 상태에서도 상태 업데이트는 필요)
@@ -691,7 +606,6 @@ class OrchayApp(App[None]):
             self._update_queue_table()
             self._update_worker_panel()
             self._update_header_info()
-            self._update_progress()
 
     def write_log(self, message: str, level: str = "info") -> None:
         """로그 패널에 메시지 작성.
@@ -726,7 +640,6 @@ class OrchayApp(App[None]):
             self._update_queue_table()
             self._update_worker_panel()
             self._update_header_info()
-            self._update_progress()
         finally:
             self._tick_running = False
 
@@ -862,14 +775,6 @@ class OrchayApp(App[None]):
         except Exception:
             pass
 
-    def _update_progress(self) -> None:
-        """진행률 업데이트."""
-        try:
-            panel = self.query_one("#progress-panel", ProgressPanel)
-            panel.set_progress(self._count_completed(), len(self._tasks))
-        except Exception:
-            pass
-
     def _update_header_info(self) -> None:
         """헤더 정보 업데이트."""
         try:
@@ -882,6 +787,50 @@ class OrchayApp(App[None]):
             )
         except Exception:
             pass
+
+    def _update_layout(self) -> None:
+        """레이아웃 상태 업데이트 (전체화면 토글)."""
+        try:
+            queue_section = self.query_one("#queue-section")
+            workers_section = self.query_one("#workers-section")
+            log_section = self.query_one("#log-section")
+
+            if self._queue_fullscreen:
+                workers_section.display = False
+                log_section.display = False
+                queue_section.display = True
+            elif self._logs_fullscreen:
+                queue_section.display = False
+                workers_section.display = False
+                log_section.display = True
+            else:
+                queue_section.display = True
+                workers_section.display = True
+                log_section.display = True
+        except Exception:
+            pass
+
+    def _get_sorted_tasks(self) -> list[Task]:
+        """정렬된 Task 목록 반환 (Queue 테이블과 동일한 순서)."""
+        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        return sorted(
+            [t for t in self._tasks if t.status != TaskStatus.DONE],
+            key=lambda t: priority_order.get(t.priority.value, 99),
+        )
+
+    def _get_selected_task(self) -> Task | None:
+        """DataTable에서 현재 선택된 Task 반환."""
+        try:
+            table: DataTable[str] = self.query_one("#queue-table", DataTable)  # type: ignore[assignment]
+            cursor_row = table.cursor_row
+            if cursor_row is None:
+                return None
+            sorted_tasks = self._get_sorted_tasks()
+            if 0 <= cursor_row < len(sorted_tasks):
+                return sorted_tasks[cursor_row]
+        except Exception:
+            pass
+        return None
 
     def _get_status_color(self, status: TaskStatus) -> str:
         """상태별 색상."""
@@ -917,55 +866,34 @@ class OrchayApp(App[None]):
         self.notify(f"Status: {completed}/{total} done, {running} running, mode={self._mode}")
 
     def action_show_queue(self) -> None:
-        """큐 인터랙티브 UI 표시."""
-        try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            queue_widget.tasks = [t for t in self._tasks if t.status != TaskStatus.DONE]
-            queue_widget.display = not queue_widget.display
-            self._queue_interactive = queue_widget.display
-        except Exception:
-            queue_count = self._count_queue()
-            self.notify(f"Queue: {queue_count} tasks pending")
+        """Queue 전체화면 토글."""
+        self._queue_fullscreen = not self._queue_fullscreen
+        if self._queue_fullscreen:
+            self._logs_fullscreen = False  # 다른 전체화면 해제
+        self._update_layout()
+        status = "expanded" if self._queue_fullscreen else "normal"
+        self.notify(f"Queue view: {status}")
 
-    def action_show_workers(self) -> None:
-        """Worker 인터랙티브 UI 표시/토글."""
-        # 워커가 없으면 경고
-        if not self._worker_list:
-            self.notify("No workers available", severity="warning")
-            return
-
+    def action_worker_select_prev(self) -> None:
+        """이전 Worker 선택."""
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
-            panel.interactive = not panel.interactive
-            self._workers_interactive = panel.interactive
+            panel.select_prev()
+        except Exception:
+            pass
 
-            # Input 포커스 제어
-            command_input = self.query_one("#command-input", Input)
-
-            if self._workers_interactive:
-                # Queue 인터랙티브 모드 해제
-                self._queue_interactive = False
-                queue_widget = self.query_one("#queue-widget", QueueWidget)
-                queue_widget.display = False
-                # Input 포커스 해제 (P 키 등이 Input으로 가지 않도록)
-                command_input.disabled = True
-                self.set_focus(None)
-                self.notify(f"Workers ({len(self._worker_list)}): ↑↓ 선택, P 일시정지, R 리셋")
-            else:
-                # Input 다시 활성화
-                command_input.disabled = False
-                idle = sum(1 for w in self._worker_list if w.state == WorkerState.IDLE)
-                busy = sum(1 for w in self._worker_list if w.state == WorkerState.BUSY)
-                paused = sum(1 for w in self._worker_list if w.is_manually_paused)
-                self.notify(f"Workers: {idle} idle, {busy} busy, {paused} paused")
-        except Exception as e:
-            self.notify(f"Workers error: {e}", severity="error")
+    def action_worker_select_next(self) -> None:
+        """다음 Worker 선택."""
+        try:
+            panel = self.query_one("#workers-panel", WorkerPanel)
+            panel.select_next()
+        except Exception:
+            pass
 
     def action_reload(self) -> None:
         """WBS 재로드."""
         self._update_queue_table()
         self._update_worker_panel()
-        self._update_progress()
         self._update_header_info()
         self.notify("Reloaded")
 
@@ -1055,33 +983,25 @@ class OrchayApp(App[None]):
         self.notify(f"Scheduler {status}")
 
     def action_show_history(self) -> None:
-        """히스토리 표시."""
-        self.notify("History: (not implemented)")
+        """Logs 전체화면 토글."""
+        self._logs_fullscreen = not self._logs_fullscreen
+        if self._logs_fullscreen:
+            self._queue_fullscreen = False  # 다른 전체화면 해제
+        self._update_layout()
+        status = "expanded" if self._logs_fullscreen else "normal"
+        self.notify(f"Logs view: {status}")
 
     def action_close_modal(self) -> None:
-        """모달/인터랙티브 모드 닫기."""
+        """모달/전체화면 모드 닫기."""
+        # 전체화면 해제
+        if self._queue_fullscreen or self._logs_fullscreen:
+            self._queue_fullscreen = False
+            self._logs_fullscreen = False
+            self._update_layout()
+            return
+
+        # Help 모달 해제
         try:
-            command_input = self.query_one("#command-input", Input)
-
-            # Workers 인터랙티브 모드 해제
-            if self._workers_interactive:
-                panel = self.query_one("#workers-panel", WorkerPanel)
-                panel.interactive = False
-                self._workers_interactive = False
-                # Input 다시 활성화
-                command_input.disabled = False
-                return
-
-            # Queue 인터랙티브 모드 해제
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            if queue_widget.display:
-                queue_widget.display = False
-                self._queue_interactive = False
-                # Input 다시 활성화
-                command_input.disabled = False
-                return
-
-            # Help 모달 해제
             help_modal = self.query_one("#help-modal", HelpModal)
             if help_modal.display:
                 help_modal.display = False
@@ -1089,60 +1009,17 @@ class OrchayApp(App[None]):
         except Exception:
             pass
 
-    def action_navigate_up(self) -> None:
-        """인터랙티브 모드에서 이전 항목 선택."""
-        if self._workers_interactive:
-            try:
-                panel = self.query_one("#workers-panel", WorkerPanel)
-                panel.select_prev()
-            except Exception:
-                pass
-        elif self._queue_interactive:
-            try:
-                queue_widget = self.query_one("#queue-widget", QueueWidget)
-                queue_widget.select_prev()
-            except Exception:
-                pass
-
-    def action_navigate_down(self) -> None:
-        """인터랙티브 모드에서 다음 항목 선택."""
-        if self._workers_interactive:
-            try:
-                panel = self.query_one("#workers-panel", WorkerPanel)
-                panel.select_next()
-            except Exception:
-                pass
-        elif self._queue_interactive:
-            try:
-                queue_widget = self.query_one("#queue-widget", QueueWidget)
-                queue_widget.select_next()
-            except Exception:
-                pass
-
     def action_item_select(self) -> None:
-        """선택된 항목에 대한 액션 실행."""
-        if self._workers_interactive:
-            # 워커 선택 시 pause/resume 토글
-            self.action_toggle_worker_pause()
-        elif self._queue_interactive:
-            try:
-                queue_widget = self.query_one("#queue-widget", QueueWidget)
-                task = queue_widget.selected_task
-                if task:
-                    self.notify(f"Selected: {task.id}")
-            except Exception:
-                pass
+        """선택된 Task 정보 표시."""
+        task = self._get_selected_task()
+        if task:
+            self.notify(f"Selected: {task.id} ({task.status.value})")
 
     def action_toggle_worker_pause(self) -> None:
         """선택된 Worker의 일시정지 토글."""
-        # Workers 모드가 아니면 먼저 활성화
-        if not self._workers_interactive:
-            if not self._worker_list:
-                self.notify("No workers available", severity="warning")
-                return
-            # Workers 모드 활성화
-            self.action_show_workers()
-            return  # 다음 P 키에서 pause 실행
+        if not self._worker_list:
+            self.notify("No workers available", severity="warning")
+            return
 
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
@@ -1171,15 +1048,6 @@ class OrchayApp(App[None]):
         try:
             panel = self.query_one("#workers-panel", WorkerPanel)
             if panel.select_by_id(worker_id):
-                panel.interactive = True
-                self._workers_interactive = True
-                # Input 비활성화 (키 입력이 Input으로 가지 않도록)
-                try:
-                    command_input = self.query_one("#command-input", Input)
-                    command_input.disabled = True
-                    self.set_focus(None)
-                except Exception:
-                    pass
                 self.notify(f"Worker {worker_id} selected (P to pause/resume)")
             else:
                 self.notify(f"Worker {worker_id} not found", severity="warning")
@@ -1207,72 +1075,39 @@ class OrchayApp(App[None]):
         self._select_worker(5)
 
     async def action_queue_move_up(self) -> None:
-        """선택된 Task를 위로 이동."""
-        if not self._queue_interactive:
-            return
-        try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            task = queue_widget.selected_task
-            if task:
-                result = await self._command_handler.up_task(task.id)
-                self.notify(result.message)
-                queue_widget.tasks = self._tasks
-                self._update_queue_table()
-        except Exception:
-            pass
+        """선택된 Task를 위로 이동 (U키)."""
+        task = self._get_selected_task()
+        if task:
+            result = await self._command_handler.up_task(task.id)
+            self.notify(result.message)
+            self._update_queue_table()
 
     async def action_queue_move_top(self) -> None:
-        """선택된 Task를 최우선으로 이동."""
-        if not self._queue_interactive:
-            return
-        try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            task = queue_widget.selected_task
-            if task:
-                result = await self._command_handler.top_task(task.id)
-                self.notify(result.message)
-                queue_widget.tasks = self._tasks
-                self._update_queue_table()
-        except Exception:
-            pass
+        """선택된 Task를 최우선으로 이동 (T키)."""
+        task = self._get_selected_task()
+        if task:
+            result = await self._command_handler.top_task(task.id)
+            self.notify(result.message)
+            self._update_queue_table()
 
     async def action_queue_skip(self) -> None:
-        """선택된 Task를 스킵."""
-        if not self._queue_interactive:
-            return
-        try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            task = queue_widget.selected_task
-            if task:
-                result = await self._command_handler.skip_task(task.id)
-                if result.success:
-                    self.notify(result.message)
-                else:
-                    self.notify(result.message, severity="error")
-                queue_widget.tasks = self._tasks
-                self._update_queue_table()
-        except Exception:
-            pass
-
-    async def action_reset_or_retry(self) -> None:
-        """R 키: Workers 모드에서는 reset, Queue 모드에서는 retry."""
-        if self._workers_interactive:
-            await self.action_reset_worker()
-        elif self._queue_interactive:
-            await self._queue_retry()
-
-    async def _queue_retry(self) -> None:
-        """선택된 Task를 재시도."""
-        try:
-            queue_widget = self.query_one("#queue-widget", QueueWidget)
-            task = queue_widget.selected_task
-            if task:
-                result = await self._command_handler.retry_task(task.id)
+        """선택된 Task를 스킵 (S키)."""
+        task = self._get_selected_task()
+        if task:
+            result = await self._command_handler.skip_task(task.id)
+            if result.success:
                 self.notify(result.message)
-                queue_widget.tasks = self._tasks
-                self._update_queue_table()
-        except Exception:
-            pass
+            else:
+                self.notify(result.message, severity="error")
+            self._update_queue_table()
+
+    async def action_queue_retry(self) -> None:
+        """선택된 Task를 재시도 (Y키)."""
+        task = self._get_selected_task()
+        if task:
+            result = await self._command_handler.retry_task(task.id)
+            self.notify(result.message)
+            self._update_queue_table()
 
     async def action_reset_worker(self) -> None:
         """선택된 Worker를 idle 상태로 강제 리셋."""

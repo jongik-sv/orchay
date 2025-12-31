@@ -9,8 +9,6 @@
 - TC-03-01: Worker 목록 표시
 - TC-03-02: Worker 상태별 색상
 - TC-03-03: 현재 Task 표시
-- TC-04-01: ProgressBar 렌더링
-- TC-04-02: 진행률 계산
 - TC-05-01: F-key 바인딩 표시
 - TC-06-01: 모드 색상 적용
 - TC-06-02: 모드 전환 시 색상 변경
@@ -33,7 +31,6 @@ from orchay.models import (
 from orchay.ui.app import (
     HeaderInfo,
     OrchayApp,
-    ProgressPanel,
     SchedulerStateIndicator,
     WorkerPanel,
 )
@@ -223,40 +220,6 @@ async def test_worker_current_task_display() -> None:
         content = str(panel.render())
         assert "TSK-01-01" in content
         assert "build" in content
-
-
-# ============================================================
-# TC-04: 진행률 표시 테스트
-# ============================================================
-
-
-@pytest.mark.asyncio
-async def test_progress_panel_renders() -> None:
-    """TC-04-01: ProgressPanel이 올바르게 렌더링되는지 확인."""
-    tasks = [
-        Task(
-            id=f"TSK-{i:02d}",
-            title=f"Task {i}",
-            status=TaskStatus.DONE if i < 4 else TaskStatus.TODO,
-            category=TaskCategory.DEVELOPMENT,
-            priority=TaskPriority.MEDIUM,
-        )
-        for i in range(9)
-    ]
-    app = OrchayApp(tasks=tasks)
-    async with app.run_test():
-        panel = app.query_one("#progress-panel", ProgressPanel)
-        assert panel is not None
-
-
-@pytest.mark.asyncio
-async def test_progress_calculation() -> None:
-    """TC-04-02: 진행률이 올바르게 계산되는지 확인."""
-    panel = ProgressPanel()
-    panel.set_progress(4, 9)
-    pct = panel.percentage
-    # 44.44...% 예상
-    assert abs(pct - 44.44) < 1
 
 
 # ============================================================
@@ -551,15 +514,16 @@ async def test_action_show_queue() -> None:
 
 
 @pytest.mark.asyncio
-async def test_action_show_workers() -> None:
-    """F4 Worker 정보 표시 액션 테스트."""
+async def test_action_worker_select() -> None:
+    """Worker 선택 테스트 (화살표 키)."""
     worker_list = [
         Worker(id=1, pane_id=1, state=WorkerState.IDLE),
         Worker(id=2, pane_id=2, state=WorkerState.BUSY),
     ]
     app = OrchayApp(worker_list=worker_list)
     async with app.run_test() as pilot:
-        await pilot.press("f4")
+        await pilot.press("down")
+        await pilot.press("up")
         # 오류 없이 실행되면 성공
 
 

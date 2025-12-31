@@ -134,3 +134,25 @@ python orchay/src/orchay/launcher.py deployment
 ## design 모드
 
 - design 까지만
+
+
+
+릴리즈 리스트
+gh release list --repo jongik-sv/orchay
+
+build-20251230-232844  Pre-release  build-20251230-232844  about 13 hours ago
+v0.1.0                 Latest       v0.1.0                 about 1 day ago
+
+
+릴리즈 삭제
+gh release delete build-20251230-232844 --repo jongik-sv/orchay --yes
+gh release delete v0.1.0 --repo jongik-sv/orchay --yes
+
+
+
+
+  # orchay (Python CLI)
+  gh workflow run "Build & Release" -f version=v0.1.2
+
+  # orchay_web (Electron)
+  gh workflow run "Build & Release Electron App" -f version=v0.1.2

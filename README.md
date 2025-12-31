@@ -84,7 +84,12 @@ pipx install orchay
 
 ##### Windows
 
-[Releases](https://github.com/jongik-sv/orchay/releases/latest)에서 `orchay_web-x.x.x-win-x64.exe` 다운로드 후 실행
+[Releases](https://github.com/jongik-sv/orchay/releases/latest)에서 다운로드:
+
+| 파일 | 설명 |
+|------|------|
+| `orchay_web-x.x.x-portable-x64.exe` | **설치 없이 바로 실행** (권장) |
+| `orchay_web-x.x.x-win-x64.exe` | 설치 프로그램 |
 
 ##### Linux
 

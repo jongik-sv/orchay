@@ -102,7 +102,8 @@ class Orchestrator:
                 )
         worker_count = 0
         for pane in panes:
-            if worker_count >= self.config.workers:
+            # config.workers가 0이면 무제한, 양수면 해당 개수까지만
+            if self.config.workers > 0 and worker_count >= self.config.workers:
                 break
             # 현재 pane (orchay 실행 중) 제외
             if pane.pane_id == current_pane_id:
@@ -651,8 +652,8 @@ def parse_args() -> argparse.Namespace:
         "-w",
         "--workers",
         type=int,
-        default=3,
-        help="Worker 수 (기본: 3)",
+        default=None,
+        help="Worker 수 (미지정=자동, 0=무제한)",
     )
     parser.add_argument(
         "-i",
@@ -835,7 +836,7 @@ async def async_main() -> int:
         config = Config()
 
     # 2. CLI 인자로 override (명시적 지정 시)
-    if args.workers != 3:  # 기본값이 아닌 경우
+    if args.workers is not None:
         config.workers = args.workers
     if args.interval != 5:
         config.interval = args.interval
