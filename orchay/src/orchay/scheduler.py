@@ -357,6 +357,47 @@ def get_next_workflow_command(
     return None
 
 
+async def handle_approve(
+    task: Task,
+    wbs_path: Path,
+    mode: ExecutionMode,
+) -> bool:
+    """설계 승인 처리.
+
+    force 모드에서만 자동 승인을 수행하고, 그 외 모드에서는 수동 승인 대기.
+
+    Args:
+        task: 승인 대상 Task
+        wbs_path: WBS 파일 경로
+        mode: 현재 실행 모드
+
+    Returns:
+        True: 승인 완료 (다음 단계 진행 가능)
+        False: 수동 승인 대기 필요
+    """
+    from orchay.wbs_parser import update_task_status
+
+    if mode != ExecutionMode.FORCE:
+        # force 모드가 아니면 수동 승인 대기
+        logger.info(f"[{task.id}] 수동 승인 대기 (모드: {mode.value})")
+        return False
+
+    # force 모드: 자동 승인
+    logger.info(f"[{task.id}] 자동 승인 처리 (force 모드)")
+
+    # WBS 상태 업데이트: [dd] → [ap]
+    success = await update_task_status(wbs_path, task.id, "[ap]")
+
+    if success:
+        logger.info(f"[{task.id}] 승인 완료: [dd] → [ap]")
+        # 메모리 상태도 동기화
+        task.status = TaskStatus.APPROVED
+    else:
+        logger.error(f"[{task.id}] 승인 실패")
+
+    return success
+
+
 async def dispatch_task(
     worker: Worker,
     task: Task,

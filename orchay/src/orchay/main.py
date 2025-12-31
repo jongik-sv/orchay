@@ -25,6 +25,7 @@ from orchay.scheduler import (
     filter_executable_tasks,
     get_manual_commands,
     get_next_workflow_command,
+    handle_approve,
 )
 from orchay.utils.wezterm import (
     WezTermNotFoundError,
@@ -374,12 +375,19 @@ class Orchestrator:
                             manual_cmds = get_manual_commands(self.mode)
 
                             if next_cmd and next_cmd not in manual_cmds:
-                                # 자동: 즉시 다음 단계 dispatch (같은 Worker)
-                                logger.info(
-                                    f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
-                                )
-                                await self._dispatch_next_step(worker, task, last_action)
-                                continue  # 다음 Worker로 (상태 유지)
+                                # pause 상태면 연속 실행 중단
+                                if self._paused:
+                                    logger.info(
+                                        f"연속 실행 중단 (paused): {task.id} → /wf:{next_cmd}"
+                                    )
+                                    task.assigned_worker = None
+                                else:
+                                    # 자동: 즉시 다음 단계 dispatch (같은 Worker)
+                                    logger.info(
+                                        f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
+                                    )
+                                    await self._dispatch_next_step(worker, task, last_action)
+                                    continue  # 다음 Worker로 (상태 유지)
                             else:
                                 # 수동: 할당 해제
                                 task.assigned_worker = None
@@ -461,6 +469,20 @@ class Orchestrator:
             worker.reset()
             return
 
+        # approve 단계 특별 처리
+        if next_workflow == "approve":
+            success = await handle_approve(task, self.wbs_path, self.mode)
+            if success:
+                # 승인 완료 → 다음 단계 진행 (재귀 호출)
+                console.print(f"[green]자동 승인:[/] {task.id} → [ap]")
+                await self._dispatch_next_step(worker, task, last_action="approve")
+            else:
+                # 수동 승인 대기
+                console.print(f"[yellow]수동 승인 대기:[/] {task.id}")
+                task.assigned_worker = None
+                worker.reset()
+            return
+
         # Worker 상태 업데이트 (BUSY 유지)
         worker.state = WorkerState.BUSY
         worker.current_task = task.id
@@ -470,6 +492,16 @@ class Orchestrator:
         # Task 할당 유지
         task.assigned_worker = worker.id
 
+        # /clear 전송 (연속 실행 시에도 context 초기화 필요)
+        if self.config.dispatch.clear_before_dispatch:
+            try:
+                await wezterm_send_text(worker.pane_id, "/clear")
+                await asyncio.sleep(5.0)  # /clear 처리 대기
+                await wezterm_send_text(worker.pane_id, "\r")
+                await asyncio.sleep(1.0)
+            except Exception as e:
+                logger.warning(f"Worker {worker.id} /clear 실패 (연속 실행): {e}")
+
         # 명령어 전송
         command = f"/wf:{next_workflow} {self.project_name}/{task.id}"
         try:
@@ -477,7 +509,6 @@ class Orchestrator:
             await asyncio.sleep(1.0)
             await wezterm_send_text(worker.pane_id, "\r")
             await asyncio.sleep(1.0)
-            await wezterm_send_text(worker.pane_id, " ")  # 추천 프롬프트 제거
             console.print(
                 f"[cyan]연속 실행:[/] {task.id} ({task.status.value}) → Worker {worker.id} "
                 f"(/wf:{next_workflow})"
@@ -509,10 +540,6 @@ class Orchestrator:
         # Task 상태에 따라 다음 workflow 결정 (첫 dispatch이므로 last_action=None)
         next_workflow = get_next_workflow_command(task, mode=self.mode)
 
-        # 실제 dispatch할 명령어로 current_step 설정 (dispatch_task()의 first_step 덮어쓰기)
-        if next_workflow:
-            worker.current_step = next_workflow
-
         # transition이 없으면 dispatch 안 함 (/clear도 전송하지 않음)
         if next_workflow is None:
             console.print(
@@ -523,14 +550,30 @@ class Orchestrator:
             worker.reset()
             return
 
+        # approve 단계 특별 처리 (Worker dispatch 대신 직접 처리)
+        if next_workflow == "approve":
+            success = await handle_approve(task, self.wbs_path, self.mode)
+            if success:
+                # 승인 완료 → 다음 단계 진행
+                console.print(f"[green]자동 승인:[/] {task.id} → [ap]")
+                await self._dispatch_next_step(worker, task, last_action="approve")
+            else:
+                # 수동 승인 대기
+                console.print(f"[yellow]수동 승인 대기:[/] {task.id}")
+                task.assigned_worker = None
+                worker.reset()
+            return
+
+        # 실제 dispatch할 명령어로 current_step 설정 (dispatch_task()의 first_step 덮어쓰기)
+        worker.current_step = next_workflow
+
         # /clear 전송 (옵션) - workflow 명령 직전에 한번만
         if self.config.dispatch.clear_before_dispatch:
             try:
                 await wezterm_send_text(worker.pane_id, "/clear")
-                await asyncio.sleep(3.0)  # /clear 처리 대기
+                await asyncio.sleep(5.0)  # /clear 처리 대기
                 await wezterm_send_text(worker.pane_id, "\r")
                 await asyncio.sleep(1.0)  # Enter 처리 대기
-                await wezterm_send_text(worker.pane_id, " ")  # 추천 프롬프트 제거
             except Exception as e:
                 logger.warning(f"Worker {worker.id} /clear 실패: {e}")
 
@@ -542,7 +585,6 @@ class Orchestrator:
             await asyncio.sleep(1.0)  # 명령어 입력 대기
             await wezterm_send_text(worker.pane_id, "\r")
             await asyncio.sleep(1.0)  # Enter 처리 대기
-            await wezterm_send_text(worker.pane_id, " ")  # 추천 프롬프트 제거
             console.print(
                 f"[cyan]Dispatch:[/] {task.id} ({task.status.value}) → Worker {worker.id} "
                 f"(/wf:{next_workflow})"

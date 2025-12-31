@@ -397,6 +397,99 @@ async def parse_wbs(path: str | Path) -> list[Task]:
     return await parser.parse()
 
 
+# 상태 코드 → 상태 이름 매핑 (역방향)
+STATUS_CODE_TO_NAME: dict[str, str] = {
+    "[ ]": "todo",
+    "[bd]": "basic-design",
+    "[dd]": "detail-design",
+    "[an]": "analysis",
+    "[ds]": "design",
+    "[ap]": "approve",
+    "[im]": "implement",
+    "[fx]": "fix",
+    "[vf]": "verify",
+    "[xx]": "done",
+}
+
+
+async def update_task_status(
+    wbs_path: Path,
+    task_id: str,
+    new_status_code: str,
+) -> bool:
+    """WBS 파일의 Task 상태 코드를 업데이트.
+
+    Args:
+        wbs_path: wbs.md 파일 경로
+        task_id: 업데이트할 Task ID (예: TSK-01-01)
+        new_status_code: 새 상태 코드 (예: "[ap]", "[im]")
+
+    Returns:
+        성공 여부
+
+    Example:
+        success = await update_task_status(
+            Path(".orchay/projects/orchay/wbs.md"),
+            "TSK-01-01",
+            "[ap]"
+        )
+    """
+    try:
+        if not wbs_path.exists():
+            logger.error(f"WBS 파일이 존재하지 않습니다: {wbs_path}")
+            return False
+
+        content = wbs_path.read_text(encoding="utf-8")
+        lines = content.split("\n")
+
+        # Task 섹션 찾기
+        task_pattern = re.compile(rf"^###\s+{re.escape(task_id)}:\s*")
+        in_task_section = False
+        updated = False
+
+        for i, line in enumerate(lines):
+            # Task 헤더 감지
+            if task_pattern.match(line):
+                in_task_section = True
+                continue
+
+            # 다른 Task나 WP 헤더를 만나면 섹션 종료
+            if in_task_section and (line.startswith("### ") or line.startswith("## ")):
+                break
+
+            # status 라인 찾기 및 업데이트
+            if in_task_section and line.strip().startswith("- status:"):
+                # 현재 상태 코드 추출
+                current_code = extract_status_code(line)
+                if current_code == new_status_code:
+                    logger.info(f"[{task_id}] 상태가 이미 {new_status_code}입니다")
+                    return True
+
+                # 새 상태 이름 가져오기
+                status_name = STATUS_CODE_TO_NAME.get(new_status_code, "unknown")
+
+                # 상태 라인 교체: "- status: {name} {code}"
+                # 기존 패턴: "- status: detail-design [dd]" 형태
+                new_line = f"- status: {status_name} {new_status_code}"
+                lines[i] = new_line
+                updated = True
+                logger.info(f"[{task_id}] 상태 변경: {current_code} → {new_status_code}")
+                break
+
+        if not updated:
+            logger.warning(f"[{task_id}] status 라인을 찾을 수 없습니다")
+            return False
+
+        # 파일 저장
+        new_content = "\n".join(lines)
+        wbs_path.write_text(new_content, encoding="utf-8")
+        return True
+
+    except Exception as e:
+        logger.error(f"WBS 상태 업데이트 오류: {e}")
+        return False
+
+
 class WbsFileHandler(FileSystemEventHandler):
     """WBS 파일 변경 이벤트 핸들러."""
 
