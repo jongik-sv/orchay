@@ -557,11 +557,11 @@ class OrchayApp(App[None]):
         table.cursor_type = "row"  # row 전체 선택 모드
         table.add_column("#", width=3)
         table.add_column("Task ID", width=12)
-        table.add_column("Status", width=8)
-        table.add_column("Category", width=14)
-        table.add_column("Priority", width=10)
-        table.add_column("Title", width=25)
-        table.add_column("Depends")  # 자동 너비 (최소 20자, 내용에 따라 확장)
+        table.add_column("Sts", width=5)
+        table.add_column("Categ", width=6)
+        table.add_column("Pri", width=4)
+        table.add_column("Title", width=28)
+        table.add_column("Depends")  # 자동 너비
 
         # 모달 위젯 숨김
         try:
@@ -750,10 +750,24 @@ class OrchayApp(App[None]):
         preserved_row: int | None = None
         running_task_ids = {w.current_task for w in self._worker_list if w.current_task}
 
+        # 짧은 표시명 매핑
+        category_short = {
+            "development": "dev",
+            "defect": "def",
+            "infrastructure": "infra",
+            "simple-dev": "sdev",
+        }
+        priority_short = {
+            "critical": "crit",
+            "high": "high",
+            "medium": "med",
+            "low": "low",
+        }
+
         for i, task in enumerate(sorted_tasks, 1):
             status_color = self._get_status_color(task.status)
             # Title과 Depends를 별도 컬럼으로
-            title = task.title[:23] + ".." if len(task.title) > 25 else task.title
+            title = task.title[:25] + ".." if len(task.title) > 27 else task.title
             deps_raw = ", ".join(task.depends) if task.depends else "-"
             deps = deps_raw.ljust(20)  # 최소 20자 보장
 
@@ -774,8 +788,8 @@ class OrchayApp(App[None]):
                 str(i),
                 task_id_display,
                 Text(task.status.value, style=status_color),  # type: ignore[arg-type]
-                task.category.value,
-                task.priority.value,
+                category_short.get(task.category.value, task.category.value[:4]),
+                priority_short.get(task.priority.value, task.priority.value[:4]),
                 title,
                 deps,
             )
