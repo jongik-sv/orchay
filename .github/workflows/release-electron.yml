@@ -53,7 +53,7 @@ jobs:
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: orchay-linux-x64
+          name: orchay_web-linux-x64
           path: |
             orchay_web/dist-electron/release/*.AppImage
             orchay_web/dist-electron/release/*.deb
@@ -63,7 +63,7 @@ jobs:
         if: matrix.platform == 'win'
         uses: actions/upload-artifact@v4
         with:
-          name: orchay-windows-x64
+          name: orchay_web-windows-x64
           path: orchay_web/dist-electron/release/*.exe
           retention-days: 7
 
@@ -71,7 +71,7 @@ jobs:
         if: matrix.platform == 'mac'
         uses: actions/upload-artifact@v4
         with:
-          name: orchay-macos
+          name: orchay_web-macos
           path: orchay_web/dist-electron/release/*.dmg
           retention-days: 7
 
