@@ -238,12 +238,21 @@ class Orchestrator:
         self.print_status()
 
     def _sync_worker_steps(self) -> None:
-        """Worker의 current_step을 WBS 상태 기반으로 동기화."""
+        """Worker의 current_step을 WBS 상태 기반으로 동기화.
+
+        Note: BUSY 상태이고 이미 step이 설정된 Worker는 sync하지 않음.
+        연속 실행 중 _dispatch_next_step()에서 설정한 step을 덮어쓰면 안 됨.
+        """
         # Task ID → Task 매핑
         task_map = {t.id: t for t in self.tasks}
 
         for worker in self.workers:
             if not worker.current_task:
+                continue
+
+            # BUSY 상태이고 이미 step이 설정되어 있으면 sync 건너뛰기
+            # (연속 실행 중 _dispatch_next_step()에서 설정한 step 보호)
+            if worker.state == WorkerState.BUSY and worker.current_step:
                 continue
 
             # Worker가 작업 중인 Task 찾기
