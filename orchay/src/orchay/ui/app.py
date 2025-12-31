@@ -679,11 +679,11 @@ class OrchayApp(App[None]):
 
     def _on_auto_refresh(self) -> None:
         """자동 갱신 콜백."""
-        # 일시정지 상태가 아닐 때만 스케줄링 사이클 실행
-        if not self._paused:
-            if self._real_orchestrator is not None and not self._tick_running:
-                self._tick_running = True
-                self.run_worker(self._run_orchestrator_tick())
+        # 스케줄링 사이클 실행 (pause 상태에서도 상태 업데이트는 필요)
+        # Orchestrator._tick() 내부에서 pause일 때 Task 분배만 건너뜀
+        if self._real_orchestrator is not None and not self._tick_running:
+            self._tick_running = True
+            self.run_worker(self._run_orchestrator_tick())
 
         # UI 업데이트는 항상 실행 (일시정지 상태에서도 워커 상태 표시)
         self._sync_from_orchestrator()
