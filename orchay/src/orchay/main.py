@@ -58,6 +58,11 @@ class Orchestrator:
         self._running = False
         self._paused = config.execution.start_paused
 
+    @property
+    def running_tasks(self) -> set[str]:
+        """현재 실행 중인 Task ID 집합."""
+        return {w.current_task for w in self.workers if w.current_task}
+
     async def initialize(self) -> bool:
         """오케스트레이터 초기화.
 

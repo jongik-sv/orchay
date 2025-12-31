@@ -6,6 +6,8 @@ Textual 프레임워크 기반 터미널 UI 구현.
 from __future__ import annotations
 
 import logging
+import subprocess
+import sys
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from rich.text import Text
@@ -357,7 +359,6 @@ class OrchayApp(App[None]):
     CSS_PATH = "styles.tcss"
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("f12", "show_help", "Help"),
-        Binding("f2", "show_status", "Status"),
         Binding("f3", "show_queue", "Queue"),
         Binding("f5", "reload", "Reload"),
         Binding("f6", "show_history", "History"),
@@ -370,6 +371,7 @@ class OrchayApp(App[None]):
         Binding("down", "worker_select_next", "Down", show=False),
         Binding("enter", "item_select", "Select", show=False),
         Binding("u", "queue_move_up", "Move Up", show=False),
+        Binding("d", "queue_move_down", "Move Down", show=False),
         Binding("t", "queue_move_top", "Top", show=False),
         Binding("s", "queue_skip", "Skip", show=False),
         Binding("y", "queue_retry", "Retry", show=False),
@@ -420,6 +422,10 @@ class OrchayApp(App[None]):
 
         # TUI 로그 핸들러 (on_mount에서 등록)
         self._log_handler: TUILogHandler | None = None
+
+        # 토스트 메시지 설정
+        self._max_notifications = 4
+        self._notification_timeout = 2.0  # 초
 
         # F9 바인딩 초기 레이블 설정 (compose 전에 설정해야 Footer에 반영됨)
         self._update_f9_binding()
@@ -523,7 +529,7 @@ class OrchayApp(App[None]):
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
                 yield Static(
-                    "Schedule Queue  (↑↓:Select  U:Up  T:Top  S:Skip  Y:Retry)",
+                    "Schedule Queue  (U:Up  D:Down  T:Top  S:Skip  Y:Retry)",
                     id="queue-title",
                 )
                 yield DataTable(id="queue-table")
@@ -719,8 +725,12 @@ class OrchayApp(App[None]):
         """완료된 Task 수."""
         return sum(1 for t in self._tasks if t.status == TaskStatus.DONE)
 
-    def _update_queue_table(self) -> None:
-        """스케줄 큐 테이블 업데이트."""
+    def _update_queue_table(self, preserve_cursor_task_id: str | None = None) -> None:
+        """스케줄 큐 테이블 업데이트.
+
+        Args:
+            preserve_cursor_task_id: 이 task ID의 위치로 커서 유지 (None이면 기본 동작)
+        """
         try:
             table: DataTable[str] = self.query_one("#queue-table", DataTable)  # type: ignore[assignment]
         except Exception:
@@ -737,6 +747,7 @@ class OrchayApp(App[None]):
 
         # 현재 작업 중인 Task 찾기 (첫 번째)
         active_row: int | None = None
+        preserved_row: int | None = None
         running_task_ids = {w.current_task for w in self._worker_list if w.current_task}
 
         for i, task in enumerate(sorted_tasks, 1):
@@ -746,12 +757,18 @@ class OrchayApp(App[None]):
             deps_raw = ", ".join(task.depends) if task.depends else "-"
             deps = deps_raw.ljust(20)  # 최소 20자 보장
 
-            # 작업 중인 Task 표시
+            # 작업 중인 Task 또는 스킵된 Task 표시
             task_id_display = task.id
             if task.id in running_task_ids:
                 task_id_display = f"▶ {task.id}"
                 if active_row is None:
                     active_row = i - 1  # 0-indexed
+            elif task.blocked_by == "skipped":
+                task_id_display = f"⏭ {task.id}"
+
+            # 커서 유지할 task 찾기
+            if preserve_cursor_task_id and task.id == preserve_cursor_task_id:
+                preserved_row = i - 1  # 0-indexed
 
             table.add_row(
                 str(i),
@@ -763,9 +780,10 @@ class OrchayApp(App[None]):
                 deps,
             )
 
-        # 작업 중인 Task로 스크롤
-        if active_row is not None and table.row_count > 0:
-            table.move_cursor(row=active_row)
+        # 커서 위치 결정: preserved_row 우선, 없으면 active_row
+        target_row = preserved_row if preserved_row is not None else active_row
+        if target_row is not None and table.row_count > 0:
+            table.move_cursor(row=target_row)
 
     def _update_worker_panel(self) -> None:
         """Worker 패널 업데이트."""
@@ -799,14 +817,18 @@ class OrchayApp(App[None]):
                 workers_section.display = False
                 log_section.display = False
                 queue_section.display = True
+                queue_section.styles.height = "1fr"
             elif self._logs_fullscreen:
                 queue_section.display = False
                 workers_section.display = False
                 log_section.display = True
+                log_section.styles.height = "1fr"
             else:
                 queue_section.display = True
                 workers_section.display = True
                 log_section.display = True
+                queue_section.styles.height = "1fr"
+                log_section.styles.height = 8
         except Exception:
             pass
 
@@ -832,6 +854,43 @@ class OrchayApp(App[None]):
             pass
         return None
 
+    def notify(
+        self,
+        message: str,
+        *,
+        title: str = "",
+        severity: str = "information",
+        timeout: float | None = None,
+    ) -> None:
+        """토스트 메시지 표시 (최대 4개, 빠른 소멸).
+
+        Args:
+            message: 표시할 메시지
+            title: 제목 (선택)
+            severity: 심각도 (information, warning, error)
+            timeout: 표시 시간 (초), None이면 기본값 사용
+        """
+        # 기존 알림 정리 (최대 개수 초과 시)
+        try:
+            from textual.widgets._toast import ToastRack
+
+            toast_rack = self.screen.query_one(ToastRack)
+            toasts = list(toast_rack.children)
+            # 최대 개수 - 1개 초과 시 오래된 것 제거 (새 알림 추가될 예정)
+            while len(toasts) >= self._max_notifications:
+                oldest = toasts.pop(0)
+                oldest.remove()
+        except Exception:
+            pass
+
+        # 짧은 timeout으로 알림 표시
+        super().notify(
+            message,
+            title=title,
+            severity=severity,  # type: ignore[arg-type]
+            timeout=timeout if timeout is not None else self._notification_timeout,
+        )
+
     def _get_status_color(self, status: TaskStatus) -> str:
         """상태별 색상."""
         status_colors = {
@@ -849,6 +908,29 @@ class OrchayApp(App[None]):
         return status_colors.get(status, "#6b7280")
 
     # 액션 핸들러
+    def action_quit(self) -> None:
+        """앱 종료 및 WezTerm 전체 닫기."""
+        # 먼저 앱 종료 처리
+        if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "stop"):
+            self._real_orchestrator.stop()
+
+        # WezTerm 전체 종료
+        if sys.platform == "win32":
+            subprocess.Popen(
+                ["taskkill", "/F", "/IM", "wezterm-gui.exe"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.Popen(
+                ["pkill", "-f", "wezterm"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+        # 앱 종료
+        self.exit()
+
     def action_show_help(self) -> None:
         """도움말 표시."""
         try:
@@ -856,14 +938,7 @@ class OrchayApp(App[None]):
             help_modal.display = not help_modal.display
             self._help_visible = help_modal.display
         except Exception:
-            self.notify("F1:Help F2:Status F3:Queue F4:Workers F5:Reload F7:Mode F9:Pause F10:Exit")
-
-    def action_show_status(self) -> None:
-        """상태 표시."""
-        completed = self._count_completed()
-        total = len(self._tasks)
-        running = sum(1 for w in self._worker_list if w.state == WorkerState.BUSY)
-        self.notify(f"Status: {completed}/{total} done, {running} running, mode={self._mode}")
+            self.notify("F12:Help F3:Queue F5:Reload F6:Logs F7:Mode F9:Pause F10:Exit")
 
     def action_show_queue(self) -> None:
         """Queue 전체화면 토글."""
@@ -1080,7 +1155,15 @@ class OrchayApp(App[None]):
         if task:
             result = await self._command_handler.up_task(task.id)
             self.notify(result.message)
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=task.id)
+
+    async def action_queue_move_down(self) -> None:
+        """선택된 Task를 아래로 이동 (D키)."""
+        task = self._get_selected_task()
+        if task:
+            result = await self._command_handler.down_task(task.id)
+            self.notify(result.message)
+            self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_queue_move_top(self) -> None:
         """선택된 Task를 최우선으로 이동 (T키)."""
@@ -1088,7 +1171,7 @@ class OrchayApp(App[None]):
         if task:
             result = await self._command_handler.top_task(task.id)
             self.notify(result.message)
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_queue_skip(self) -> None:
         """선택된 Task를 스킵 (S키)."""
@@ -1099,7 +1182,7 @@ class OrchayApp(App[None]):
                 self.notify(result.message)
             else:
                 self.notify(result.message, severity="error")
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_queue_retry(self) -> None:
         """선택된 Task를 재시도 (Y키)."""
@@ -1107,7 +1190,7 @@ class OrchayApp(App[None]):
         if task:
             result = await self._command_handler.retry_task(task.id)
             self.notify(result.message)
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_reset_worker(self) -> None:
         """선택된 Worker를 idle 상태로 강제 리셋."""

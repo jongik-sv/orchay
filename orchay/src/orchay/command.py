@@ -268,6 +268,28 @@ class CommandHandler:
         tasks[idx], tasks[idx - 1] = tasks[idx - 1], tasks[idx]
         return CommandResult.ok(f"{task_id} → 위로 이동")
 
+    async def down_task(self, task_id: str) -> CommandResult:
+        """Task를 큐에서 한 칸 아래로 이동합니다.
+
+        Args:
+            task_id: 이동할 Task ID
+
+        Returns:
+            CommandResult
+        """
+        tasks = self.orchestrator.tasks
+        idx = next((i for i, t in enumerate(tasks) if t.id == task_id), -1)
+
+        if idx == -1:
+            return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
+
+        if idx >= len(tasks) - 1:
+            return CommandResult.ok(f"{task_id}는 이미 마지막입니다")
+
+        # 스왑
+        tasks[idx], tasks[idx + 1] = tasks[idx + 1], tasks[idx]
+        return CommandResult.ok(f"{task_id} → 아래로 이동")
+
     async def top_task(self, task_id: str) -> CommandResult:
         """Task를 큐의 맨 앞으로 이동합니다.
 
