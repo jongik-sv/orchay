@@ -3,6 +3,10 @@ productName: orchay_web
 copyright: Copyright (c) 2024
 electronVersion: "33.2.1"
 
+# asar 압축 활성화
+asar: true
+compression: maximum
+
 directories:
   output: dist-electron/release
   buildResources: resources
@@ -12,6 +16,13 @@ files:
   - dist-electron/main/**/*
   - dist-electron/preload/**/*
   - package.json
+  # 불필요한 파일 제외
+  - "!**/*.map"
+  - "!**/node_modules/**/*.md"
+  - "!**/node_modules/**/*.ts"
+  - "!**/node_modules/**/test/**"
+  - "!**/node_modules/**/tests/**"
+  - "!**/node_modules/**/.github/**"
 
 # 서버 빌드 결과물을 extraResources로 복사
 extraResources:
@@ -19,6 +30,11 @@ extraResources:
     to: server
     filter:
       - "**/*"
+      - "!**/*.map"
+      - "!**/node_modules/**/*.md"
+      - "!**/node_modules/**/*.ts"
+      - "!**/node_modules/**/test/**"
+      - "!**/node_modules/**/tests/**"
 
 # Windows 설정
 win:
