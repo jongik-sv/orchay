@@ -329,8 +329,17 @@ class Orchestrator:
                 # 현재 Task의 DONE 신호인지 확인 (이전 Task의 신호 무시)
                 if done_info and worker.current_task and done_info.task_id != worker.current_task:
                     logger.debug(
-                        f"Worker {worker.id}: 이전 DONE 신호 무시 "
+                        f"Worker {worker.id}: 이전 Task DONE 신호 무시 "
                         f"(신호={done_info.task_id}, 현재={worker.current_task})"
+                    )
+                    # 상태 변경 없이 BUSY 유지
+                    continue
+
+                # 현재 step의 DONE 신호인지 확인 (이전 step의 신호 무시)
+                if done_info and worker.current_step and done_info.action != worker.current_step:
+                    logger.debug(
+                        f"Worker {worker.id}: 이전 step DONE 신호 무시 "
+                        f"(신호={done_info.action}, 현재={worker.current_step})"
                     )
                     # 상태 변경 없이 BUSY 유지
                     continue
