@@ -247,10 +247,13 @@ def get_wezterm_gui_pids() -> set[int]:
     try:
         if platform.system() == "Windows":
             # tasklist로 wezterm-gui.exe PID 조회
+            # Windows 콘솔은 CP949 인코딩 사용
             result = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq wezterm-gui.exe", "/FO", "CSV", "/NH"],
                 capture_output=True,
                 text=True,
+                encoding="cp949",
+                errors="ignore",
             )
             for line in result.stdout.strip().split("\n"):
                 if line and "wezterm-gui.exe" in line:

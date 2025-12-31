@@ -909,24 +909,36 @@ class OrchayApp(App[None]):
 
     # 액션 핸들러
     def action_quit(self) -> None:
-        """앱 종료 및 WezTerm 전체 닫기."""
+        """앱 종료 및 현재 폴더의 WezTerm 닫기."""
+        from pathlib import Path
+
+        from orchay.launcher import get_pid_file, load_wezterm_pid
+
         # 먼저 앱 종료 처리
         if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "stop"):
             self._real_orchestrator.stop()
 
-        # WezTerm 전체 종료
-        if sys.platform == "win32":
-            subprocess.Popen(
-                ["taskkill", "/F", "/IM", "wezterm-gui.exe"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        else:
-            subprocess.Popen(
-                ["pkill", "-f", "wezterm"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        # 현재 폴더의 WezTerm만 종료 (PID 파일 기반)
+        cwd = str(Path.cwd())
+        saved_pid = load_wezterm_pid(cwd)
+        if saved_pid:
+            if sys.platform == "win32":
+                subprocess.Popen(
+                    ["taskkill", "/F", "/PID", str(saved_pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            else:
+                subprocess.Popen(
+                    ["kill", "-9", str(saved_pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            # PID 파일 삭제
+            try:
+                get_pid_file(cwd).unlink()
+            except OSError:
+                pass
 
         # 앱 종료
         self.exit()
