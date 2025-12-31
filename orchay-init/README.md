@@ -198,6 +198,10 @@ npm publish --otp=123456
 
 # 2FA 없는 경우
 npm publish
+
+# login 
+npm login
+npm publish
 ```
 
 ### Access Token 발급 방법

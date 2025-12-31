@@ -670,9 +670,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["design", "quick", "develop", "force"],
+        choices=["design", "quick", "develop", "force", "test"],
         default="quick",
         help="실행 모드 (기본: quick)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="(test 모드) 모든 구현 완료 Task 자동 선택",
     )
     parser.add_argument(
         "--dry-run",

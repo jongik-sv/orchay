@@ -93,9 +93,9 @@ async def test_queue_table_columns() -> None:
         columns = [col.label.plain for col in table.columns.values()]
         assert "#" in columns
         assert "Task ID" in columns
-        assert "Status" in columns
-        assert "Category" in columns
-        assert "Priority" in columns
+        assert "Sts" in columns  # Status → Sts
+        assert "Categ" in columns  # Category → Categ
+        assert "Pri" in columns  # Priority → Pri
         assert "Title" in columns
 
 

@@ -119,27 +119,36 @@ python orchay/src/orchay/launcher.py deployment
 
 추가로 develop 모드일 경우 설계가 끝나고 review, apply를 하고 build가 끝난후 audit, patch를 각각 한번씩 실행하고
 
-## develop 모드
+## 모드
+### develop 모드
 - design -> review -> apply -> approve(사람이 실행) -> build -> audit -> patch -> test -> verify -> done(사람이 실행)
 
-## quick 모드
+### quick 모드
 - design -> approve(사람이 실행) -> build -> verify -> done(사람이 실행)
 
-## force 모드
+### force 모드
 - design -> approve -> build -> verify -> done(사람이 실행)
 
-## design 모드
+### design 모드
 - design 까지만
 
-## test 모드
+### test 모드
 - test 대상(im, vf, xx)의 테스트 수행
 
-## ochary_web
+## ochary_web 수정할 기능
 - wbs 편집 기능
   - wbs 내용 
-  - 수동 승인
+  - 수동 승인 : **force모드가 아닐 때 queue에서 아무 작업이 걸려있지 않은 [dd] 상태의 Task를 승인 상태로 바꾸는 기능이 있으면 좋겠어.** 명령어 호출이 아닌 단순 값을 [dd]에서 [ap]으로 변경하는 것
 - Task 상태
   - 보류 상태 : 진행을 풀기 전까지 진행이 되지 않는 상태
+  - 
+
+## 공통 수정
+- 코드 리펙토링
+- 
+
+
+
 
 릴리즈 리스트
 gh release list --repo jongik-sv/orchay

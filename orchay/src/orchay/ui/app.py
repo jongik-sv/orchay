@@ -5,6 +5,7 @@ Textual 프레임워크 기반 터미널 UI 구현.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import subprocess
 import sys
@@ -22,7 +23,7 @@ from textual.widgets import DataTable, Footer, Header, RichLog, Static
 from orchay.command import CommandHandler
 from orchay.scheduler import ExecutionMode
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
-from orchay.ui.widgets import HelpModal
+from orchay.ui.widgets import HelpModal, TaskDetailModal, TestSelectionPanel
 from orchay.utils.active_tasks import (
     pause_worker,
     resume_worker,
@@ -79,6 +80,7 @@ class SchedulerStateIndicator(Static):
         "quick": "#22c55e",
         "develop": "#8b5cf6",
         "force": "#f59e0b",
+        "test": "#f97316",
     }
 
     def __init__(self, state: str = "running", mode: str = "quick", project: str = "") -> None:
@@ -369,9 +371,9 @@ class OrchayApp(App[None]):
         Binding("escape", "close_modal", "Close", show=False),
         Binding("up", "worker_select_prev", "Up", show=False),
         Binding("down", "worker_select_next", "Down", show=False),
-        Binding("enter", "item_select", "Select", show=False),
         # priority=True: DataTable 키바인딩보다 우선
-        Binding("s", "queue_toggle_skip", "Skip/Retry", show=False, priority=True),
+        Binding("enter", "item_select", "Select", show=False, priority=True),
+        Binding("space", "queue_toggle_skip", "Skip/Retry", show=False, priority=True),
         Binding("r", "reset_worker", "Reset Worker", show=False, priority=True),
         Binding("p", "toggle_worker_pause", "Pause Worker", show=False, priority=True),
         Binding("1", "select_worker_1", "W1", show=False, priority=True),
@@ -382,6 +384,9 @@ class OrchayApp(App[None]):
         Binding("shift+f1", "show_worker_1", "W1 Info", show=False),
         Binding("shift+f2", "show_worker_2", "W2 Info", show=False),
         Binding("shift+f3", "show_worker_3", "W3 Info", show=False),
+        # Test mode 전용 키
+        Binding("t", "run_tests", "Run Tests", show=False, priority=True),
+        Binding("a", "toggle_select_all", "Select All", show=False, priority=True),
     ]
 
     def __init__(
@@ -526,7 +531,7 @@ class OrchayApp(App[None]):
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
                 yield Static(
-                    "Schedule Queue  (S:Skip/Retry)",
+                    "Schedule Queue  (Enter:Detail  Space:Skip/Retry)",
                     id="queue-title",
                 )
                 yield DataTable(id="queue-table")
@@ -542,8 +547,14 @@ class OrchayApp(App[None]):
                 yield Static("Logs  (F6:Expand)", id="log-title")
                 yield RichLog(id="log-panel", highlight=True, markup=True)
 
+            # Test 모드 선택 패널 (기본 숨김)
+            with Vertical(id="test-section"):
+                yield Static("Test Mode  (Space:Select  A:All  T:Run)", id="test-title")
+                yield TestSelectionPanel()
+
         # 모달 위젯들 (기본 숨김)
         yield HelpModal()
+        yield TaskDetailModal()
 
         yield Footer()
 
@@ -566,6 +577,14 @@ class OrchayApp(App[None]):
             help_modal.display = False
         except Exception:
             pass
+        try:
+            task_detail_modal = self.query_one("#task-detail-modal", TaskDetailModal)
+            task_detail_modal.display = False
+        except Exception:
+            pass
+
+        # test 모드 UI 초기 설정
+        self._update_test_mode_ui()
 
         # 초기 데이터 로드
         self._update_queue_table()
@@ -597,16 +616,20 @@ class OrchayApp(App[None]):
 
     def _on_auto_refresh(self) -> None:
         """자동 갱신 콜백."""
+        # 현재 선택된 Task ID 저장 (커서 위치 유지용)
+        selected_task = self._get_selected_task()
+        selected_task_id = selected_task.id if selected_task else None
+
         # 스케줄링 사이클 실행 (pause 상태에서도 상태 업데이트는 필요)
         # Orchestrator._tick() 내부에서 pause일 때 Task 분배만 건너뜀
         if self._real_orchestrator is not None and not self._tick_running:
             self._tick_running = True
-            self.run_worker(self._run_orchestrator_tick())
+            self.run_worker(self._run_orchestrator_tick(selected_task_id))
             # UI 업데이트는 _run_orchestrator_tick() 완료 후 수행됨
         elif not self._tick_running:
             # Orchestrator 없거나 tick 미실행 시에만 직접 UI 업데이트
             self._sync_from_orchestrator()
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=selected_task_id)
             self._update_worker_panel()
             self._update_header_info()
 
@@ -633,14 +656,18 @@ class OrchayApp(App[None]):
         except Exception:
             pass
 
-    async def _run_orchestrator_tick(self) -> None:
-        """Orchestrator 스케줄링 사이클 실행."""
+    async def _run_orchestrator_tick(self, preserve_cursor_task_id: str | None = None) -> None:
+        """Orchestrator 스케줄링 사이클 실행.
+
+        Args:
+            preserve_cursor_task_id: 커서 위치 유지할 Task ID
+        """
         try:
             if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "_tick"):
                 await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
             # tick 완료 후 UI 업데이트 (동일 asyncio 루프에서 실행)
             self._sync_from_orchestrator()
-            self._update_queue_table()
+            self._update_queue_table(preserve_cursor_task_id=preserve_cursor_task_id)
             self._update_worker_panel()
             self._update_header_info()
         finally:
@@ -997,11 +1024,13 @@ class OrchayApp(App[None]):
 
     def action_toggle_mode(self) -> None:
         """모드 전환."""
-        modes = ["design", "quick", "develop", "force"]
+        modes = ["design", "quick", "develop", "force", "test"]
         current_idx = modes.index(self._mode) if self._mode in modes else 0
         next_idx = (current_idx + 1) % len(modes)
         self.mode = modes[next_idx]
         self.notify(f"Mode changed to: {self._mode}")
+        # test 모드 전환 시 UI 업데이트
+        self._update_test_mode_ui()
 
     def _get_f9_label(self) -> str:
         """F9 바인딩 레이블 결정.
@@ -1091,6 +1120,15 @@ class OrchayApp(App[None]):
 
     def action_close_modal(self) -> None:
         """모달/전체화면 모드 닫기."""
+        # Task 상세 모달 해제
+        try:
+            task_modal = self.query_one("#task-detail-modal", TaskDetailModal)
+            if task_modal.display:
+                task_modal.display = False
+                return
+        except Exception:
+            pass
+
         # 전체화면 해제
         if self._queue_fullscreen or self._logs_fullscreen:
             self._queue_fullscreen = False
@@ -1107,11 +1145,32 @@ class OrchayApp(App[None]):
         except Exception:
             pass
 
-    def action_item_select(self) -> None:
-        """선택된 Task 정보 표시."""
+    async def action_item_select(self) -> None:
+        """선택된 Task 상세 정보 모달 표시/닫기 (Enter 키)."""
+        # 먼저 모달 상태 확인
+        try:
+            modal = self.query_one("#task-detail-modal", TaskDetailModal)
+            # 모달이 이미 열려있으면 닫기 (모든 모드에서)
+            if modal.display:
+                modal.display = False
+                return
+        except Exception:
+            pass
+
+        # test 모드에서는 테스트 실행
+        if self._mode == "test":
+            await self.action_run_tests()
+            return
+
         task = self._get_selected_task()
         if task:
-            self.notify(f"Selected: {task.id} ({task.status.value})")
+            try:
+                modal = self.query_one("#task-detail-modal", TaskDetailModal)
+                modal.set_task(task)
+                modal.display = True
+            except Exception:
+                # 모달 못 찾으면 토스트로 fallback
+                self.notify(f"Selected: {task.id} ({task.status.value})")
 
     def action_toggle_worker_pause(self) -> None:
         """선택된 Worker의 일시정지 토글."""
@@ -1173,7 +1232,23 @@ class OrchayApp(App[None]):
         self._select_worker(5)
 
     async def action_queue_toggle_skip(self) -> None:
-        """선택된 Task의 스킵 상태 토글 (S키)."""
+        """선택된 Task의 스킵 상태 토글 (Space키)."""
+        # test 모드에서는 SelectionList의 선택 토글
+        if self._mode == "test":
+            try:
+                from textual.widgets import SelectionList
+                selection_list: SelectionList[str] = self.query_one(
+                    "#test-task-list", SelectionList
+                )
+                # highlighted된 항목의 값을 가져와서 toggle
+                idx = selection_list.highlighted
+                if idx is not None:
+                    option = selection_list.get_option_at_index(idx)
+                    if option is not None:
+                        selection_list.toggle(option.value)
+            except Exception as e:
+                self.write_log(f"Toggle error: {e}", "error")
+            return
         task = self._get_selected_task()
         if task:
             # 스킵된 상태면 Retry, 아니면 Skip
@@ -1240,6 +1315,117 @@ class OrchayApp(App[None]):
             return
         task_info = worker.current_task or "-"
         self.notify(f"Worker {worker_id}: {worker.state.value}, task={task_info}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Test Mode Actions
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _update_test_mode_ui(self) -> None:
+        """test 모드 UI 표시/숨김 토글."""
+        try:
+            test_section = self.query_one("#test-section")
+            queue_section = self.query_one("#queue-section")
+
+            if self._mode == "test":
+                # test 모드: TestSelectionPanel 표시, Queue 숨김
+                test_section.display = True
+                queue_section.display = False
+                # 태스크 목록 업데이트
+                panel = self.query_one(TestSelectionPanel)
+                panel.set_tasks(self._tasks)
+                # SelectionList에 focus 설정
+                try:
+                    from textual.widgets import SelectionList
+                    selection_list = self.query_one("#test-task-list", SelectionList)
+                    selection_list.focus()
+                except Exception:
+                    pass
+            else:
+                # 다른 모드: Queue 표시, TestSelectionPanel 숨김
+                test_section.display = False
+                queue_section.display = True
+                # DataTable에 focus 복원
+                try:
+                    table = self.query_one("#queue-table")
+                    table.focus()
+                except Exception:
+                    pass
+        except Exception:
+            pass  # 위젯이 아직 마운트되지 않았을 수 있음
+
+    async def action_run_tests(self) -> None:
+        """선택된 Task에 /wf:test dispatch (test 모드 전용)."""
+        if self._mode != "test":
+            self.notify("Test mode에서만 사용 가능", severity="warning")
+            return
+
+        try:
+            panel = self.query_one(TestSelectionPanel)
+            selected_ids = panel.get_selected_task_ids()
+        except Exception:
+            self.notify("TestSelectionPanel not found", severity="error")
+            return
+
+        if not selected_ids:
+            self.notify("테스트할 Task를 선택하세요", severity="warning")
+            return
+
+        # idle Worker 찾기
+        idle_workers = [
+            w for w in self._worker_list
+            if w.state == WorkerState.IDLE and not w.is_manually_paused
+        ]
+
+        if not idle_workers:
+            self.notify("사용 가능한 Worker 없음", severity="warning")
+            return
+
+        # 선택된 태스크에 dispatch (idle Worker 수만큼)
+        dispatched = 0
+        for task_id in selected_ids:
+            if dispatched >= len(idle_workers):
+                break
+
+            task = next((t for t in self._tasks if t.id == task_id), None)
+            if task is None:
+                continue
+
+            worker = idle_workers[dispatched]
+
+            # dispatch 실행
+            from orchay.utils.wezterm import wezterm_send_text
+            command = f"/wf:test {self._project}/{task_id}"
+            await wezterm_send_text(worker.pane_id, command)
+            await asyncio.sleep(1.0)
+            await wezterm_send_text(worker.pane_id, "\r")
+
+            # 상태 업데이트
+            worker.state = WorkerState.BUSY
+            worker.current_task = task_id
+            worker.current_step = "test"
+            task.assigned_worker = worker.id
+
+            dispatched += 1
+            self.write_log(f"Test dispatch: {task_id} → Worker {worker.id}")
+
+        self.notify(f"테스트 시작: {dispatched}개 Task")
+        self._update_worker_panel()
+
+    def action_toggle_select_all(self) -> None:
+        """전체 선택/해제 토글 (test 모드 전용)."""
+        if self._mode != "test":
+            return
+
+        try:
+            panel = self.query_one(TestSelectionPanel)
+            if panel.get_selected_count() > 0:
+                panel.deselect_all()
+                self.notify("전체 선택 해제")
+            else:
+                panel.select_all()
+                self.notify(f"전체 선택: {panel.get_task_count()}개")
+        except Exception:
+            pass
 
 
 def run_app(

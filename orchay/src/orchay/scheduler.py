@@ -22,6 +22,7 @@ class ExecutionMode(str, Enum):
     QUICK = "quick"
     DEVELOP = "develop"
     FORCE = "force"
+    TEST = "test"
 
 
 # 우선순위 정렬 순서
@@ -55,6 +56,7 @@ WORKFLOW_STEPS: dict[ExecutionMode, list[str]] = {
         "done",
     ],
     ExecutionMode.FORCE: ["start", "approve", "build", "done"],
+    ExecutionMode.TEST: ["test"],  # 테스트만 실행
 }
 
 
@@ -157,6 +159,11 @@ async def filter_executable_tasks(
         elif mode == ExecutionMode.FORCE:
             # BR-06: force 모드는 의존성 무시, 모든 미완료 Task 포함
             pass
+        elif mode == ExecutionMode.TEST:
+            # BR-TEST: test 모드는 구현 완료 상태([im], [vf], [xx])만 포함
+            if task.status not in IMPLEMENTED_STATUSES:
+                logger.debug(f"  {task.id}: BR-TEST 제외 (구현 미완료)")
+                continue
         else:
             # BR-05: quick/develop 모드 의존성 검사
             # [ ] 상태는 의존성 무시, [dd] 이상 상태에서는 의존성 검사
@@ -298,6 +305,10 @@ def get_next_workflow_command(
     mode_config = execution_modes.get(mode.value, {}) if mode else {}
     workflow_scope = mode_config.get("workflowScope", "transitions-only")
     stop_after_cmd = mode_config.get("stopAfterCommand")
+
+    # test-only scope: 항상 "test" 명령 반환 (상태 변경 없음)
+    if workflow_scope == "test-only":
+        return "test"
 
     # Task 카테고리에 해당하는 workflow 찾기
     workflow_name = _get_workflow_name(task.category.value)

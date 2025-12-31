@@ -6,9 +6,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 from textual.containers import VerticalScroll
-from textual.widgets import Static
+from textual.widgets import SelectionList, Static
+from textual.widgets.selection_list import Selection
+
+if TYPE_CHECKING:
+    from orchay.models import Task, TaskStatus
 
 
 class HelpModal(VerticalScroll):
@@ -25,9 +30,8 @@ class HelpModal(VerticalScroll):
   F3  Queue 확장   F7  모드 전환       Q    종료
 
 -- Schedule Queue Keys -----------------------------------------------
-  Up/Down  Task 선택    U  위로 이동      S  스킵
-  Enter    Task 정보    T  최우선 지정    Y  스킵 복구
-  ESC      전체화면 해제
+  Up/Down  Task 선택         Enter  상세 보기
+  Space    스킵/복구 토글    ESC    전체화면 해제
 
 -- Worker Keys -------------------------------------------------------
   Up/Down  Worker 선택    P   Worker Pause
@@ -39,6 +43,7 @@ class HelpModal(VerticalScroll):
   develop  [dd]>[xx] 전체 품질검증.
            start>review>apply>approve>build>audit>patch>test>done
   force    의존성 무시. quick과 동일 단계
+  test     [im]+상태 Task 테스트. Space:선택  A:전체  T:실행
 
 -- Task Status Codes -------------------------------------------------
   [ ]   TODO          대기 중, 설계 시작 전
@@ -71,3 +76,111 @@ class HelpModal(VerticalScroll):
         """내부 Static 위젯 생성."""
         # markup=False로 [bd], [dd] 등이 마크업 태그로 해석되는 것 방지
         yield Static(self.HELP_TEXT, markup=False)
+
+
+class TaskDetailModal(VerticalScroll):
+    """Task 상세 정보 모달 (WBS raw content 표시)."""
+
+    def __init__(self) -> None:
+        super().__init__(id="task-detail-modal")
+        self._current_task: Task | None = None  # _task는 Textual 내부에서 사용하므로 이름 변경
+        self._content_widget: Static | None = None
+
+    def set_task(self, task: Task) -> None:
+        """표시할 Task 설정."""
+        self._current_task = task
+        self._update_content()
+
+    def compose(self) -> Generator[Static, None, None]:
+        """내부 Static 위젯 생성."""
+        self._content_widget = Static("", id="task-detail-content", markup=False)
+        yield self._content_widget
+
+    def _update_content(self) -> None:
+        """Task raw_content로 내용 업데이트."""
+        if self._content_widget is None or self._current_task is None:
+            return
+
+        # Task ID와 raw content 표시
+        header = f"[{self._current_task.id}] {self._current_task.title}\n"
+        header += "─" * 50 + "\n"
+        content = header + self._current_task.raw_content
+        self._content_widget.update(content)
+
+
+class TestSelectionPanel(VerticalScroll):
+    """테스트 대상 Task 선택 패널.
+
+    test 모드에서 구현 완료된 태스크([im], [vf], [xx])를 선택할 수 있는 UI.
+    SelectionList를 사용하여 다중 선택을 지원합니다.
+    """
+
+    # 테스트 대상 상태 코드
+    TESTABLE_STATUSES = {"[im]", "[vf]", "[xx]"}
+
+    def __init__(self) -> None:
+        super().__init__(id="test-selection-panel")
+        self._selection_list: SelectionList[str] | None = None
+        self._tasks: list[Task] = []
+
+    def compose(self) -> Generator[SelectionList[str], None, None]:
+        """SelectionList 위젯 생성."""
+        self._selection_list = SelectionList[str](id="test-task-list")
+        yield self._selection_list
+
+    def set_tasks(self, tasks: list[Task]) -> None:
+        """구현 완료 태스크로 목록 업데이트.
+
+        Args:
+            tasks: 전체 Task 목록 (내부에서 상태 필터링)
+        """
+        if self._selection_list is None:
+            return
+
+        # [im], [vf], [xx] 상태만 필터
+        self._tasks = [
+            t for t in tasks
+            if t.status.value in self.TESTABLE_STATUSES
+        ]
+
+        # 기존 목록 초기화 후 재구성
+        self._selection_list.clear_options()
+
+        for task in self._tasks:
+            # 상태, ID, 제목 표시
+            status_display = task.status.value
+            title = task.title[:35] if len(task.title) > 35 else task.title
+            label = f"{status_display} {task.id}: {title}"
+            self._selection_list.add_option(Selection(label, task.id, False))
+
+    def get_selected_task_ids(self) -> list[str]:
+        """선택된 Task ID 목록 반환.
+
+        Returns:
+            선택된 Task ID 리스트
+        """
+        if self._selection_list is None:
+            return []
+        return list(self._selection_list.selected)
+
+    def select_all(self) -> None:
+        """모든 항목 선택."""
+        if self._selection_list is None:
+            return
+        self._selection_list.select_all()
+
+    def deselect_all(self) -> None:
+        """모든 항목 선택 해제."""
+        if self._selection_list is None:
+            return
+        self._selection_list.deselect_all()
+
+    def get_task_count(self) -> int:
+        """테스트 가능한 Task 수 반환."""
+        return len(self._tasks)
+
+    def get_selected_count(self) -> int:
+        """선택된 Task 수 반환."""
+        if self._selection_list is None:
+            return 0
+        return len(self._selection_list.selected)

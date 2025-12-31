@@ -38,10 +38,10 @@ parallel-processing: true
 
 | Task 유형 | 실행 단계 | Agent |
 |----------|----------|-------|
-| Backend-only | 1 → 2 → 4 → 5 | backend-architect |
-| Frontend-only | 1 → 3 → 4 → 5 | frontend-architect |
-| Full-stack | 1 → 2 → 3 → 4 → 5 | backend + frontend |
-| infrastructure | 1 → 2(간소화) → 5 | devops-architect |
+| Backend-only | 1 → 2 → 4 → 5 → 6 → 7 → 8 | backend-architect |
+| Frontend-only | 1 → 3 → 4 → 5 → 6 → 7 → 8 | frontend-architect |
+| Full-stack | 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 | backend + frontend |
+| infrastructure | 1 → 2(간소화) → 7 → 8 | devops-architect |
 
 ---
 
@@ -129,7 +129,29 @@ parallel-processing: true
 ├── 3차: 8/8 통과 ✅ (루프 종료)
 ```
 
-### 5단계: 구현 보고서 생성
+### 5단계: 테스트 결과서 생성 ⭐
+
+```
+생성 파일:
+├── 070-tdd-test-results.md (Task 폴더)
+├── 070-e2e-test-results.md (Task 폴더)
+└── test-results/[timestamp]/
+    ├── tdd/coverage/
+    └── e2e/
+        ├── e2e-test-report.html ← 브라우저 열기
+        └── screenshots/
+```
+
+**WBS 업데이트**: `test-result: none` → `pass` | `fail`
+
+**테스트 결과서 필수 포함 항목**:
+- 테스트 실행 요약 (총 테스트 수, 성공/실패 수, 실행 시간)
+- 커버리지 리포트 (라인, 브랜치, 함수)
+- 실패 테스트 상세 (실패 원인, 수정 내역)
+- 테스트-수정 루프 이력 (시도 횟수, 각 시도별 결과)
+- 요구사항 커버리지 매핑 (FR/BR → 테스트 ID)
+
+### 7단계: 구현 보고서 생성
 
 - `030-implementation.md` 생성
 - 템플릿: `.orchay/templates/030-implementation.md`
@@ -138,7 +160,7 @@ parallel-processing: true
 - 상세설계 테스트 시나리오 ↔ 실제 테스트 매핑
 - 요구사항 커버리지 (FR/BR → 테스트 ID)
 
-### 6단계: 상태 전환 (자동)
+### 8단계: 상태 전환 (자동)
 
 ```bash
 # {project}: 입력에서 파싱 (예: deployment/TSK-01-01 → deployment)
@@ -204,6 +226,18 @@ Task: TSK-01-01-01 | Full-stack
 ├── 테마: ui-theme-dark.md 적용
 └── E2E: 8/8 ✅ [3회 시도]
 
+🔄 4단계: 테스트-수정 루프
+├── TDD: 2회 시도 → 12/12 ✅
+└── E2E: 3회 시도 → 8/8 ✅
+
+📄 5단계: 테스트 결과서 생성
+├── 070-tdd-test-results.md ✅
+├── 070-e2e-test-results.md ✅
+├── test-results/20250101-120000/
+│   ├── tdd/coverage/ (85%)
+│   └── e2e/screenshots/ (8장)
+└── WBS: test-result → pass
+
 📊 품질: TDD 85% | E2E 100% | FR/BR 100%
 
 다음: /wf:audit 또는 /wf:verify
@@ -229,11 +263,11 @@ Task: TSK-01-01-01 | Full-stack
 | category | 다음 | 설명 |
 |----------|------|------|
 | development | `/wf:audit` | 코드 리뷰 (선택) |
-| development | `/wf:test` | 테스트 실행 (선택) |
 | development | `/wf:verify` | 통합테스트 |
 | infrastructure | `/wf:audit` | 코드 리뷰 (선택) |
-| infrastructure | `/wf:test` | 테스트 실행 (선택) |
 | infrastructure | `/wf:verify` | 통합테스트 |
+
+> ℹ️ `/wf:test`는 build 완료 후 테스트 재실행이 필요할 때만 사용
 
 ---
 
@@ -265,5 +299,5 @@ ORCHAY_DONE:{task-id}:build:error:{에러 요약}
 
 <!--
 wf:build lite
-Version: 1.2
+Version: 1.3
 -->

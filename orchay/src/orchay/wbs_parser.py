@@ -203,6 +203,7 @@ class WbsParser:
         existing.tech_spec = new.tech_spec
         existing.api_spec = new.api_spec
         existing.ui_spec = new.ui_spec
+        existing.raw_content = new.raw_content
         # assigned_worker는 업데이트하지 않음 (런타임 상태)
 
     def _parse_metadata(self, content: str) -> None:
@@ -231,6 +232,7 @@ class WbsParser:
 
         current_task: dict[str, str | list[str]] | None = None
         current_list_key: str | None = None  # 현재 파싱 중인 중첩 리스트 키
+        raw_lines: list[str] = []  # Task의 raw content 저장용
         i = 0
 
         while i < len(lines):
@@ -241,6 +243,7 @@ class WbsParser:
             if header_match:
                 # 이전 Task 저장
                 if current_task:
+                    current_task["raw_content"] = "\n".join(raw_lines).strip()
                     task = self._create_task(current_task)
                     if task:
                         tasks.append(task)
@@ -250,6 +253,7 @@ class WbsParser:
                     "id": header_match.group(1),
                     "title": header_match.group(2).strip(),
                 }
+                raw_lines = []  # raw content 초기화
                 current_list_key = None
                 i += 1
                 continue
@@ -258,16 +262,20 @@ class WbsParser:
             # 이렇게 하면 WP 속성이 Task에 적용되지 않음
             if line.startswith("## "):
                 if current_task:
+                    current_task["raw_content"] = "\n".join(raw_lines).strip()
                     task = self._create_task(current_task)
                     if task:
                         tasks.append(task)
                     current_task = None
+                raw_lines = []
                 current_list_key = None
                 i += 1
                 continue
 
             # 속성 파싱 (현재 Task가 있을 때만)
             if current_task:
+                # raw content에 추가
+                raw_lines.append(line)
                 # 중첩 리스트 항목 감지 (  - item)
                 if line.startswith("  - ") and current_list_key:
                     item = line[4:].strip()
@@ -304,6 +312,7 @@ class WbsParser:
 
         # 마지막 Task 저장
         if current_task:
+            current_task["raw_content"] = "\n".join(raw_lines).strip()
             task = self._create_task(current_task)
             if task:
                 tasks.append(task)
@@ -373,6 +382,7 @@ class WbsParser:
                 tech_spec=get_list("tech-spec"),
                 api_spec=get_list("api-spec"),
                 ui_spec=get_list("ui-spec"),
+                raw_content=get_str("raw_content", ""),
             )
         except Exception as e:
             logger.error(f"Task 생성 오류: {e}")

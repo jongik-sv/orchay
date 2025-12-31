@@ -6,11 +6,10 @@ Textual 앱의 E2E 테스트.
 from __future__ import annotations
 
 import pytest
-from textual.widgets import Input
 
 from orchay.models import Task, TaskCategory, TaskPriority, TaskStatus, Worker, WorkerState
 from orchay.ui.app import OrchayApp
-from orchay.ui.widgets import HelpModal, QueueWidget
+from orchay.ui.widgets import HelpModal, TaskDetailModal
 
 # ============================================================================
 # Fixtures
@@ -54,29 +53,22 @@ def create_test_workers() -> list[Worker]:
 
 
 # ============================================================================
-# E2E-001: 명령어 입력 테스트
+# E2E-001: 기본 앱 렌더링 테스트
 # ============================================================================
 
 
 @pytest.mark.asyncio
-async def test_command_input_status() -> None:
-    """E2E-001: 명령어 입력 → 결과 표시."""
+async def test_app_renders() -> None:
+    """E2E-001: 앱 기본 렌더링 테스트."""
     app = OrchayApp(
         tasks=create_test_tasks(),
         worker_list=create_test_workers(),
     )
 
     async with app.run_test() as pilot:
-        # Input 포커스
-        command_input = app.query_one("#command-input", Input)
-        command_input.focus()
-
-        # status 명령 입력 (Textual 테스트에서는 직접 값 설정)
-        command_input.value = "status"
-        await pilot.press("enter")
-
-        # 명령어가 실행되었는지 확인 (Input이 클리어됨)
-        assert command_input.value == ""
+        # 앱이 정상적으로 렌더링되는지 확인
+        assert app._tasks is not None
+        assert len(app._tasks) == 3
 
 
 # ============================================================================
@@ -112,36 +104,30 @@ async def test_f12_help() -> None:
 
 @pytest.mark.asyncio
 async def test_queue_interactive() -> None:
-    """E2E-003: F3으로 큐 인터랙티브 UI 표시."""
+    """E2E-003: F3으로 큐 전체화면 토글."""
     app = OrchayApp(
         tasks=create_test_tasks(),
         worker_list=create_test_workers(),
     )
 
     async with app.run_test() as pilot:
-        # F3 키 입력
+        # F3 키 입력 (전체화면 토글)
         await pilot.press("f3")
-
-        # 큐 위젯 표시 확인
-        queue_widget = app.query_one("#queue-widget", QueueWidget)
-        assert queue_widget.display is True
-
-        # 선택된 Task 확인
-        assert queue_widget.selected_task is not None
+        assert app._queue_fullscreen is True
 
         # ESC로 닫기
         await pilot.press("escape")
-        assert queue_widget.display is False
+        assert app._queue_fullscreen is False
 
 
 # ============================================================================
-# E2E-004: Task top 기능 테스트
+# E2E-004: Task detail 모달 표시 테스트
 # ============================================================================
 
 
 @pytest.mark.asyncio
-async def test_task_top() -> None:
-    """E2E-004: 큐에서 T 키로 Task 최우선 이동."""
+async def test_task_detail_modal() -> None:
+    """E2E-004: Enter 키로 Task 상세 모달 표시."""
     tasks = create_test_tasks()
     app = OrchayApp(
         tasks=tasks,
@@ -149,22 +135,16 @@ async def test_task_top() -> None:
     )
 
     async with app.run_test() as pilot:
-        # F3으로 큐 열기
-        await pilot.press("f3")
+        # Enter 키로 Task 상세 모달 표시
+        await pilot.press("enter")
 
-        # 마지막 Task 선택 (아래로 2번)
-        await pilot.press("down")
-        await pilot.press("down")
+        # 모달 표시 확인
+        task_modal = app.query_one("#task-detail-modal", TaskDetailModal)
+        assert task_modal.display is True
 
-        queue_widget = app.query_one("#queue-widget", QueueWidget)
-        assert queue_widget.selected_task is not None
-        original_id = queue_widget.selected_task.id
-
-        # T 키로 최우선 이동
-        await pilot.press("t")
-
-        # 첫 번째 Task가 원래 선택된 Task인지 확인
-        assert app._tasks[0].id == original_id
+        # ESC로 닫기
+        await pilot.press("escape")
+        assert task_modal.display is False
 
 
 # ============================================================================
@@ -220,11 +200,11 @@ async def test_skip_running_task_rejected() -> None:
     )
 
     async with app.run_test() as pilot:
-        # skip TSK-01 명령 실행
-        command_input = app.query_one("#command-input", Input)
-        command_input.focus()
-        command_input.value = "skip TSK-01"
-        await pilot.press("enter")
+        # CommandHandler로 직접 skip 시도
+        result = await app._command_handler.skip_task("TSK-01")
+
+        # 실행 중이므로 skip 실패
+        assert result.success is False
 
         # TSK-01은 여전히 blocked_by가 없어야 함
         task = next(t for t in app._tasks if t.id == "TSK-01")
@@ -293,63 +273,6 @@ async def test_pause_keeps_running() -> None:
 # ============================================================================
 # 추가 테스트
 # ============================================================================
-
-
-@pytest.mark.asyncio
-async def test_queue_navigation() -> None:
-    """큐 네비게이션 테스트."""
-    app = OrchayApp(
-        tasks=create_test_tasks(),
-        worker_list=create_test_workers(),
-    )
-
-    async with app.run_test() as pilot:
-        # F3으로 큐 열기
-        await pilot.press("f3")
-
-        queue_widget = app.query_one("#queue-widget", QueueWidget)
-
-        # 초기 선택: 첫 번째 (인덱스 0)
-        assert queue_widget._selected_index == 0
-
-        # 직접 네비게이션 메서드 호출로 테스트
-        queue_widget.select_next()
-        assert queue_widget._selected_index == 1
-
-        queue_widget.select_prev()
-        assert queue_widget._selected_index == 0
-
-        # 경계에서 더 위로 이동 (무반응)
-        queue_widget.select_prev()
-        assert queue_widget._selected_index == 0
-
-
-@pytest.mark.asyncio
-async def test_f2_status() -> None:
-    """F2 상태 표시 테스트."""
-    app = OrchayApp(
-        tasks=create_test_tasks(),
-        worker_list=create_test_workers(),
-    )
-
-    async with app.run_test() as pilot:
-        # F2 키 입력
-        await pilot.press("f2")
-        # notify가 호출되었는지는 별도로 확인 필요
-
-
-@pytest.mark.asyncio
-async def test_f4_workers() -> None:
-    """F4 Worker 정보 표시 테스트."""
-    app = OrchayApp(
-        tasks=create_test_tasks(),
-        worker_list=create_test_workers(),
-    )
-
-    async with app.run_test() as pilot:
-        # F4 키 입력
-        await pilot.press("f4")
-        # notify가 호출되었는지는 별도로 확인 필요
 
 
 @pytest.mark.asyncio

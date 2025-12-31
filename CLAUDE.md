@@ -174,3 +174,4 @@ await watcher.stop()
 ## basic rule
 - 대답은 한국어로 해.
 - prd.md 문서에는 코드를 남기지말고 *-reference.md 문서에 남기고 prd문서에는 링크만 남겨
+- 코드 수정 후에는 언제나 테스트를 철저히 수행해야 함

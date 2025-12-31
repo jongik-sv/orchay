@@ -61,6 +61,7 @@ class Task(BaseModel):
     tech_spec: list[str] = Field(default_factory=list, description="기술 스펙 목록")
     api_spec: list[str] = Field(default_factory=list, description="API 스펙 목록")
     ui_spec: list[str] = Field(default_factory=list, description="UI 스펙 목록")
+    raw_content: str = Field(default="", description="WBS 원본 텍스트 (제목 제외)")
 
     def is_executable(self) -> bool:
         """실행 가능 여부 확인."""

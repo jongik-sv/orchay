@@ -66,6 +66,18 @@
       "dependencyCheck": "ignore",
       "manualCommands": ["done"],
       "color": "#f59e0b"
+    },
+    "test": {
+      "label": "테스트 모드",
+      "labelEn": "Test Mode",
+      "description": "구현 완료된 Task에 /wf:test 실행",
+      "workflowScope": "test-only",
+      "stopAtState": null,
+      "dependencyCheck": "ignore",
+      "manualCommands": [],
+      "requiresSelection": true,
+      "targetStatuses": ["[im]", "[vf]", "[xx]"],
+      "color": "#f97316"
     }
   },
   "categories": {
@@ -104,7 +116,7 @@
       ],
       "actions": {
         "[dd]": ["review", "apply"],
-        "[im]": ["test", "audit", "patch"],
+        "[im]": ["audit", "patch"],
         "[vf]": ["test"]
       }
     },
@@ -120,7 +132,7 @@
       ],
       "actions": {
         "[dd]": ["review", "apply"],
-        "[im]": ["test", "audit", "patch"],
+        "[im]": ["audit", "patch"],
         "[vf]": ["test"]
       }
     },
@@ -136,7 +148,7 @@
       ],
       "actions": {
         "[dd]": ["review", "apply"],
-        "[im]": ["test", "audit", "patch"],
+        "[im]": ["audit", "patch"],
         "[vf]": ["test"]
       }
     }

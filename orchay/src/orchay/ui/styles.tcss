@@ -154,6 +154,37 @@ DataTable > .datatable--cursor {
     color: #f59e0b;
 }
 
+.mode-test {
+    color: #f97316;
+}
+
+/* Test 모드 선택 섹션 */
+#test-section {
+    height: 1fr;
+    min-height: 10;
+    border: solid #f97316;
+    margin-bottom: 1;
+    display: none;  /* 기본 숨김 */
+}
+
+#test-title {
+    height: 1;
+    padding: 0 1;
+    background: #c2410c;
+    color: $text;
+    text-style: bold;
+}
+
+#test-selection-panel {
+    height: 100%;
+    padding: 0 1;
+    scrollbar-size: 1 1;
+}
+
+#test-task-list {
+    height: 100%;
+}
+
 /* 도움말 모달 */
 #help-modal {
     layer: modal;
@@ -164,6 +195,20 @@ DataTable > .datatable--cursor {
     border: solid $success;
     padding: 1 2;
     margin: 1 5;
+    color: $text;
+    overflow-y: auto;
+}
+
+/* Task 상세 모달 */
+#task-detail-modal {
+    layer: modal;
+    width: 70;
+    height: auto;
+    max-height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1 2;
+    margin: 2 5;
     color: $text;
     overflow-y: auto;
 }

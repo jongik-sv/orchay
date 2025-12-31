@@ -162,30 +162,12 @@ class TestQueueInteractive:
 
 
 # ============================================================================
-# UT-013~016: 큐 조정 테스트
+# UT-015~016: 큐 조정 테스트 (up/top 제거됨)
 # ============================================================================
 
 
 class TestQueueAdjustment:
     """큐 조정 기능 테스트."""
-
-    @pytest.mark.asyncio
-    async def test_up_task(self, handler: CommandHandler) -> None:
-        """UT-013: Task 위로 이동."""
-        # TSK-02를 위로 이동
-        result = await handler.up_task("TSK-02")
-        assert result.success
-        # 순서 확인: TSK-02가 TSK-01 앞으로
-        task_ids = [t.id for t in handler.orchestrator.tasks]
-        assert task_ids.index("TSK-02") < task_ids.index("TSK-01")
-
-    @pytest.mark.asyncio
-    async def test_top_task(self, handler: CommandHandler) -> None:
-        """UT-014: Task 최우선 이동."""
-        result = await handler.top_task("TSK-03")
-        assert result.success
-        # TSK-03이 첫 번째
-        assert handler.orchestrator.tasks[0].id == "TSK-03"
 
     @pytest.mark.asyncio
     async def test_skip_task(self, handler: CommandHandler) -> None:
