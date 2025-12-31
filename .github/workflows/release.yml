@@ -5,12 +5,11 @@
 name: Build & Release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'orchay/**'
   workflow_dispatch:
-    inputs:
-      version:
-        description: '릴리스 버전 (예: v0.1.2)'
-        required: true
-        type: string
 
 env:
   PYTHON_VERSION: '3.12'
@@ -91,6 +90,14 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete existing release
+        run: gh release delete latest -y --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -102,11 +109,14 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version }}
-          name: ${{ inputs.version }}
+          tag_name: latest
+          name: Latest Build
           draft: false
-          prerelease: ${{ contains(inputs.version, '-') }}
-          generate_release_notes: true
+          prerelease: false
+          body: |
+            🚀 최신 빌드 (자동 생성)
+
+            빌드 시간: ${{ github.run_id }}
           files: |
             artifacts/orchay-linux-x64/orchay-linux-x64.zip
             artifacts/orchay-windows-x64/orchay-windows-x64.zip

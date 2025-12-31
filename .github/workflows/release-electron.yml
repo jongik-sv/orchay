@@ -1,12 +1,11 @@
 name: Build & Release Electron App
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'orchay_web/**'
   workflow_dispatch:
-    inputs:
-      version:
-        description: '릴리스 버전 (예: v0.1.2)'
-        required: true
-        type: string
 
 jobs:
   build:
@@ -82,6 +81,14 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete existing release
+        run: gh release delete electron-latest -y --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -93,11 +100,14 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version }}
-          name: ${{ inputs.version }}
+          tag_name: electron-latest
+          name: Electron Latest Build
           draft: false
-          prerelease: ${{ contains(inputs.version, '-') }}
-          generate_release_notes: true
+          prerelease: false
+          body: |
+            🖥️ Electron 최신 빌드 (자동 생성)
+
+            빌드 시간: ${{ github.run_id }}
           files: |
             artifacts/**/*.exe
             artifacts/**/*.dmg

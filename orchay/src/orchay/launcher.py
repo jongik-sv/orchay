@@ -241,6 +241,41 @@ def save_wezterm_pid(cwd: str, pid: int) -> None:
     log.debug(f"Saved WezTerm PID {pid} to {pid_file}")
 
 
+def get_wezterm_gui_pids() -> set[int]:
+    """현재 실행 중인 wezterm-gui 프로세스 PID 목록."""
+    pids: set[int] = set()
+    try:
+        if platform.system() == "Windows":
+            # tasklist로 wezterm-gui.exe PID 조회
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq wezterm-gui.exe", "/FO", "CSV", "/NH"],
+                capture_output=True,
+                text=True,
+            )
+            for line in result.stdout.strip().split("\n"):
+                if line and "wezterm-gui.exe" in line:
+                    # CSV 형식: "wezterm-gui.exe","PID",...
+                    parts = line.split(",")
+                    if len(parts) >= 2:
+                        pid_str = parts[1].strip().strip('"')
+                        with contextlib.suppress(ValueError):
+                            pids.add(int(pid_str))
+        else:
+            # pgrep으로 wezterm-gui PID 조회
+            result = subprocess.run(
+                ["pgrep", "-f", "wezterm-gui"],
+                capture_output=True,
+                text=True,
+            )
+            for line in result.stdout.strip().split("\n"):
+                if line:
+                    with contextlib.suppress(ValueError):
+                        pids.add(int(line))
+    except Exception:
+        pass
+    return pids
+
+
 def load_wezterm_pid(cwd: str) -> int | None:
     """저장된 WezTerm PID 로드."""
     pid_file = get_pid_file(cwd)
@@ -360,15 +395,31 @@ def launch_wezterm_windows(
     # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
     config_file = _get_bundled_file("wezterm-orchay-windows.lua")
     wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
+
+    # 시작 전 wezterm-gui PID 목록 기록
+    pids_before = get_wezterm_gui_pids()
+    log.debug(f"WezTerm PIDs before launch: {pids_before}")
+
     log.debug(f"Popen: {wezterm_launch_args}")
-    proc = subprocess.Popen(
+    subprocess.Popen(
         wezterm_launch_args,
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )
-    log.debug(f"WezTerm process started, PID: {proc.pid}")
 
-    # PID 저장 (다음 실행 시 이 폴더의 WezTerm만 종료하기 위해)
-    save_wezterm_pid(cwd, proc.pid)
+    # 잠시 대기 후 새로 생긴 wezterm-gui PID 찾기
+    time.sleep(1.5)
+    pids_after = get_wezterm_gui_pids()
+    new_pids = pids_after - pids_before
+    log.debug(f"WezTerm PIDs after launch: {pids_after}")
+    log.debug(f"New WezTerm PIDs: {new_pids}")
+
+    # 새로 생긴 PID 저장 (여러 개면 가장 큰 것 = 가장 최근)
+    if new_pids:
+        new_pid = max(new_pids)
+        save_wezterm_pid(cwd, new_pid)
+        log.info(f"WezTerm GUI started with PID: {new_pid}")
+    else:
+        log.warning("Could not detect new WezTerm GUI PID")
 
     log.info("=" * 60)
     log.info("Launcher completed - WezTerm gui-startup will create layout")
@@ -402,18 +453,31 @@ def launch_wezterm_linux(
     """
     wezterm_cmd = "wezterm"
 
+    # 시작 전 wezterm-gui PID 목록 기록
+    pids_before = get_wezterm_gui_pids()
+    log.debug(f"WezTerm PIDs before launch: {pids_before}")
+
     # 1. WezTerm 시작
     wezterm_launch_args = [wezterm_cmd]
     log.debug(f"Popen: {wezterm_launch_args}")
-    proc = subprocess.Popen(wezterm_launch_args, start_new_session=True)
-    log.debug(f"WezTerm process started, PID: {proc.pid}")
-
-    # PID 저장 (다음 실행 시 이 폴더의 WezTerm만 종료하기 위해)
-    save_wezterm_pid(cwd, proc.pid)
+    subprocess.Popen(wezterm_launch_args, start_new_session=True)
 
     log.info("Waiting for WezTerm to start (2s)...")
     time.sleep(2)
     log.debug("Wait complete")
+
+    # 새로 생긴 wezterm-gui PID 찾아서 저장
+    pids_after = get_wezterm_gui_pids()
+    new_pids = pids_after - pids_before
+    log.debug(f"WezTerm PIDs after launch: {pids_after}")
+    log.debug(f"New WezTerm PIDs: {new_pids}")
+
+    if new_pids:
+        new_pid = max(new_pids)
+        save_wezterm_pid(cwd, new_pid)
+        log.info(f"WezTerm GUI started with PID: {new_pid}")
+    else:
+        log.warning("Could not detect new WezTerm GUI PID")
 
     # 2. 창 크기 조절 (wmctrl 사용)
     if shutil.which("wmctrl"):
