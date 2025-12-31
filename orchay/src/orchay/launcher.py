@@ -228,33 +228,56 @@ def _create_layout_config(workers: int) -> list[int]:
     return layout_map[min(workers, 6)]
 
 
-def kill_mux_server() -> None:
-    """기존 mux-server 종료 및 완전히 종료될 때까지 대기."""
-    log.debug("kill_mux_server() called")
-    log.debug(f"Current PID: {os.getpid()}")
+def get_pid_file(cwd: str) -> Path:
+    """현재 폴더의 WezTerm PID 파일 경로."""
+    return Path(cwd) / ".orchay" / "logs" / "wezterm.pid"
 
-    if platform.system() == "Windows":
-        log.debug("Windows: killing wezterm processes...")
-        # mux-server 종료
-        subprocess.run(
-            ["taskkill", "/f", "/im", "wezterm-mux-server.exe"],
-            capture_output=True,
-        )
-        # wezterm-gui도 종료 (connect 모드로 인해 같이 종료해야 함)
-        subprocess.run(
-            ["taskkill", "/f", "/im", "wezterm-gui.exe"],
-            capture_output=True,
-        )
+
+def save_wezterm_pid(cwd: str, pid: int) -> None:
+    """WezTerm PID를 파일에 저장."""
+    pid_file = get_pid_file(cwd)
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+    pid_file.write_text(str(pid))
+    log.debug(f"Saved WezTerm PID {pid} to {pid_file}")
+
+
+def load_wezterm_pid(cwd: str) -> int | None:
+    """저장된 WezTerm PID 로드."""
+    pid_file = get_pid_file(cwd)
+    if not pid_file.exists():
+        return None
+    try:
+        return int(pid_file.read_text().strip())
+    except (ValueError, OSError):
+        return None
+
+
+def kill_orchay_wezterm(cwd: str) -> None:
+    """현재 폴더의 orchay WezTerm만 종료 (다른 폴더는 유지)."""
+    log.debug(f"kill_orchay_wezterm() called for {cwd}")
+
+    # 저장된 PID로 해당 프로세스만 종료
+    saved_pid = load_wezterm_pid(cwd)
+    if saved_pid:
+        log.info(f"Killing previous WezTerm (PID: {saved_pid}) for this folder...")
+        if platform.system() == "Windows":
+            subprocess.run(
+                ["taskkill", "/f", "/pid", str(saved_pid)],
+                capture_output=True,
+            )
+        else:
+            subprocess.run(["kill", "-9", str(saved_pid)], capture_output=True)
+        # PID 파일 삭제
+        pid_file = get_pid_file(cwd)
+        with contextlib.suppress(OSError):
+            pid_file.unlink()
+        # 프로세스 종료 대기
+        time.sleep(0.5)
     else:
-        log.debug("Linux: killing wezterm-mux-server...")
-        result1 = subprocess.run(["pkill", "-f", "wezterm-mux-server"], capture_output=True)
-        log.debug(f"pkill wezterm-mux-server: returncode={result1.returncode}")
+        log.debug("No previous WezTerm PID found for this folder")
 
-        log.debug("Linux: killing wezterm-gui...")
-        result2 = subprocess.run(["pkill", "-f", "wezterm-gui"], capture_output=True)
-        log.debug(f"pkill wezterm-gui: returncode={result2.returncode}")
-
-        # 오래된 socket 파일 정리
+    # Linux: 오래된 socket 파일 정리 (현재 폴더와 무관하게)
+    if platform.system() != "Windows":
         log.debug("Cleaning up socket files...")
         wezterm_runtime = f"/run/user/{os.getuid()}/wezterm"
         if os.path.isdir(wezterm_runtime):
@@ -267,10 +290,7 @@ def kill_mux_server() -> None:
                     os.remove(link)
                     log.debug(f"Removed link: {link}")
 
-    # 프로세스 완전 종료 대기
-    log.debug("Waiting 1s for processes to terminate...")
-    time.sleep(1)
-    log.debug("kill_mux_server() completed")
+    log.debug("kill_orchay_wezterm() completed")
 
 
 # =============================================================================
@@ -347,6 +367,9 @@ def launch_wezterm_windows(
     )
     log.debug(f"WezTerm process started, PID: {proc.pid}")
 
+    # PID 저장 (다음 실행 시 이 폴더의 WezTerm만 종료하기 위해)
+    save_wezterm_pid(cwd, proc.pid)
+
     log.info("=" * 60)
     log.info("Launcher completed - WezTerm gui-startup will create layout")
     log.info("=" * 60)
@@ -384,6 +407,10 @@ def launch_wezterm_linux(
     log.debug(f"Popen: {wezterm_launch_args}")
     proc = subprocess.Popen(wezterm_launch_args, start_new_session=True)
     log.debug(f"WezTerm process started, PID: {proc.pid}")
+
+    # PID 저장 (다음 실행 시 이 폴더의 WezTerm만 종료하기 위해)
+    save_wezterm_pid(cwd, proc.pid)
+
     log.info("Waiting for WezTerm to start (2s)...")
     time.sleep(2)
     log.debug("Wait complete")
@@ -660,9 +687,9 @@ def main() -> int:
     # 여기서는 orchay 실행 인자만 모음.
     full_orchay_cmd_list = orchay_base_cmd + ["run"] + orchay_args
 
-    log.info("Killing existing WezTerm processes...")
-    kill_mux_server()
-    log.debug("kill_mux_server() completed")
+    log.info("Killing existing WezTerm for this folder...")
+    kill_orchay_wezterm(cwd)
+    log.debug("kill_orchay_wezterm() completed")
 
     log.info("Starting WezTerm...")
     log.info(f"  Workers: {workers}")
