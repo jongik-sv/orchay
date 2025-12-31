@@ -271,33 +271,88 @@ def _get_workflow_name(category: str) -> str:
     return category_to_workflow.get(category, "development")
 
 
-def get_next_workflow_command(task: Task) -> str | None:
+def get_next_workflow_command(
+    task: Task,
+    mode: ExecutionMode | None = None,
+    last_action: str | None = None,
+) -> str | None:
     """Task 상태에 따라 다음 실행할 workflow 명령을 반환합니다.
 
     Args:
         task: 대상 Task
+        mode: 현재 실행 모드 (actions 포함 여부 결정)
+        last_action: 마지막으로 완료된 action (연속 실행 시)
 
     Returns:
         workflow 명령어 (예: "start", "build", "done") 또는 None (transition 없음)
+
+    Note:
+        - design/develop 모드: transitions + actions 실행
+        - quick/force 모드: transitions만 실행
     """
     workflows_data = _load_workflows()
     workflows = workflows_data.get("workflows", {})
+    execution_modes = workflows_data.get("executionModes", {})
+
+    # 현재 모드의 workflowScope 확인
+    mode_config = execution_modes.get(mode.value, {}) if mode else {}
+    workflow_scope = mode_config.get("workflowScope", "transitions-only")
+    stop_after_cmd = mode_config.get("stopAfterCommand")
 
     # Task 카테고리에 해당하는 workflow 찾기
     workflow_name = _get_workflow_name(task.category.value)
     workflow = workflows.get(workflow_name, {})
     transitions = workflow.get("transitions", [])
+    actions = workflow.get("actions", {})
 
-    # 현재 상태에서 다음으로 가는 transition 찾기
     current_status = task.status.value
+
+    # transition commands 집합 (action과 구분용)
+    transition_commands = {t.get("command") for t in transitions}
+
+    # actions 처리 (design-only 또는 full scope)
+    if workflow_scope in ("design-only", "full"):
+        state_actions = actions.get(current_status, [])
+
+        if state_actions:
+            # last_action이 transition이면 → 새 상태 진입, 첫 번째 action 반환
+            # last_action이 action이면 → 같은 상태, 다음 action 반환
+            # last_action이 None이면 → 첫 번째 action 반환
+
+            if last_action is None or last_action in transition_commands:
+                # 새 상태 진입: 첫 번째 action
+                next_action = state_actions[0]
+            else:
+                # 같은 상태에서 action 완료: 다음 action 찾기
+                try:
+                    idx = state_actions.index(last_action)
+                    if idx + 1 < len(state_actions):
+                        next_action = state_actions[idx + 1]
+                    else:
+                        next_action = None  # 모든 actions 완료 → transition으로
+                except ValueError:
+                    # last_action이 이 상태의 action이 아님 → 첫 번째 action
+                    next_action = state_actions[0]
+
+            if next_action:
+                # stopAfterCommand 체크 (design 모드에서 apply 후 멈춤 등)
+                if stop_after_cmd == next_action:
+                    return next_action  # 이게 마지막 명령
+                return next_action
+
+    # transition 반환
     for transition in transitions:
         if transition.get("from") == current_status:
-            return transition.get("command")
+            cmd = transition.get("command")
+            # stopAfterCommand 체크
+            if stop_after_cmd == cmd:
+                return cmd
+            return cmd
 
     # transition 없으면 None 반환
-    logger.warning(
-        f"Transition 없음: {task.id} ({task.category.value}) "
-        f"상태 {current_status} → workflow '{workflow_name}'"
+    logger.debug(
+        f"다음 명령 없음: {task.id} ({task.category.value}) "
+        f"상태 {current_status}, last_action={last_action}"
     )
     return None
 

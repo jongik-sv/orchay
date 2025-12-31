@@ -29,9 +29,9 @@
     "design": {
       "label": "설계 모드",
       "labelEn": "Design Mode",
-      "description": "설계 문서만 생성 (start만 실행)",
+      "description": "설계 문서 생성 및 리뷰 (start → review → apply)",
       "workflowScope": "design-only",
-      "stopAfterCommand": "start",
+      "stopAfterCommand": "apply",
       "stopAtState": "[dd]",
       "dependencyCheck": "ignore",
       "manualCommands": [],

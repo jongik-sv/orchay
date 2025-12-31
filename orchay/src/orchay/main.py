@@ -240,8 +240,8 @@ class Orchestrator:
     def _sync_worker_steps(self) -> None:
         """Worker의 current_step을 WBS 상태 기반으로 동기화.
 
-        Note: BUSY 상태이고 이미 step이 설정된 Worker는 sync하지 않음.
-        연속 실행 중 _dispatch_next_step()에서 설정한 step을 덮어쓰면 안 됨.
+        Note: 이미 step이 설정된 Worker는 sync하지 않음.
+        dispatch 시점에 설정된 step을 덮어쓰면 안 됨.
         """
         # Task ID → Task 매핑
         task_map = {t.id: t for t in self.tasks}
@@ -250,9 +250,9 @@ class Orchestrator:
             if not worker.current_task:
                 continue
 
-            # BUSY 상태이고 이미 step이 설정되어 있으면 sync 건너뛰기
-            # (연속 실행 중 _dispatch_next_step()에서 설정한 step 보호)
-            if worker.state == WorkerState.BUSY and worker.current_step:
+            # 이미 step이 설정되어 있으면 sync 건너뛰기
+            # (dispatch 시점에 설정된 정확한 step 보호)
+            if worker.current_step:
                 continue
 
             # Worker가 작업 중인 Task 찾기
@@ -366,7 +366,11 @@ class Orchestrator:
                             # WBS 재파싱 (스킬이 변경한 상태 반영)
                             await self._refresh_task_status(task)
 
-                            next_cmd = get_next_workflow_command(task)
+                            # done_info.action을 전달하여 다음 action 결정
+                            last_action = done_info.action if done_info else None
+                            next_cmd = get_next_workflow_command(
+                                task, mode=self.mode, last_action=last_action
+                            )
                             manual_cmds = get_manual_commands(self.mode)
 
                             if next_cmd and next_cmd not in manual_cmds:
@@ -374,7 +378,7 @@ class Orchestrator:
                                 logger.info(
                                     f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
                                 )
-                                await self._dispatch_next_step(worker, task)
+                                await self._dispatch_next_step(worker, task, last_action)
                                 continue  # 다음 Worker로 (상태 유지)
                             else:
                                 # 수동: 할당 해제
@@ -438,12 +442,19 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"Task 상태 갱신 실패: {task.id} - {e}")
 
-    async def _dispatch_next_step(self, worker: Worker, task: Task) -> None:
+    async def _dispatch_next_step(
+        self, worker: Worker, task: Task, last_action: str | None = None
+    ) -> None:
         """같은 Worker에 다음 워크플로우 단계를 dispatch합니다.
 
         연속 실행을 위해 DONE 상태 감지 후 즉시 다음 명령어를 전송합니다.
+
+        Args:
+            worker: 대상 Worker
+            task: 대상 Task
+            last_action: 마지막으로 완료된 action (연속 실행 시)
         """
-        next_workflow = get_next_workflow_command(task)
+        next_workflow = get_next_workflow_command(task, mode=self.mode, last_action=last_action)
         if next_workflow is None:
             logger.warning(f"다음 워크플로우 없음: {task.id}")
             task.assigned_worker = None
@@ -495,8 +506,12 @@ class Orchestrator:
 
         # 워크플로우 명령 결정 (먼저 확인하여 /clear 낭비 방지)
         # 형식: /wf:{workflow} {project}/{task_id}
-        # Task 상태에 따라 다음 workflow 결정
-        next_workflow = get_next_workflow_command(task)
+        # Task 상태에 따라 다음 workflow 결정 (첫 dispatch이므로 last_action=None)
+        next_workflow = get_next_workflow_command(task, mode=self.mode)
+
+        # 실제 dispatch할 명령어로 current_step 설정 (dispatch_task()의 first_step 덮어쓰기)
+        if next_workflow:
+            worker.current_step = next_workflow
 
         # transition이 없으면 dispatch 안 함 (/clear도 전송하지 않음)
         if next_workflow is None:

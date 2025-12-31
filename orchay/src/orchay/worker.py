@@ -15,7 +15,8 @@ _startup_time: float = time.time()
 _IDLE_DETECTION_DELAY: float = 3.0  # 시작 후 3초간 idle 감지 비활성화
 
 # ORCHAY_DONE 패턴: ORCHAY_DONE:{task-id}:{action}:{status}[:{message}]
-DONE_PATTERN = re.compile(r"ORCHAY_DONE:([^:]+):(\w+):(success|error)(?::(.+))?")
+# action은 "wf:verify" 형식일 수 있으므로 wf: 접두사를 선택적으로 허용
+DONE_PATTERN = re.compile(r"ORCHAY_DONE:([^:]+):(?:wf:)?(\w+):(success|error)(?::(.+))?")
 
 # Fallback 완료 패턴: "Task [project/]TSK-XX-XX 완료"
 # 예: "Task TSK-01-01 완료" 또는 "Task orchay/TSK-01-01 완료"

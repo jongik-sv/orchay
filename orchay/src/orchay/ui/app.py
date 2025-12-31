@@ -684,13 +684,14 @@ class OrchayApp(App[None]):
         if self._real_orchestrator is not None and not self._tick_running:
             self._tick_running = True
             self.run_worker(self._run_orchestrator_tick())
-
-        # UI 업데이트는 항상 실행 (일시정지 상태에서도 워커 상태 표시)
-        self._sync_from_orchestrator()
-        self._update_queue_table()
-        self._update_worker_panel()
-        self._update_header_info()
-        self._update_progress()
+            # UI 업데이트는 _run_orchestrator_tick() 완료 후 수행됨
+        elif not self._tick_running:
+            # Orchestrator 없거나 tick 미실행 시에만 직접 UI 업데이트
+            self._sync_from_orchestrator()
+            self._update_queue_table()
+            self._update_worker_panel()
+            self._update_header_info()
+            self._update_progress()
 
     def write_log(self, message: str, level: str = "info") -> None:
         """로그 패널에 메시지 작성.
@@ -720,6 +721,12 @@ class OrchayApp(App[None]):
         try:
             if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "_tick"):
                 await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
+            # tick 완료 후 UI 업데이트 (동일 asyncio 루프에서 실행)
+            self._sync_from_orchestrator()
+            self._update_queue_table()
+            self._update_worker_panel()
+            self._update_header_info()
+            self._update_progress()
         finally:
             self._tick_running = False
 
