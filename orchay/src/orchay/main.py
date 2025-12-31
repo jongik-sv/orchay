@@ -326,6 +326,15 @@ class Orchestrator:
 
             # done 상태 처리: 연속 실행 또는 할당 해제
             if new_state == WorkerState.DONE:
+                # 현재 Task의 DONE 신호인지 확인 (이전 Task의 신호 무시)
+                if done_info and worker.current_task and done_info.task_id != worker.current_task:
+                    logger.debug(
+                        f"Worker {worker.id}: 이전 DONE 신호 무시 "
+                        f"(신호={done_info.task_id}, 현재={worker.current_task})"
+                    )
+                    # 상태 변경 없이 BUSY 유지
+                    continue
+
                 if worker.state == WorkerState.DONE:
                     # DONE 상태가 연속 감지 → IDLE로 강제 전환
                     # (ORCHAY_DONE 신호가 화면에 남아있어도 두 번째 tick에서 전환)
