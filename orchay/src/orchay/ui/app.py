@@ -941,7 +941,7 @@ class OrchayApp(App[None]):
             TaskStatus.DETAIL_DESIGN: "#8b5cf6",
             TaskStatus.ANALYSIS: "#f59e0b",
             TaskStatus.DESIGN: "#3b82f6",
-            TaskStatus.APPROVED: "#a855f7",
+            TaskStatus.APPROVED: "#06b6d4",
             TaskStatus.IMPLEMENT: "#f59e0b",
             TaskStatus.FIX: "#ef4444",
             TaskStatus.VERIFY: "#22c55e",
