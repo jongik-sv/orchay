@@ -804,7 +804,9 @@ class OrchayApp(App[None]):
                 if active_row is None:
                     active_row = i - 1  # 0-indexed
             elif task.blocked_by == "skipped":
-                task_id_display = Text(f"⏸ {task.id}", style="bold #ffffff on #f97316")
+                task_id_display = Text()
+                task_id_display.append("⏸ ", style="bold #ffffff on #f97316")
+                task_id_display.append(task.id)
 
             # 커서 유지할 task 찾기
             if preserve_cursor_task_id and task.id == preserve_cursor_task_id:
