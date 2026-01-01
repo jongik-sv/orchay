@@ -31,7 +31,7 @@ class HelpModal(VerticalScroll):
 
 -- Schedule Queue Keys -----------------------------------------------
   Up/Down  Task 선택         Enter  상세 보기
-  Space    스킵/복구 토글    Y      수동 승인 ([dd]→[ap])
+  Space    스킵/복구 토글    Y      승인/취소 ([dd]↔[ap])
   ESC      전체화면 해제
 
 -- Worker Keys -------------------------------------------------------

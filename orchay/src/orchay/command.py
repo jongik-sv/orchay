@@ -288,18 +288,18 @@ class CommandHandler:
         return CommandResult.ok(f"{task_id} → 큐로 복구")
 
     async def approve_task(self, task_id: str) -> CommandResult:
-        """Task를 수동 승인합니다 ([dd] → [ap]).
+        """Task 승인 상태 토글 ([dd] ↔ [ap]).
 
         Args:
-            task_id: 승인할 Task ID
+            task_id: 승인/취소할 Task ID
 
         Returns:
             CommandResult
 
         Business Rules:
             BR-AP-01: force 모드에서는 이미 자동 승인
-            BR-AP-02: [dd] 상태만 승인 가능
-            BR-AP-03: 실행 중인 Task는 승인 불가
+            BR-AP-02: [dd] 또는 [ap] 상태만 변경 가능
+            BR-AP-03: 실행 중인 Task는 변경 불가
         """
         from pathlib import Path
 
@@ -313,15 +313,28 @@ class CommandHandler:
         if task is None:
             return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
 
-        # BR-AP-02: [dd] 상태만 승인 가능
-        if task.status != TaskStatus.DETAIL_DESIGN:
-            return CommandResult.error(
-                f"[dd] 상태만 승인 가능합니다 (현재: {task.status.value})"
-            )
-
-        # BR-AP-03: 실행 중인 Task는 승인 불가
+        # BR-AP-03: 실행 중인 Task는 변경 불가
         if task.assigned_worker is not None:
-            return CommandResult.error(f"실행 중인 Task는 승인할 수 없습니다: {task_id}")
+            return CommandResult.error(f"실행 중인 Task는 변경할 수 없습니다: {task_id}")
+
+        # 상태값 추출 (버그 수정: enum이든 str이든 처리)
+        status_value = task.status.value if hasattr(task.status, "value") else str(task.status)
+
+        # 토글 로직: [dd] ↔ [ap]
+        if task.status == TaskStatus.DETAIL_DESIGN:
+            # [dd] → [ap] 승인
+            new_status = "[ap]"
+            new_enum = TaskStatus.APPROVED
+            action = "승인됨"
+        elif task.status == TaskStatus.APPROVED:
+            # [ap] → [dd] 취소
+            new_status = "[dd]"
+            new_enum = TaskStatus.DETAIL_DESIGN
+            action = "취소됨"
+        else:
+            return CommandResult.error(
+                f"[dd] 또는 [ap] 상태만 변경 가능합니다 (현재: {status_value})"
+            )
 
         # WBS 파일 경로
         wbs_path: Path | None = getattr(self.orchestrator, "wbs_path", None)
@@ -329,11 +342,11 @@ class CommandHandler:
             return CommandResult.error("WBS 파일 경로를 찾을 수 없습니다")
 
         # WBS 파일 직접 업데이트
-        success = await update_task_status(wbs_path, task_id, "[ap]")
+        success = await update_task_status(wbs_path, task_id, new_status)
         if success:
-            task.status = TaskStatus.APPROVED  # 메모리 동기화
-            return CommandResult.ok(f"{task_id} → 승인됨 [ap]")
-        return CommandResult.error(f"{task_id} 승인 실패")
+            task.status = new_enum  # 메모리 동기화
+            return CommandResult.ok(f"{task_id} → {action} {new_status}")
+        return CommandResult.error(f"{task_id} 상태 변경 실패")
 
     # ========================================================================
     # 모드/일시정지 제어
