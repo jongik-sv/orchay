@@ -185,3 +185,16 @@ class TestSelectionPanel(VerticalScroll):
         if self._selection_list is None:
             return 0
         return len(self._selection_list.selected)
+
+    def get_highlighted_task(self) -> Task | None:
+        """현재 하이라이트된 Task 반환.
+
+        Returns:
+            하이라이트된 Task 또는 None
+        """
+        if self._selection_list is None:
+            return None
+        highlighted_idx = self._selection_list.highlighted
+        if highlighted_idx is not None and 0 <= highlighted_idx < len(self._tasks):
+            return self._tasks[highlighted_idx]
+        return None

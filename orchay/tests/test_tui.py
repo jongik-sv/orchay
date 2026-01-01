@@ -177,6 +177,9 @@ async def test_mode_change() -> None:
         assert app._mode == "force"
 
         await pilot.press("f7")
+        assert app._mode == "test"
+
+        await pilot.press("f7")
         assert app._mode == "design"  # 순환
 
 

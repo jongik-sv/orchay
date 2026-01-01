@@ -167,19 +167,31 @@ wezterm.on('gui-startup', function(cmd)
     end
 
   else
-    -- 2열: 먼저 좌우 분할, 그 다음 각 열 세로 분할
-    -- 2열일 때 size=0.5면 원본(왼쪽)이 50%, 새것(오른쪽)이 50%
-    local col2_area = worker_area:split {
-      direction = 'Right',
-      size = 0.5,
-      cwd = cwd,
-    }
-    local col1_area = worker_area  -- 원본이 col1 (왼쪽)
+    -- 다중 열: 균등 분할을 위해 오른쪽부터 순차적으로 분할
+    -- 예: 3열일 때 - 먼저 1/3 분할, 남은 부분에서 1/2 분할
+    --
+    -- Windows에서 size 파라미터가 정확히 적용되지 않는 문제 보정:
+    -- 새 pane(오른쪽)이 지정 크기보다 작아지는 현상이 있어 약간 보정
+    local col_areas = {}
+    local remaining_area = worker_area
 
-    local col_areas = { col1_area, col2_area }
+    -- 오른쪽부터 분할 (columns-1 번 분할)
+    for col = columns, 2, -1 do
+      -- 남은 영역에서 1/col 크기로 오른쪽에 새 열 생성
+      -- Windows 보정: 약간 크게 (0.02 추가)
+      local base_size = 1 / col
+      local adjusted_size = math.min(base_size + 0.02, 0.6)  -- 최대 60%
+      local new_col = remaining_area:split {
+        direction = 'Right',
+        size = adjusted_size,
+        cwd = cwd,
+      }
+      table.insert(col_areas, 1, new_col)  -- 앞에 삽입 (오른쪽 → 왼쪽 순)
+    end
+    table.insert(col_areas, 1, remaining_area)  -- 첫 번째 열 (가장 왼쪽)
 
     -- 각 열에서 세로 분할
-    for col = 1, 2 do
+    for col = 1, columns do
       local col_pane = col_areas[col]
       local rows = workers_per_column[col]
       local col_panes = { col_pane }

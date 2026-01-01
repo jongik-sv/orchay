@@ -138,7 +138,7 @@ python orchay/src/orchay/launcher.py deployment
 ## ochary_web 수정할 기능
 - wbs 편집 기능
   - wbs 내용 
-  - 수동 승인 : **force모드가 아닐 때 queue에서 아무 작업이 걸려있지 않은 [dd] 상태의 Task를 승인 상태로 바꾸는 기능이 있으면 좋겠어.** 명령어 호출이 아닌 단순 값을 [dd]에서 [ap]으로 변경하는 것
+  - 수동 승인 : **force모드가 아닐 때** queue에서 아무 작업이 걸려있지 않은 [dd] 상태의 Task를 승인 상태로 바꾸는 기능이 있으면 좋겠어. 명령어 호출이 아닌 단순 값을 [dd]에서 [ap]으로 변경하는 것
 - Task 상태
   - 보류 상태 : 진행을 풀기 전까지 진행이 되지 않는 상태
   - 
