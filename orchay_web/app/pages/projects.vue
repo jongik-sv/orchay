@@ -16,18 +16,27 @@
       />
     </div>
 
+    <!-- 설정 필요 상태 -->
+    <InlineMessage
+      v-if="configStore.needsSetup"
+      severity="warn"
+      class="mb-4"
+    >
+      홈 디렉토리를 먼저 설정해주세요.
+    </InlineMessage>
+
     <!-- 로딩 상태 -->
-    <div v-if="pending" class="flex justify-center items-center h-64">
+    <div v-else-if="projectStore.loading" class="flex justify-center items-center h-64">
       <ProgressSpinner />
     </div>
 
     <!-- 에러 상태 -->
     <InlineMessage
-      v-else-if="error"
+      v-else-if="projectStore.error"
       severity="error"
       class="mb-4"
     >
-      프로젝트 목록을 불러오는 중 오류가 발생했습니다: {{ error.message }}
+      프로젝트 목록을 불러오는 중 오류가 발생했습니다: {{ projectStore.error }}
     </InlineMessage>
 
     <!-- 빈 상태 -->
@@ -53,11 +62,6 @@
         <template #title>
           <div class="flex items-center justify-between">
             <span class="text-xl font-semibold">{{ project.name }}</span>
-            <Badge
-              v-if="project.id === defaultProject"
-              value="Default"
-              severity="success"
-            />
           </div>
         </template>
 
@@ -71,18 +75,6 @@
                 :severity="project.status === 'active' ? 'success' : 'secondary'"
               />
             </div>
-
-            <!-- WBS 깊이 -->
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-surface-600 dark:text-surface-400">WBS Depth:</span>
-              <span class="text-sm font-medium">{{ project.wbsDepth }} Levels</span>
-            </div>
-
-            <!-- 생성일 -->
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-surface-600 dark:text-surface-400">Created:</span>
-              <span class="text-sm">{{ formatDate(project.createdAt) }}</span>
-            </div>
           </div>
         </template>
       </Card>
@@ -91,24 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { formatDate } from '~/utils/format';
 import { encodePathSegment } from '~/utils/urlPath';
-
-// 타입 정의 (server/utils/projects/types.ts에서 복사)
-interface ProjectListItem {
-  id: string;
-  name: string;
-  path: string;
-  status: 'active' | 'archived';
-  wbsDepth: 3 | 4;
-  createdAt: string;
-}
-
-interface ProjectListResponse {
-  projects: ProjectListItem[];
-  defaultProject: string | null;
-  total: number;
-}
 
 /**
  * Projects Page
@@ -119,20 +94,11 @@ interface ProjectListResponse {
  */
 
 // ============================================================
-// API 호출
+// Stores
 // ============================================================
 
-const {
-  data,
-  pending,
-  error,
-  refresh,
-} = await useFetch<ProjectListResponse>('/api/projects', {
-  key: 'projects-list',
-  timeout: 5000, // 5초 타임아웃 (C-002)
-  retry: 2, // 2회 재시도 (C-002)
-  retryDelay: 1000, // 1초 간격 (C-002)
-});
+const configStore = useConfigStore()
+const projectStore = useProjectStore()
 
 // ============================================================
 // 상태 관리
@@ -152,21 +118,39 @@ const filterOptions = [
 // Computed Properties
 // ============================================================
 
-// 기본 프로젝트 ID
-const defaultProject = computed(() => data.value?.defaultProject ?? null);
-
 // 필터링된 프로젝트 목록
-const filteredProjects = computed<ProjectListItem[]>(() => {
-  if (!data.value?.projects) return [];
+const filteredProjects = computed(() => {
+  const projects = projectStore.projects || []
 
   if (filterStatus.value === 'all') {
-    return data.value.projects;
+    return projects;
   }
 
-  return data.value.projects.filter(
-    (project: ProjectListItem) => project.status === filterStatus.value
+  return projects.filter(
+    (project) => project.status === filterStatus.value
   );
 });
+
+// ============================================================
+// Lifecycle
+// ============================================================
+
+onMounted(async () => {
+  // 설정이 완료된 경우에만 프로젝트 목록 로드
+  if (configStore.initialized) {
+    await projectStore.fetchProjects()
+  }
+})
+
+// configStore.initialized가 변경되면 프로젝트 목록 로드
+watch(
+  () => configStore.initialized,
+  async (initialized) => {
+    if (initialized && projectStore.projects.length === 0) {
+      await projectStore.fetchProjects()
+    }
+  }
+)
 
 // ============================================================
 // 이벤트 핸들러

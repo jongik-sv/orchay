@@ -2,10 +2,41 @@
  * WBS 스토어
  * WBS 트리 데이터 관리 및 확장/축소 상태 관리
  * Task: TSK-01-01-03, TSK-09-01
+ * Tauri/Electron/Web 환경을 자동 감지합니다.
  */
 
 import type { WbsNode } from '~/types/store'
-import type { WbsMetadata, AllWbsResponse } from '~/types'
+import type { WbsMetadata, AllWbsResponse, ProjectWbsNode } from '~/types'
+import * as tauriApi from '../utils/tauri'
+import { parseWbsMarkdown } from '../utils/wbsParser'
+
+// 트리를 평탄화하는 헬퍼 (fetchAllWbs용)
+function flattenNodes(nodes: WbsNode[]): WbsNode[] {
+  const result: WbsNode[] = []
+  for (const node of nodes) {
+    result.push(node)
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenNodes(node.children))
+    }
+  }
+  return result
+}
+
+/**
+ * 노드 ID에 프로젝트 프리픽스 추가 (재귀)
+ * 다중 프로젝트 모드에서 노드 ID 충돌 방지
+ * 서버의 wbsService.ts:addProjectPrefixToNodes()와 동일
+ */
+function addProjectPrefixToNodes(nodes: WbsNode[], projectId: string): WbsNode[] {
+  return nodes.map(node => ({
+    ...node,
+    id: `${projectId}:${node.id}`,
+    projectId,
+    children: node.children?.length
+      ? addProjectPrefixToNodes(node.children, projectId)
+      : [],
+  }))
+}
 
 export const useWbsStore = defineStore('wbs', () => {
   // ============================================================
@@ -135,17 +166,35 @@ export const useWbsStore = defineStore('wbs', () => {
     error.value = null
     isMultiProjectMode.value = false
     try {
-      // API 응답: { metadata, tree } 객체 형식
-      const response = await $fetch<{ metadata: WbsMetadata; tree: WbsNode[] }>(
-        `/api/projects/${projectId}/wbs`
-      )
-      tree.value = response.tree
-      flatNodes.value = flattenTree(response.tree)
+      let parsedTree: WbsNode[] = []
+
+      if (tauriApi.isTauri()) {
+        // Tauri 환경: Rust 커맨드로 마크다운 읽기 → 파싱
+        const configStore = useConfigStore()
+        if (!configStore.basePath) {
+          tree.value = []
+          flatNodes.value.clear()
+          return
+        }
+        const wbsContent = await tauriApi.getWbs(configStore.basePath, projectId)
+        parsedTree = parseWbsMarkdown(wbsContent)
+      } else {
+        // Web/Electron 환경: Nitro API 사용
+        const response = await $fetch<{ metadata: WbsMetadata; tree: WbsNode[] }>(
+          `/api/projects/${projectId}/wbs`
+        )
+        parsedTree = response.tree
+      }
+
+      tree.value = parsedTree
+      flatNodes.value = flattenTree(parsedTree)
       // 기본적으로 최상위 노드들 확장
-      response.tree.forEach(node => expandedNodes.value.add(node.id))
+      parsedTree.forEach(node => expandedNodes.value.add(node.id))
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch WBS'
-      throw e
+      console.error('[WbsStore] Failed to fetch WBS:', e)
+      tree.value = []
+      flatNodes.value.clear()
     } finally {
       loading.value = false
     }
@@ -156,24 +205,113 @@ export const useWbsStore = defineStore('wbs', () => {
    * TSK-09-01
    */
   async function fetchAllWbs(): Promise<void> {
+    console.log('[WbsStore] fetchAllWbs START')
     loading.value = true
     error.value = null
     isMultiProjectMode.value = true
 
     try {
-      const response = await $fetch<AllWbsResponse>('/api/wbs/all')
-      tree.value = response.projects
-      flatNodes.value = flattenTree(response.projects)
+      let allProjects: WbsNode[] = []
+
+      if (tauriApi.isTauri()) {
+        console.log('[WbsStore] Tauri environment detected')
+        // Tauri 환경: 각 프로젝트의 WBS를 개별 로드
+        let configStore
+        let projectStore
+
+        try {
+          configStore = useConfigStore()
+          projectStore = useProjectStore()
+          console.log('[WbsStore] Stores obtained, basePath:', configStore?.basePath)
+        } catch (e) {
+          console.error('[WbsStore] Failed to get stores:', e)
+          tree.value = []
+          flatNodes.value.clear()
+          throw e  // 에러 전파
+        }
+
+        const basePath = configStore?.basePath
+        if (!basePath) {
+          console.log('[WbsStore] No base path configured, skipping fetchAllWbs')
+          tree.value = []
+          flatNodes.value.clear()
+          return
+        }
+
+        // 프로젝트 목록 가져오기
+        try {
+          console.log('[WbsStore] Fetching projects...')
+          await projectStore.fetchProjects()
+          const projectList = projectStore.projects
+          const projects = Array.isArray(projectList) ? projectList : []
+          console.log('[WbsStore] Found', projects.length, 'projects')
+
+          for (const project of projects) {
+            if (!project?.id) continue
+            try {
+              console.log('[WbsStore] Loading WBS for project:', project.id)
+              const wbsContent = await tauriApi.getWbs(basePath, project.id)
+              const projectTree = parseWbsMarkdown(wbsContent)
+              console.log('[WbsStore] Parsed', projectTree.length, 'nodes for', project.id)
+
+              // Task 개수 및 진행률 계산 (프리픽스 추가 전에 계산)
+              const tasks = flattenNodes(projectTree).filter(n => n.type === 'task')
+              const taskCount = tasks.length
+              const progress = taskCount > 0
+                ? Math.round(tasks.reduce((sum, t) => sum + (t.progress || 0), 0) / taskCount)
+                : 0
+
+              // 다중 프로젝트 모드: 노드 ID에 프로젝트 프리픽스 추가 (서버와 동일)
+              const prefixedTree = addProjectPrefixToNodes(projectTree, project.id)
+
+              // 프로젝트 노드로 감싸기 (ProjectWbsNode 타입)
+              const projectNode: ProjectWbsNode = {
+                id: project.id,
+                title: project.name || project.id,
+                type: 'project',
+                status: project.status || 'active',
+                progress,
+                taskCount,
+                children: prefixedTree,
+                projectMeta: {
+                  name: project.name || project.id,
+                  status: (project.status || 'active') as 'active' | 'archived' | 'completed',
+                  wbsDepth: 4,
+                  createdAt: project.createdAt || new Date().toISOString(),
+                }
+              }
+              allProjects.push(projectNode)
+            } catch (e) {
+              console.warn(`[WbsStore] Failed to load WBS for project ${project.id}:`, e)
+            }
+          }
+        } catch (e) {
+          console.error('[WbsStore] Failed to fetch projects:', e)
+          throw e  // 에러 전파
+        }
+      } else {
+        // Web/Electron 환경: Nitro API 사용
+        const response = await $fetch<AllWbsResponse>('/api/wbs/all')
+        allProjects = response.projects || []
+      }
+
+      tree.value = allProjects
+      flatNodes.value = flattenTree(allProjects)
+      console.log('[WbsStore] Tree loaded with', allProjects.length, 'projects')
 
       // 프로젝트 노드만 기본 확장
-      response.projects.forEach(project => {
+      allProjects.forEach(project => {
         expandedNodes.value.add(project.id)
       })
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch all WBS'
-      throw e
+      console.error('[WbsStore] Failed to fetch all WBS:', e)
+      tree.value = []
+      flatNodes.value.clear()
+      throw e  // 에러 전파
     } finally {
       loading.value = false
+      console.log('[WbsStore] fetchAllWbs END')
     }
   }
 
@@ -184,10 +322,22 @@ export const useWbsStore = defineStore('wbs', () => {
     loading.value = true
     error.value = null
     try {
-      await $fetch(`/api/projects/${projectId}/wbs`, {
-        method: 'PUT',
-        body: tree.value
-      })
+      if (tauriApi.isTauri()) {
+        // Tauri 환경: Rust 커맨드로 저장
+        const configStore = useConfigStore()
+        if (!configStore.basePath) {
+          throw new Error('Base path not configured')
+        }
+        // TODO: tree → markdown 변환 구현 필요
+        // 현재는 원본 마크다운을 유지하고 있지 않음
+        console.warn('[WbsStore] Tauri WBS save not fully implemented')
+      } else {
+        // Web/Electron 환경: Nitro API 사용
+        await $fetch(`/api/projects/${projectId}/wbs`, {
+          method: 'PUT',
+          body: tree.value
+        })
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to save WBS'
       throw e

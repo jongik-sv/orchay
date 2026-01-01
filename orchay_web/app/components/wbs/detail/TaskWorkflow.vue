@@ -26,7 +26,7 @@
 
         <!-- 화살표 (마지막 노드 제외) -->
         <i
-          v-if="index < workflowSteps.length - 1"
+          v-if="workflowSteps && index < workflowSteps.length - 1"
           class="pi pi-arrow-right text-gray-400"
           aria-hidden="true"
         />
@@ -74,7 +74,8 @@ const workflowConfig = useWorkflowConfig()
  * FR-001, BR-WF-01
  */
 const workflowSteps = computed<WorkflowStepInfo[]>(() => {
-  return workflowConfig.getWorkflowSteps(props.task.category)
+  const steps = workflowConfig.getWorkflowSteps(props.task?.category)
+  return steps || []
 })
 
 /**
@@ -82,7 +83,8 @@ const workflowSteps = computed<WorkflowStepInfo[]>(() => {
  * FR-002
  */
 const currentStepIndex = computed(() => {
-  return workflowSteps.value.findIndex(step => step.code === props.task.status)
+  if (!workflowSteps.value || workflowSteps.value.length === 0) return 0
+  return workflowSteps.value.findIndex(step => step.code === props.task?.status)
 })
 
 // ============================================================

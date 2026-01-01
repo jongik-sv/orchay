@@ -2,7 +2,7 @@
 
 import pytest
 
-from orchay.models import Config, Task, TaskCategory, TaskPriority, TaskStatus, Worker
+from orchay.models import Config, Task, TaskCategory, TaskPriority, TaskStatus
 
 
 @pytest.fixture
@@ -16,12 +16,6 @@ def sample_task() -> Task:
         status=TaskStatus.TODO,
         priority=TaskPriority.HIGH,
     )
-
-
-@pytest.fixture
-def sample_worker() -> Worker:
-    """샘플 Worker fixture."""
-    return Worker(id=1, pane_id=100)
 
 
 @pytest.fixture

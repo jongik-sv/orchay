@@ -95,11 +95,6 @@ def check_dependencies_implemented(
     return True
 
 
-def _is_beyond_todo_status(status: TaskStatus) -> bool:
-    """Task가 TODO 이후 상태([dd] 이상)인지 확인."""
-    return status not in {TaskStatus.TODO}
-
-
 async def filter_executable_tasks(
     tasks: list[Task],
     mode: ExecutionMode,

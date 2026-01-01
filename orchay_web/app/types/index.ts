@@ -39,7 +39,7 @@ export interface WbsNode {
   assignee?: string;
   schedule?: ScheduleRange;
   tags?: string[];
-  depends?: string;
+  depends?: string[];  // 쉼표로 구분된 의존성 목록 (파서에서 배열로 변환)
   requirements?: string[];
   ref?: string;
   progress?: number;

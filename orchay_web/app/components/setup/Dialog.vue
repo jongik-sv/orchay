@@ -139,6 +139,7 @@ function validatePath(path: string): boolean {
  * 설정/변경 버튼 클릭
  */
 async function handleSubmit(): Promise<void> {
+  console.log('[SetupDialog] handleSubmit START');
   if (!validatePath(inputPath.value)) {
     return;
   }
@@ -147,19 +148,31 @@ async function handleSubmit(): Promise<void> {
 
   try {
     // 1. 경로 설정
+    console.log('[SetupDialog] Step 1: Setting base path...');
     await configStore.setBasePath(inputPath.value);
+    console.log('[SetupDialog] Step 1 complete. initialized:', configStore.initialized);
 
     // 2. Hot reload: 데이터 갱신
+    console.log('[SetupDialog] Step 2: Hot reload data...');
     try {
       await Promise.all([
         wbsStore.fetchAllWbs?.() || Promise.resolve(),
         projectStore.fetchProjects?.() || Promise.resolve(),
       ]);
+      console.log('[SetupDialog] Step 2 complete. projects:', projectStore.projects.length);
     } catch (hotReloadError) {
-      console.warn('[SetupDialog] Hot reload failed:', hotReloadError);
+      console.error('[SetupDialog] Hot reload FAILED:', hotReloadError);
+      // 에러를 토스트로 표시하지만 설정 자체는 성공으로 처리
+      toast.add({
+        severity: 'warn',
+        summary: '데이터 로드 실패',
+        detail: '경로는 설정되었지만 데이터 로드에 실패했습니다. 페이지를 새로고침해보세요.',
+        life: 5000,
+      });
     }
 
     // 3. 성공 토스트
+    console.log('[SetupDialog] Step 3: Showing success toast');
     toast.add({
       severity: 'success',
       summary: '설정 완료',
@@ -167,6 +180,7 @@ async function handleSubmit(): Promise<void> {
       life: 3000,
     });
   } catch (e) {
+    console.error('[SetupDialog] handleSubmit FAILED:', e);
     // 에러 토스트
     toast.add({
       severity: 'error',
@@ -176,6 +190,7 @@ async function handleSubmit(): Promise<void> {
     });
   } finally {
     isSubmitting.value = false;
+    console.log('[SetupDialog] handleSubmit END');
   }
 }
 
@@ -226,9 +241,9 @@ function selectRecentPath(path: string): void {
           @keyup.enter="handleSubmit"
         />
 
-        <!-- Electron 전용: 폴더 선택 버튼 -->
+        <!-- 데스크톱 전용: 폴더 선택 버튼 (Tauri 또는 Electron) -->
         <Button
-          v-if="configStore.isElectron"
+          v-if="configStore.isDesktop"
           icon="pi pi-folder-open"
           severity="secondary"
           aria-label="폴더 선택"
@@ -242,9 +257,9 @@ function selectRecentPath(path: string): void {
         {{ validationError }}
       </small>
 
-      <!-- 최근 경로 목록 (Electron 전용, 변경 모드) -->
+      <!-- 최근 경로 목록 (데스크톱 전용, 변경 모드) -->
       <div
-        v-if="configStore.isElectron && configStore.recentPaths.length > 0 && configStore.dialogMode === 'change'"
+        v-if="configStore.isDesktop && configStore.recentPaths.length > 0 && configStore.dialogMode === 'change'"
         class="space-y-2"
       >
         <span class="text-sm text-text-secondary">최근 사용:</span>
@@ -264,7 +279,7 @@ function selectRecentPath(path: string): void {
 
       <!-- 웹 모드 안내 -->
       <Message
-        v-if="!configStore.isElectron"
+        v-if="!configStore.isDesktop"
         severity="info"
         :closable="false"
         class="text-sm"

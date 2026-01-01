@@ -5,10 +5,7 @@
 사용법:
     orchay                      # 스케줄러 실행 (기본)
     orchay run [options]        # 스케줄러 실행
-    orchay exec start <task> <step>  # Task 실행 시작 등록
-    orchay exec stop <task>     # Task 실행 완료 해제
-    orchay exec list            # 실행 중인 Task 목록
-    orchay exec clear           # 모든 실행 상태 초기화
+    orchay history [task_id]    # 작업 히스토리 조회
 """
 
 from __future__ import annotations
@@ -80,47 +77,6 @@ def create_parser() -> argparse.ArgumentParser:
         help="상세 로그 출력",
     )
 
-    # exec 서브커맨드 (실행 상태 관리)
-    exec_parser = subparsers.add_parser(
-        "exec",
-        help="Task 실행 상태 관리 (워크플로우 훅용)",
-    )
-    exec_subparsers = exec_parser.add_subparsers(dest="exec_command", help="exec 명령어")
-
-    # exec start
-    start_parser = exec_subparsers.add_parser("start", help="Task 실행 시작 등록")
-    start_parser.add_argument("task_id", help="Task ID (예: TSK-01-01)")
-    start_parser.add_argument("step", help="워크플로우 단계 (예: design, build, done)")
-    start_parser.add_argument(
-        "-w",
-        "--worker",
-        type=int,
-        default=0,
-        help="Worker ID (기본: 0)",
-    )
-    start_parser.add_argument(
-        "-p",
-        "--pane",
-        type=int,
-        default=0,
-        help="Pane ID (기본: 0)",
-    )
-
-    # exec stop
-    stop_parser = exec_subparsers.add_parser("stop", help="Task 실행 완료 해제")
-    stop_parser.add_argument("task_id", help="Task ID (예: TSK-01-01)")
-
-    # exec update
-    update_parser = exec_subparsers.add_parser("update", help="Task 단계 갱신")
-    update_parser.add_argument("task_id", help="Task ID")
-    update_parser.add_argument("step", help="새 단계")
-
-    # exec list
-    exec_subparsers.add_parser("list", help="실행 중인 Task 목록")
-
-    # exec clear
-    exec_subparsers.add_parser("clear", help="모든 실행 상태 초기화")
-
     # history 서브커맨드 (작업 히스토리 조회)
     history_parser = subparsers.add_parser(
         "history",
@@ -144,58 +100,6 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     return parser
-
-
-def exec_start(args: argparse.Namespace) -> int:
-    """Task 실행 시작 등록 (deprecated)."""
-    console.print("[yellow]⚠ exec start 명령어는 더 이상 사용되지 않습니다.[/]")
-    console.print("[dim]Task 할당은 Orchestrator 메모리에서 자동으로 관리됩니다.[/]")
-    return 0
-
-
-def exec_stop(args: argparse.Namespace) -> int:
-    """Task 실행 완료 해제 (deprecated)."""
-    console.print("[yellow]⚠ exec stop 명령어는 더 이상 사용되지 않습니다.[/]")
-    console.print("[dim]Task 해제는 Orchestrator 메모리에서 자동으로 관리됩니다.[/]")
-    return 0
-
-
-def exec_update(args: argparse.Namespace) -> int:
-    """Task 단계 갱신 (deprecated)."""
-    console.print("[yellow]⚠ exec update 명령어는 더 이상 사용되지 않습니다.[/]")
-    console.print("[dim]Task 단계는 WBS 상태에서 자동으로 동기화됩니다.[/]")
-    return 0
-
-
-def exec_list(_args: argparse.Namespace) -> int:
-    """실행 중인 Task 목록 출력 (deprecated)."""
-    console.print("[yellow]⚠ exec list 명령어는 더 이상 사용되지 않습니다.[/]")
-    console.print("[dim]실행 중인 Task는 TUI에서 확인하세요.[/]")
-    return 0
-
-
-def exec_clear(_args: argparse.Namespace) -> int:
-    """모든 실행 상태 초기화 (deprecated)."""
-    console.print("[yellow]⚠ exec clear 명령어는 더 이상 사용되지 않습니다.[/]")
-    console.print("[dim]Orchestrator 재시작 시 상태가 자동으로 초기화됩니다.[/]")
-    return 0
-
-
-def handle_exec(args: argparse.Namespace) -> int:
-    """exec 서브커맨드 처리."""
-    if args.exec_command == "start":
-        return exec_start(args)
-    elif args.exec_command == "stop":
-        return exec_stop(args)
-    elif args.exec_command == "update":
-        return exec_update(args)
-    elif args.exec_command == "list":
-        return exec_list(args)
-    elif args.exec_command == "clear":
-        return exec_clear(args)
-    else:
-        console.print("[yellow]사용법:[/] orchay exec {start|stop|update|list|clear}")
-        return 1
 
 
 def handle_history(args: argparse.Namespace) -> int:
@@ -280,9 +184,7 @@ def cli_main() -> int:
 
     args = parser.parse_args()
 
-    if args.command == "exec":
-        return handle_exec(args)
-    elif args.command == "history":
+    if args.command == "history":
         return handle_history(args)
     elif args.command == "run":
         # 스케줄러 실행 (기존 main.py 방식)

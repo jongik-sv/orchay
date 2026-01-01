@@ -13,9 +13,10 @@ export default defineNuxtConfig({
   // 서버 디렉토리 (srcDir과 별도로 프로젝트 루트 사용)
   serverDir: 'server',
 
-  // Standalone 모드 설정 (npx orchay 실행용)
+  // Tauri용 SSG 모드 (프로덕션 빌드)
+  // 개발 모드에서는 devUrl로 SSR 서버 사용
   nitro: {
-    preset: 'node-server'
+    preset: 'static'
   },
 
   // Sourcemap 비활성화 (빌드 오류 방지)
@@ -50,8 +51,8 @@ export default defineNuxtConfig({
     typeCheck: false  // 다른 Task 의존성(Pinia) 완료 후 활성화
   },
 
-  // SSR 활성화 (기본값)
-  ssr: true,
+  // SSR 비활성화 (Tauri SSG 모드)
+  ssr: false,
 
   // 개발 서버 설정
   devServer: {

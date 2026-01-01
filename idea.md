@@ -12,6 +12,8 @@ wezterm cli send-text --no-paste --pane-id 1 프롬프트 # 예 : /wf:design TSK
 wezterm cli send-text --no-paste --pane-id 1 `r # 명령어를 submit 하기 위한 enter 키
 
 python C:\project\orchay_flutter\orchay\launcher.py
+PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
+
 
 # orchay
 
@@ -27,113 +29,6 @@ python C:\project\orchay_flutter\orchay\launcher.py
 - orchay 폴더
 
   - script, settings, templates
-
-1. Development (개발 워크플로우)
-
-가장 완전한 개발 프로세스
-[ ] → [bd] → [dd] → [ap] → [im] → [vf] → [xx]
-시작전 기본설계 상세설계 승인 구현 검증 완료
-| 상태 | 가능한 액션 |
-|---------------|--------------------|
-| [bd] 기본설계 | ui |
-| [dd] 상세설계 | review, apply |
-| [im] 구현 | test, audit, patch |
-| [vf] 검증 | test |
-
-2. Defect (결함 수정 워크플로우)
-
-버그 수정용 간소화 프로세스
-[ ] → [an] → [fx] → [vf] → [xx]
-시작전 분석 수정 검증 완료
-| 상태 | 가능한 액션 |
-|-----------|--------------------|
-| [fx] 수정 | test, audit, patch |
-| [vf] 검증 | test |
-
-3. Infrastructure (인프라 워크플로우)
-
-인프라/설정 작업용 (설계 생략 가능)
-[ ] → [ds] → [im] → [xx]
-시작전 설계 구현 완료
-
----
-
-상태(States) 요약
-
-| 코드 | 이름     | Phase     | 진행률 |
-| ---- | -------- | --------- | ------ |
-| [ ]  | 시작 전  | todo      | 0%     |
-| [bd] | 기본설계 | design    | 20%    |
-| [dd] | 상세설계 | design    | 40%    |
-| [ap] | 승인     | design    | 50%    |
-| [an] | 분석     | design    | 30%    |
-| [ds] | 설계     | design    | 30%    |
-| [im] | 구현     | implement | 60%    |
-| [fx] | 수정     | implement | 60%    |
-| [vf] | 검증     | implement | 80%    |
-| [xx] | 완료     | done      | 100%   |
-
-Execution Mode 분석
-
-scheduler.py에서 4가지 실행 모드가 정의되어 있습니다:
-
-모드별 워크플로우 단계
-
-WORKFLOW_STEPS = {
-DESIGN: ["start"],
-QUICK: ["start", "approve", "build", "done"],
-DEVELOP: ["start", "review", "apply", "approve", "build", "audit", "patch", "test", "done"],
-FORCE: ["start", "approve", "build", "done"],
-}
-
-모드별 동작 비교
-
-| 모드    | 워크플로우 단계                                                        | 의존성 검사      | 대상 Task   |
-| ------- | ---------------------------------------------------------------------- | ---------------- | ----------- |
-| design  | start                                                                  | 없음             | [ ] 상태만  |
-| quick   | start → approve → build → done                                         | [dd]+ 상태에서만 | 미완료 전체 |
-| develop | start → review → apply → approve → build → audit → patch → test → done | [dd]+ 상태에서만 | 미완료 전체 |
-| force   | start → approve → build → done                                         | 무시             | 미완료 전체 |
-
-비즈니스 규칙 (filter_executable_tasks)
-
-| 규칙  | 설명                                          |
-| ----- | --------------------------------------------- |
-| BR-01 | 완료 Task [xx]는 항상 제외                    |
-| BR-02 | blocked-by 설정된 Task 제외                   |
-| BR-03 | 이미 Worker에 할당된 Task 제외                |
-| BR-04 | design 모드: [ ] 상태만 포함                  |
-| BR-05 | quick/develop: [dd] 이상 상태에서 의존성 검사 |
-| BR-06 | force 모드: 의존성 무시                       |
-| BR-07 | 우선순위 정렬: critical > high > medium > low |
-
-의존성 검사 로직
-
-# [ ] 상태 → 의존성 검사 안 함 (설계 시작 가능)
-
-# [dd] 이상 → 선행 Task가 [im] 이상이어야 진행 가능
-
-IMPLEMENTED_STATUSES = {IMPLEMENT, VERIFY, DONE} # [im], [vf], [xx]
-
-python orchay/src/orchay/launcher.py deployment
-
-추가로 develop 모드일 경우 설계가 끝나고 review, apply를 하고 build가 끝난후 audit, patch를 각각 한번씩 실행하고
-
-## 모드
-### develop 모드
-- design -> review -> apply -> approve(사람이 실행) -> build -> audit -> patch -> test -> verify -> done(사람이 실행)
-
-### quick 모드
-- design -> approve(사람이 실행) -> build -> verify -> done(사람이 실행)
-
-### force 모드
-- design -> approve -> build -> verify -> done(사람이 실행)
-
-### design 모드
-- design 까지만
-
-### test 모드
-- test 대상(im, vf, xx)의 테스트 수행
 
 ## ochary_web 수정할 기능
 - wbs 편집 기능
@@ -170,5 +65,9 @@ gh release delete v0.1.0 --repo jongik-sv/orchay --yes
   # orchay_web (Electron)
   gh workflow run "Build & Release Electron App" -f version=v0.1.2
 
+
+
+
+PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
 
 

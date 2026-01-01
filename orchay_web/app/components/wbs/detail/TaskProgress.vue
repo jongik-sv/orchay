@@ -56,7 +56,7 @@
 
               <!-- 연결선 (마지막 단계 제외) -->
               <div
-                v-if="index < workflowSteps.length - 1"
+                v-if="workflowSteps && index < workflowSteps.length - 1"
                 class="workflow-connector"
                 :class="{
                   'workflow-connector-completed': index < currentStepIndex,
@@ -144,7 +144,8 @@ const selectedStepIndex = ref<number | null>(null)
  * 설정 기반 동적 로딩
  */
 const workflowSteps = computed(() => {
-  const steps = workflowConfig.getWorkflowSteps(props.task.category)
+  const steps = workflowConfig.getWorkflowSteps(props.task?.category)
+  if (!steps || !Array.isArray(steps)) return []
   return steps.map(step => ({
     code: step.code,
     label: step.label,
@@ -155,7 +156,8 @@ const workflowSteps = computed(() => {
  * 현재 단계 인덱스
  */
 const currentStepIndex = computed(() => {
-  const index = workflowSteps.value.findIndex(step => step.code === props.task.status)
+  if (!workflowSteps.value || workflowSteps.value.length === 0) return 0
+  const index = workflowSteps.value.findIndex(step => step.code === props.task?.status)
   return index !== -1 ? index : 0
 })
 
@@ -178,6 +180,7 @@ const effectiveSelectedIndex = computed(() => {
  * 진행률 퍼센트
  */
 const progressPercentage = computed(() => {
+  if (!workflowSteps.value || workflowSteps.value.length === 0) return 0
   const total = workflowSteps.value.length - 1 // 시작 전 제외
   if (total === 0) return 0
   return Math.round((currentStepIndex.value / total) * 100)

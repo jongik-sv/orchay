@@ -4,10 +4,12 @@
  * Task: TSK-01-01-03, TSK-09-01
  */
 
-import type { TaskDetail, WbsNodeType, WbsNode, ProjectFile, ProjectFilesResponse } from '~/types'
+import type { TaskDetail, WbsNodeType, WbsNode, ProjectFile, ProjectFilesResponse, TaskCategory, Priority } from '~/types'
 import { useWbsStore } from './wbs'
 import { useProjectStore } from './project'
+import { useConfigStore } from './config'
 import { buildApiUrl } from '~/utils/urlPath'
+import * as tauriApi from '~/utils/tauri'
 
 /**
  * 복합 ID 파싱 (다중 프로젝트 모드 지원)
@@ -35,6 +37,140 @@ function getNodeTypeFromId(nodeId: string): WbsNodeType | null {
   if (upper.startsWith('ACT-')) return 'act'
   if (upper.startsWith('TSK-')) return 'task'
   return null
+}
+
+/**
+ * 가능한 워크플로우 액션 조회
+ * 서버의 taskService.getAvailableActions() 로직과 동일하게 구현
+ */
+function getAvailableActions(category: TaskCategory, status: string): string[] {
+  // 상태 코드 추출 (예: "detail-design [dd]" → "[dd]" → "dd")
+  const statusCode = status.match(/\[([^\]]+)\]/)?.[1] || status
+
+  const workflowMap: Record<TaskCategory, Record<string, string[]>> = {
+    development: {
+      '[ ]': ['start'],
+      'bd': ['draft'],
+      'dd': ['build'],
+      'im': ['verify'],
+      'vf': ['done'],
+      'xx': [],
+    },
+    defect: {
+      '[ ]': ['start'],
+      'an': ['verify'],
+      'fx': ['verify'],
+      'vf': ['done'],
+      'xx': [],
+    },
+    infrastructure: {
+      '[ ]': ['start', 'skip'],
+      'ds': ['build'],
+      'im': ['done'],
+      'xx': [],
+    },
+  }
+
+  const categoryActions = workflowMap[category]
+  if (!categoryActions) {
+    return []
+  }
+
+  return categoryActions[statusCode] || []
+}
+
+/**
+ * WBS 스토어에서 TaskDetail 구성 (Tauri 전용)
+ * 서버의 taskService.getTaskDetail() 로직을 클라이언트에서 재현
+ */
+async function buildTaskDetailFromWbs(
+  wbsStore: ReturnType<typeof useWbsStore>,
+  taskId: string,
+  projectId: string | null
+): Promise<TaskDetail> {
+  // 1. WBS 트리에서 Task 노드 검색
+  // 다중 프로젝트 모드: 복합 ID 우선 검색 (서버와 동일)
+  const taskNode = wbsStore.isMultiProjectMode
+    ? (wbsStore.getNode(`${projectId}:${taskId}`) || wbsStore.getNode(taskId))
+    : (wbsStore.getNode(taskId) || wbsStore.getNode(`${projectId}:${taskId}`))
+
+  if (!taskNode || taskNode.type !== 'task') {
+    throw new Error(`Task not found: ${taskId}`)
+  }
+
+  // 2. 부모 WP/ACT 찾기
+  const { parentWp, parentAct } = findParentNodes(wbsStore, taskId, projectId)
+
+  // 3. Task 카테고리와 상태로 가능한 액션 조회
+  const category = (taskNode.category || 'development') as TaskCategory
+  const status = taskNode.status || '[ ]'
+  const availableActions = getAvailableActions(category, status)
+
+  // 4. 문서 목록 조회 (Tauri 환경)
+  let documents: tauriApi.DocumentInfo[] = []
+  if (projectId) {
+    try {
+      const configStore = useConfigStore()
+      if (configStore.basePath) {
+        documents = await tauriApi.listTaskDocuments(configStore.basePath, projectId, taskId)
+      }
+    } catch (e) {
+      console.warn('[buildTaskDetailFromWbs] Failed to load documents:', e)
+    }
+  }
+
+  // 5. TaskDetail 구성 (id는 원본 taskId 사용, 복합 ID 아님)
+  return {
+    id: taskId,
+    title: taskNode.title,
+    category,
+    status,
+    priority: (taskNode.priority || 'medium') as Priority,
+    assignee: taskNode.assignee ? { id: taskNode.assignee, name: taskNode.assignee } : undefined,
+    parentWp,
+    parentAct,
+    schedule: taskNode.schedule,
+    requirements: taskNode.requirements || [],
+    tags: taskNode.tags || [],
+    depends: taskNode.depends,  // 이미 배열 형태 (파서에서 처리)
+    ref: taskNode.ref,
+    documents,
+    availableActions,
+    completed: taskNode.completed,
+    rawContent: taskNode.rawContent,
+  }
+}
+
+/**
+ * 트리에서 부모 WP/ACT 노드 찾기
+ */
+function findParentNodes(
+  wbsStore: ReturnType<typeof useWbsStore>,
+  taskId: string,
+  projectId: string | null
+): { parentWp: string; parentAct?: string } {
+  let parentWp = ''
+  let parentAct: string | undefined
+
+  // 트리를 순회하며 Task의 부모 찾기
+  // 다중 프로젝트 모드: 복합 ID 우선 검색 (서버와 동일)
+  const compositeId = projectId ? `${projectId}:${taskId}` : taskId
+  const ancestorIds = wbsStore.isMultiProjectMode
+    ? (wbsStore.getAncestorIds(compositeId) || wbsStore.getAncestorIds(taskId) || [])
+    : (wbsStore.getAncestorIds(taskId) || wbsStore.getAncestorIds(compositeId) || [])
+
+  for (const ancestorId of ancestorIds) {
+    const node = wbsStore.getNode(ancestorId)
+    if (node?.type === 'wp') {
+      // 다중 프로젝트 모드: 원본 ID 반환 (프리픽스 제거)
+      parentWp = node.projectId ? node.id.replace(`${node.projectId}:`, '') : node.id
+    }
+    if (node?.type === 'act') {
+      parentAct = node.projectId ? node.id.replace(`${node.projectId}:`, '') : node.id
+    }
+  }
+
+  return { parentWp, parentAct }
 }
 
 export const useSelectionStore = defineStore('selection', () => {
@@ -159,6 +295,7 @@ export const useSelectionStore = defineStore('selection', () => {
   /**
    * Task 상세 정보 로드
    * 다중 프로젝트 모드: 복합 ID (projectId:taskId)에서 원본 ID 추출
+   * Tauri 환경에서는 WBS 스토어에서 직접 TaskDetail 구성
    */
   async function loadTaskDetail(compositeTaskId: string) {
     loadingTask.value = true
@@ -174,10 +311,17 @@ export const useSelectionStore = defineStore('selection', () => {
       // 선택된 프로젝트 ID 저장
       selectedProjectId.value = projectId || null
 
-      // 한글, 공백, 괄호 등 특수문자 안전하게 인코딩
-      const url = buildApiUrl('/api/tasks', [taskId], projectId ? { project: projectId } : undefined)
-      const data = await $fetch<TaskDetail>(url)
-      selectedTask.value = data
+      // Tauri 환경: WBS 스토어에서 TaskDetail 구성 (API 서버 없음)
+      if (tauriApi.isTauri()) {
+        const wbsStore = useWbsStore()
+        const taskDetail = await buildTaskDetailFromWbs(wbsStore, taskId, projectId)
+        selectedTask.value = taskDetail
+      } else {
+        // Web 환경: API 호출
+        const url = buildApiUrl('/api/tasks', [taskId], projectId ? { project: projectId } : undefined)
+        const data = await $fetch<TaskDetail>(url)
+        selectedTask.value = data
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load task detail'
       selectedTask.value = null

@@ -7,7 +7,7 @@
   >
     <!-- 문서 테이블 -->
     <DataTable
-      v-if="documents.length > 0"
+      v-if="documents && documents.length > 0"
       :value="documents"
       size="small"
       scrollable
@@ -75,14 +75,16 @@ import { DOCUMENT_TYPE_CONFIG } from '~/utils/documentConfig'
 // Props & Emits
 // ============================================================
 interface Props {
-  documents: DocumentInfo[]
+  documents?: DocumentInfo[]
 }
 
 interface Emits {
   (e: 'open-document', document: DocumentInfo): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  documents: () => []
+})
 const emit = defineEmits<Emits>()
 
 // ============================================================

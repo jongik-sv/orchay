@@ -27,6 +27,7 @@ useHead({
 // ============================================================
 const route = useRoute()
 const router = useRouter()
+const configStore = useConfigStore()
 const projectStore = useProjectStore()
 const wbsStore = useWbsStore()
 const selectionStore = useSelectionStore()
@@ -80,6 +81,13 @@ onMounted(async () => {
   error.value = null
 
   try {
+    // Tauri 환경에서는 base path가 설정되어 있어야 WBS 로드 가능
+    if (!configStore.initialized) {
+      console.log('[WbsPage] Config not initialized, waiting for setup')
+      loading.value = false
+      return
+    }
+
     // 항상 모든 프로젝트 WBS 로드
     await wbsStore.fetchAllWbs()
 
@@ -92,6 +100,24 @@ onMounted(async () => {
 
   loading.value = false
 })
+
+// configStore.initialized가 변경되면 WBS 로드
+watch(
+  () => configStore.initialized,
+  async (initialized) => {
+    if (initialized && wbsStore.tree.length === 0) {
+      loading.value = true
+      try {
+        await wbsStore.fetchAllWbs()
+        await autoSelectFirstTask()
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : '프로젝트 목록을 불러오는 데 실패했습니다'
+        console.error('Failed to load all projects:', e)
+      }
+      loading.value = false
+    }
+  }
+)
 
 /**
  * 첫 번째 Task 자동 선택 및 부모 노드 확장

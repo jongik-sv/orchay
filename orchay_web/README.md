@@ -19,11 +19,48 @@ orchay_web은 orchay 스케줄러의 상태를 웹 브라우저에서 모니터�
 | 분류 | 기술 |
 |------|------|
 | Framework | Nuxt 3 |
+| Desktop | **Tauri 2** (Electron에서 마이그레이션) |
 | UI Library | PrimeVue 4, Tailwind CSS |
 | State | Pinia |
 | Flow Chart | @vue-flow |
 | Markdown | marked, mermaid |
 | Testing | Vitest (Unit), Playwright (E2E) |
+
+## 데스크톱 앱 (Tauri)
+
+> ⚠️ **마이그레이션 진행 중**: Electron → Tauri 2로 전환 중입니다.
+
+### Tauri 개발
+
+```bash
+# 개발 모드 (핫 리로드)
+npm run tauri:dev
+
+# 프로덕션 빌드
+npm run tauri:build
+
+# 디버그 빌드
+npm run tauri:build:debug
+```
+
+### Tauri vs Electron
+
+| 항목 | Tauri | Electron |
+|------|-------|----------|
+| 번들 크기 | ~10MB | ~150MB+ |
+| 메모리 사용량 | 낮음 | 높음 |
+| 백엔드 | Rust | Node.js |
+| 보안 | 강함 (샌드박싱) | 보통 |
+
+### 마이그레이션 상태
+
+- [x] Tauri 2 프로젝트 초기화
+- [x] 파일시스템 플러그인 (`@tauri-apps/plugin-fs`)
+- [x] 다이얼로그 플러그인 (`@tauri-apps/plugin-dialog`)
+- [x] 스토어 플러그인 (`@tauri-apps/plugin-store`)
+- [x] GitHub Actions 자동 빌드
+- [ ] 모든 Electron API를 Tauri로 전환
+- [ ] 크로스 플랫폼 테스트
 
 ## 설치
 

@@ -301,7 +301,7 @@ const { selectedProjectId } = storeToRefs(selectionStore)
 
 // Task 네비게이션
 const { hasPrevTask, hasNextTask, currentTaskIndex, allTasks } = storeToRefs(selectionStore)
-const totalTasks = computed(() => allTasks.value.length)
+const totalTasks = computed(() => allTasks.value?.length || 0)
 
 // ============================================================
 // State
