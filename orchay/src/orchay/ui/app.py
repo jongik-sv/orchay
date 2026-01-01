@@ -798,13 +798,13 @@ class OrchayApp(App[None]):
             deps = deps_raw.ljust(20)  # 최소 20자 보장
 
             # 작업 중인 Task 또는 스킵된 Task 표시
-            task_id_display = task.id
+            task_id_display: str | Text = task.id
             if task.id in running_task_ids:
-                task_id_display = f"▶ {task.id}"
+                task_id_display = Text(f"▶ {task.id}", style="#22c55e")  # green
                 if active_row is None:
                     active_row = i - 1  # 0-indexed
             elif task.blocked_by == "skipped":
-                task_id_display = f"⏭ {task.id}"
+                task_id_display = Text(f"⏭ {task.id}", style="#f97316")  # orange
 
             # 커서 유지할 task 찾기
             if preserve_cursor_task_id and task.id == preserve_cursor_task_id:
