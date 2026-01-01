@@ -941,7 +941,7 @@ class OrchayApp(App[None]):
             TaskStatus.DETAIL_DESIGN: "#8b5cf6",
             TaskStatus.ANALYSIS: "#f59e0b",
             TaskStatus.DESIGN: "#3b82f6",
-            TaskStatus.APPROVED: "#10b981",
+            TaskStatus.APPROVED: "#a855f7",
             TaskStatus.IMPLEMENT: "#f59e0b",
             TaskStatus.FIX: "#ef4444",
             TaskStatus.VERIFY: "#22c55e",
@@ -1161,12 +1161,15 @@ class OrchayApp(App[None]):
         except Exception:
             pass
 
-        # test 모드에서는 테스트 실행
+        # test 모드에서는 TestSelectionPanel에서 Task 가져오기
         if self._mode == "test":
-            await self.action_run_tests()
-            return
-
-        task = self._get_selected_task()
+            try:
+                panel = self.query_one("#test-selection-panel", TestSelectionPanel)
+                task = panel.get_highlighted_task()
+            except Exception:
+                task = None
+        else:
+            task = self._get_selected_task()
         if task:
             try:
                 modal = self.query_one("#task-detail-modal", TaskDetailModal)
