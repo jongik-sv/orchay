@@ -8,11 +8,11 @@ import time
 from dataclasses import dataclass
 from typing import Literal
 
+from orchay.domain.constants import WORKER_DETECTION
 from orchay.utils.wezterm import pane_exists, wezterm_get_text
 
 # 모듈 시작 시간 (idle 감지 지연용)
 _startup_time: float = time.time()
-_IDLE_DETECTION_DELAY: float = 3.0  # 시작 후 3초간 idle 감지 비활성화
 
 # ORCHAY_DONE 패턴: ORCHAY_DONE:{task-id}:{action}:{status}[:{message}]
 # action은 "wf:verify" 형식일 수 있으므로 wf: 접두사를 선택적으로 허용
@@ -148,8 +148,8 @@ async def detect_worker_state(
     if not await pane_exists(pane_id):
         return "dead", None
 
-    # 출력 텍스트 조회 (최근 50줄)
-    output = await wezterm_get_text(pane_id, lines=50)
+    # 출력 텍스트 조회
+    output = await wezterm_get_text(pane_id, lines=WORKER_DETECTION.OUTPUT_LINES)
 
     # 빈 출력이면 busy로 간주
     if not output.strip():
@@ -185,9 +185,9 @@ async def detect_worker_state(
     # 6. 프롬프트 패턴 체크
     # - Task 실행 중(has_active_task=True): 프롬프트로 idle 감지 안 함
     # - Task 없음(has_active_task=False): 프롬프트로 idle 감지 허용
-    # - 시작 후 3초 이내: 무조건 프롬프트로 idle 감지 (Worker 초기화용)
+    # - 시작 후 지연 시간 이내: 무조건 프롬프트로 idle 감지 (Worker 초기화용)
     elapsed = time.time() - _startup_time
-    if elapsed < _IDLE_DETECTION_DELAY or not has_active_task:
+    if elapsed < WORKER_DETECTION.IDLE_DETECTION_DELAY or not has_active_task:
         last_lines = output.strip().split("\n")[-5:]
         last_text = "\n".join(last_lines)
         for pattern in PROMPT_PATTERNS:

@@ -38,6 +38,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+# 직접 실행 시 패키지 경로 추가 (import 전에 실행되어야 함)
+_src_path = Path(__file__).resolve().parent.parent
+if str(_src_path) not in sys.path:
+    sys.path.insert(0, str(_src_path))
+
+from orchay.utils.process import _kill_process_sync, _list_processes_sync
+
 # 로그 파일 설정 (.orchay/logs/ 폴더에 저장)
 def _get_log_file() -> Path:
     """프로젝트 루트의 .orchay/logs/launcher.log 경로 반환."""
@@ -140,7 +147,7 @@ def _get_bundled_file(filename: str) -> Path:
     """PyInstaller 번들 파일 또는 프로젝트 파일 경로 반환.
 
     Args:
-        filename: 파일명 (예: wezterm-orchay-windows.lua)
+        filename: 파일명 (예: wezterm-orchay.lua)
 
     Returns:
         Path: 파일 경로
@@ -243,40 +250,8 @@ def save_wezterm_pid(cwd: str, pid: int) -> None:
 
 def get_wezterm_gui_pids() -> set[int]:
     """현재 실행 중인 wezterm-gui 프로세스 PID 목록."""
-    pids: set[int] = set()
-    try:
-        if platform.system() == "Windows":
-            # tasklist로 wezterm-gui.exe PID 조회
-            # Windows 콘솔은 CP949 인코딩 사용
-            result = subprocess.run(
-                ["tasklist", "/FI", "IMAGENAME eq wezterm-gui.exe", "/FO", "CSV", "/NH"],
-                capture_output=True,
-                text=True,
-                encoding="cp949",
-                errors="ignore",
-            )
-            for line in result.stdout.strip().split("\n"):
-                if line and "wezterm-gui.exe" in line:
-                    # CSV 형식: "wezterm-gui.exe","PID",...
-                    parts = line.split(",")
-                    if len(parts) >= 2:
-                        pid_str = parts[1].strip().strip('"')
-                        with contextlib.suppress(ValueError):
-                            pids.add(int(pid_str))
-        else:
-            # pgrep으로 wezterm-gui PID 조회
-            result = subprocess.run(
-                ["pgrep", "-f", "wezterm-gui"],
-                capture_output=True,
-                text=True,
-            )
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    with contextlib.suppress(ValueError):
-                        pids.add(int(line))
-    except Exception:
-        pass
-    return pids
+    processes = _list_processes_sync("wezterm-gui")
+    return {p.pid for p in processes}
 
 
 def load_wezterm_pid(cwd: str) -> int | None:
@@ -298,13 +273,7 @@ def kill_orchay_wezterm(cwd: str) -> None:
     saved_pid = load_wezterm_pid(cwd)
     if saved_pid:
         log.info(f"Killing previous WezTerm (PID: {saved_pid}) for this folder...")
-        if platform.system() == "Windows":
-            subprocess.run(
-                ["taskkill", "/f", "/pid", str(saved_pid)],
-                capture_output=True,
-            )
-        else:
-            subprocess.run(["kill", "-9", str(saved_pid)], capture_output=True)
+        _kill_process_sync(saved_pid)
         # PID 파일 삭제
         pid_file = get_pid_file(cwd)
         with contextlib.suppress(OSError):
@@ -396,7 +365,7 @@ def launch_wezterm_windows(
     # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
     # --config-file로 orchay 전용 설정 파일 사용 (사용자 ~/.wezterm.lua 불필요)
     # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
-    config_file = _get_bundled_file("wezterm-orchay-windows.lua")
+    config_file = _get_bundled_file("wezterm-orchay.lua")
     wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
 
     # 시작 전 wezterm-gui PID 목록 기록

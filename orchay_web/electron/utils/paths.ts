@@ -16,6 +16,11 @@ export function getServerPath(): string {
 
 /**
  * 기본 ORCHAY_BASE_PATH 경로
+ *
+ * 우선순위:
+ * 1. 환경변수 ORCHAY_BASE_PATH
+ * 2. 패키징된 앱: 실행 파일이 있는 디렉토리
+ * 3. 개발 모드: 현재 작업 디렉토리
  */
 export function getDefaultBasePath(): string {
   // 1. 환경변수가 설정되어 있으면 사용
@@ -23,7 +28,13 @@ export function getDefaultBasePath(): string {
     return process.env.ORCHAY_BASE_PATH
   }
 
-  // 2. 실행 폴더의 .orchay를 사용 (현재 작업 디렉토리)
+  // 2. 패키징된 앱: 실행 파일 디렉토리 사용
+  //    (다른 PC에 복사해도 설정 없이 바로 동작)
+  if (app.isPackaged) {
+    return path.dirname(process.execPath)
+  }
+
+  // 3. 개발 모드: 현재 작업 디렉토리
   return process.cwd()
 }
 

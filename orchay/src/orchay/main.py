@@ -18,6 +18,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from orchay.application import DispatchService, TaskService, WorkerService
+from orchay.domain.workflow import WorkflowConfig, WorkflowEngine
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
 from orchay.scheduler import (
     ExecutionMode,
@@ -57,6 +59,20 @@ class Orchestrator:
         self.mode = ExecutionMode(config.execution.mode)
         self._running = False
         self._paused = config.execution.start_paused
+
+        # Phase 2.4: 서비스 레이어 초기화
+        workflow_config = WorkflowConfig.from_project_root(base_dir)
+        self._workflow_engine = WorkflowEngine(workflow_config)
+        self._task_service = TaskService(self.parser, self._workflow_engine)
+        self._worker_service = WorkerService(config)
+        self._dispatch_service = DispatchService(
+            config=config,
+            project_name=project_name,
+            wbs_path=wbs_path,
+            mode=self.mode,
+            workflow_engine=self._workflow_engine,
+            output_callback=lambda msg: console.print(msg),
+        )
 
     @property
     def running_tasks(self) -> set[str]:

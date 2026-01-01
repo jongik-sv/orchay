@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
+    "build": "cross-env NODE_NO_WARNINGS=1 nuxt build",
     "preview": "nuxt preview",
     "prepublishOnly": "npm run build",
     "postinstall": "nuxt prepare",
@@ -27,7 +27,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "electron:dev": "concurrently \"nuxt dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "nuxt build && electron-vite build",
+    "electron:build": "cross-env NODE_NO_WARNINGS=1 nuxt build && electron-vite build",
     "electron:preview": "npm run electron:build && cross-env ELECTRON_DEV=false electron .",
     "dist:win": "npm run electron:build && electron-builder --win --config",
     "dist:mac": "npm run electron:build && electron-builder --mac --config",

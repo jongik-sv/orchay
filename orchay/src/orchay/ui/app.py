@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import subprocess
-import sys
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from rich.text import Text
@@ -29,6 +27,7 @@ from orchay.utils.active_tasks import (
     resume_worker,
     set_scheduler_state,
 )
+from orchay.utils.process import kill_process_nowait
 
 
 class TUILogHandler(logging.Handler):
@@ -964,18 +963,7 @@ class OrchayApp(App[None]):
         cwd = str(Path.cwd())
         saved_pid = load_wezterm_pid(cwd)
         if saved_pid:
-            if sys.platform == "win32":
-                subprocess.Popen(
-                    ["taskkill", "/F", "/PID", str(saved_pid)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            else:
-                subprocess.Popen(
-                    ["kill", "-9", str(saved_pid)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+            kill_process_nowait(saved_pid)
             # PID 파일 삭제
             try:
                 get_pid_file(cwd).unlink()

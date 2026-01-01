@@ -82,8 +82,8 @@ datas = [
     # orchay 패키지 리소스
     ('src/orchay/ui/styles.tcss', 'orchay/ui'),
 
-    # WezTerm 설정 파일 (Windows launcher용)
-    ('wezterm-orchay-windows.lua', '.'),
+    # WezTerm 설정 파일 (크로스 플랫폼)
+    ('wezterm-orchay.lua', '.'),
 ]
 
 a = Analysis(

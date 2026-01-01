@@ -178,8 +178,9 @@ async function createWindow(port: number): Promise<void> {
     return { action: 'deny' }
   })
 
-  // 준비되면 윈도우 표시
+  // 준비되면 Splash 닫고 윈도우 표시
   mainWindow.once('ready-to-show', () => {
+    closeSplashWindow()
     mainWindow?.show()
     if (isDev) {
       mainWindow?.webContents.openDevTools()
@@ -268,15 +269,9 @@ app.whenReady().then(async () => {
     }
     console.log(`[Electron] Server ready at ${Date.now() - startTime}ms`)
 
-    // 5. 메인 윈도우 생성
+    // 5. 메인 윈도우 생성 (ready-to-show에서 Splash 닫힘)
     await createWindow(serverPort)
     console.log(`[Electron] Window created at ${Date.now() - startTime}ms`)
-
-    // 6. 메인 윈도우 준비되면 Splash 닫기
-    mainWindow?.once('ready-to-show', () => {
-      closeSplashWindow()
-      console.log(`[Electron] App fully loaded at ${Date.now() - startTime}ms`)
-    })
   } catch (error) {
     console.error('[Electron] Failed to initialize:', error)
     closeSplashWindow()
