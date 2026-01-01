@@ -14,11 +14,15 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from orchay.domain.constants import DISPATCH_TIMINGS
+from orchay.domain.workflow import ExecutionMode
 from orchay.models import Worker, WorkerState
+from orchay.scheduler import get_manual_commands, get_next_workflow_command
 from orchay.utils.wezterm import get_active_pane_id, wezterm_list_panes
 from orchay.worker import detect_worker_state
 
 if TYPE_CHECKING:
+    from orchay.application.dispatch_service import DispatchService
+    from orchay.application.task_service import TaskService
     from orchay.models import Config, Task
 
 logger = logging.getLogger(__name__)
@@ -302,3 +306,207 @@ class WorkerService:
             실행 중인 Task ID 집합
         """
         return {w.current_task for w in self._workers if w.current_task}
+
+    async def update_worker_state_with_continuation(
+        self,
+        worker: Worker,
+        tasks: list[Task],
+        dispatch_service: DispatchService,
+        task_service: TaskService,
+        mode: ExecutionMode,
+        paused: bool,
+    ) -> None:
+        """Worker 상태를 업데이트하고 연속 실행을 처리합니다.
+
+        Orchestrator._update_worker_states()의 복잡한 done 처리 로직을 통합합니다:
+        - 이전 Task/step DONE 신호 무시
+        - DONE 연속 감지 → IDLE 전환
+        - 연속 실행 체크 및 dispatch_next_step 호출
+        - BUSY → IDLE 전환 시 min_task_duration 체크
+
+        Args:
+            worker: 업데이트할 Worker
+            tasks: 현재 Task 목록
+            dispatch_service: DispatchService 인스턴스
+            task_service: TaskService 인스턴스
+            mode: 현재 실행 모드
+            paused: 스케줄러 일시정지 여부
+        """
+        task_map = {t.id: t for t in tasks}
+
+        # Grace period: dispatch 직후에는 상태 체크 건너뛰기
+        if worker.dispatch_time:
+            elapsed = (datetime.now() - worker.dispatch_time).total_seconds()
+            if elapsed < self._config.dispatch.grace_period:
+                logger.debug(
+                    f"Worker {worker.id}: grace period ({elapsed:.1f}s < "
+                    f"{self._config.dispatch.grace_period}s)"
+                )
+                return
+
+        # Worker가 현재 Task를 실행 중인지 여부 전달
+        has_active_task = worker.current_task is not None
+        state, done_info = await detect_worker_state(worker.pane_id, has_active_task)
+
+        # 상태 매핑
+        state_map = {
+            "dead": WorkerState.DEAD,
+            "done": WorkerState.DONE,
+            "paused": WorkerState.PAUSED,
+            "error": WorkerState.ERROR,
+            "blocked": WorkerState.BLOCKED,
+            "idle": WorkerState.IDLE,
+            "busy": WorkerState.BUSY,
+        }
+        new_state = state_map.get(state, WorkerState.BUSY)
+
+        # done 상태 처리: 연속 실행 또는 할당 해제
+        if new_state == WorkerState.DONE:
+            await self._handle_done_state(
+                worker=worker,
+                done_info=done_info,
+                task_map=task_map,
+                dispatch_service=dispatch_service,
+                task_service=task_service,
+                mode=mode,
+                paused=paused,
+            )
+        elif new_state == WorkerState.IDLE:
+            self._handle_idle_state(worker, task_map)
+        else:
+            worker.state = new_state
+
+    async def _handle_done_state(
+        self,
+        worker: Worker,
+        done_info: object | None,
+        task_map: dict[str, Task],
+        dispatch_service: DispatchService,
+        task_service: TaskService,
+        mode: ExecutionMode,
+        paused: bool,
+    ) -> None:
+        """DONE 상태를 처리합니다.
+
+        Args:
+            worker: 대상 Worker
+            done_info: DONE 신호 정보 (task_id, action 포함)
+            task_map: Task ID → Task 매핑
+            dispatch_service: DispatchService 인스턴스
+            task_service: TaskService 인스턴스
+            mode: 현재 실행 모드
+            paused: 스케줄러 일시정지 여부
+        """
+        # 이전 Task DONE 신호 무시
+        if (
+            done_info
+            and worker.current_task
+            and hasattr(done_info, "task_id")
+            and done_info.task_id != worker.current_task
+        ):
+            logger.debug(
+                f"Worker {worker.id}: 이전 Task DONE 신호 무시 "
+                f"(신호={done_info.task_id}, 현재={worker.current_task})"
+            )
+            return
+
+        # 이전 step DONE 신호 무시
+        if (
+            done_info
+            and worker.current_step
+            and hasattr(done_info, "action")
+            and done_info.action != worker.current_step
+        ):
+            logger.debug(
+                f"Worker {worker.id}: 이전 step DONE 신호 무시 "
+                f"(신호={done_info.action}, 현재={worker.current_step})"
+            )
+            return
+
+        if worker.state == WorkerState.DONE:
+            # DONE 상태가 연속 감지 → IDLE로 강제 전환
+            worker.reset()
+        else:
+            # 처음 DONE 감지: 연속 실행 체크
+            task_id = (
+                done_info.task_id
+                if done_info and hasattr(done_info, "task_id")
+                else worker.current_task
+            )
+            if task_id:
+                task = task_map.get(task_id)
+                if task:
+                    # WBS 재파싱 (스킬이 변경한 상태 반영)
+                    await task_service.refresh_task_status(task)
+
+                    # 다음 action 결정
+                    last_action = (
+                        done_info.action
+                        if done_info and hasattr(done_info, "action")
+                        else None
+                    )
+                    next_cmd = get_next_workflow_command(
+                        task, mode=mode, last_action=last_action
+                    )
+                    manual_cmds = get_manual_commands(mode)
+
+                    if next_cmd and next_cmd not in manual_cmds:
+                        if paused:
+                            # pause 상태면 연속 실행 중단
+                            logger.info(
+                                f"연속 실행 중단 (paused): {task.id} → /wf:{next_cmd}"
+                            )
+                            task.assigned_worker = None
+                        else:
+                            # 자동: 즉시 다음 단계 dispatch (같은 Worker)
+                            logger.info(
+                                f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
+                            )
+                            await dispatch_service.dispatch_next_step(
+                                worker, task, last_action
+                            )
+                            return  # 상태 유지, 다음으로
+                    else:
+                        # 수동: 할당 해제
+                        task.assigned_worker = None
+                        logger.info(f"수동 대기: {task.id} (다음: {next_cmd})")
+
+            # DONE 상태로 유지 (다음 tick에서 IDLE로 전환됨)
+            worker.state = WorkerState.DONE
+            worker.current_task = None
+            worker.current_step = None
+
+    def _handle_idle_state(
+        self,
+        worker: Worker,
+        task_map: dict[str, Task],
+    ) -> None:
+        """IDLE 상태를 처리합니다.
+
+        Args:
+            worker: 대상 Worker
+            task_map: Task ID → Task 매핑
+        """
+        # DONE → IDLE 전환: ORCHAY_DONE 신호가 사라짐
+        if worker.state == WorkerState.DONE:
+            worker.reset()
+        # BUSY → IDLE 전환: Task 완료로 간주
+        elif worker.state == WorkerState.BUSY:
+            # 추가 검증: dispatch 후 최소 시간 경과 확인
+            if worker.dispatch_time:
+                elapsed = (datetime.now() - worker.dispatch_time).total_seconds()
+                if elapsed < self._config.dispatch.min_task_duration:
+                    logger.warning(
+                        f"Worker {worker.id}: 비정상 조기 완료 "
+                        f"({elapsed:.1f}s < {self._config.dispatch.min_task_duration}s), "
+                        f"idle 전환 거부"
+                    )
+                    return  # idle 전환 거부, BUSY 상태 유지
+
+            if worker.current_task:
+                task = task_map.get(worker.current_task)
+                if task:
+                    task.assigned_worker = None
+            worker.reset()
+        else:
+            worker.state = WorkerState.IDLE

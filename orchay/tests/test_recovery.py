@@ -112,6 +112,38 @@ class TestExtractResetTime:
         result = await extract_reset_time("")
         assert result is None
 
+    @pytest.mark.asyncio
+    async def test_invalid_month_name(self) -> None:
+        """잘못된 월 이름은 무시."""
+        from orchay.recovery import extract_reset_time
+
+        output = "resets Xyz 9 at 10:30am"  # Xyz는 유효한 월이 아님
+        result = await extract_reset_time(output)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_midnight_am(self) -> None:
+        """12:00am은 0시로 변환."""
+        from orchay.recovery import extract_reset_time
+
+        output = "resets Jan 1 at 12:00am"  # 자정
+        result = await extract_reset_time(output)
+
+        assert result is not None
+        assert result.hour == 0
+        assert result.minute == 0
+
+    @pytest.mark.asyncio
+    async def test_invalid_date(self) -> None:
+        """잘못된 날짜 (예: 2월 31일)는 None 반환."""
+        from orchay.recovery import extract_reset_time
+
+        output = "resets Feb 31 at 10:30am"  # 2월 31일은 없음
+        result = await extract_reset_time(output)
+
+        assert result is None
+
 
 class TestCalculateWaitSeconds:
     """calculate_wait_seconds() 함수 테스트."""

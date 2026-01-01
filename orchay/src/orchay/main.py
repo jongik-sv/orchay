@@ -21,22 +21,13 @@ from rich.table import Table
 from orchay.application import DispatchService, TaskService, WorkerService
 from orchay.domain.workflow import WorkflowConfig, WorkflowEngine
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
-from orchay.scheduler import (
-    ExecutionMode,
-    dispatch_task,
-    filter_executable_tasks,
-    get_manual_commands,
-    get_next_workflow_command,
-    handle_approve,
-)
+from orchay.scheduler import ExecutionMode, get_next_workflow_command
 from orchay.utils.wezterm import (
     WezTermNotFoundError,
     get_active_pane_id,
     wezterm_list_panes,
-    wezterm_send_text,
 )
 from orchay.wbs_parser import WbsParser
-from orchay.worker import detect_worker_state
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -170,451 +161,82 @@ class Orchestrator:
 
         console.print("\n[yellow]스케줄러 종료[/]")
 
-    def _merge_tasks(self, new_tasks: list[Task]) -> None:
-        """WBS 파싱 결과를 기존 Task 리스트에 병합.
-
-        런타임 상태(assigned_worker)는 보존하고 WBS 필드만 업데이트합니다.
-
-        Args:
-            new_tasks: WBS 파싱으로 얻은 새 Task 리스트
-        """
-        # 기존 Task를 ID로 매핑
-        existing_map = {t.id: t for t in self.tasks}
-        new_ids = {t.id for t in new_tasks}
-
-        # 1. 삭제된 Task 제거 (WBS에서 사라진 것)
-        self.tasks = [t for t in self.tasks if t.id in new_ids]
-
-        # 2. 기존 Task 업데이트 또는 새 Task 추가
-        for new_task in new_tasks:
-            if new_task.id in existing_map:
-                # 기존 Task: WBS 필드만 업데이트, 런타임 상태 보존
-                existing = existing_map[new_task.id]
-                existing.title = new_task.title
-                existing.status = new_task.status
-                existing.priority = new_task.priority
-                existing.category = new_task.category
-                existing.depends = new_task.depends
-                existing.blocked_by = new_task.blocked_by
-                # assigned_worker는 절대 건드리지 않음!
-            else:
-                # 새 Task: 리스트에 추가
-                self.tasks.append(new_task)
-
-        logger.debug(f"Task 병합 완료: {len(self.tasks)}개")
-
     async def _tick(self) -> None:
-        """단일 스케줄링 사이클."""
+        """단일 스케줄링 사이클.
+
+        Phase 2.4: 서비스 레이어로 리팩토링됨.
+        """
         logger.debug("_tick 시작")
 
-        # 1. WBS 재파싱 후 기존 Task에 병합 (런타임 상태 보존)
-        new_tasks = await self.parser.parse()
-        self._merge_tasks(new_tasks)
+        # 1. Task 재로드 및 정리 (TaskService 사용)
+        self.tasks = await self._task_service.reload_tasks()
+        self._task_service.tasks = self.tasks  # 서비스와 동기화
+        self._task_service.cleanup_completed(self.mode)
 
-        # 2. stopAtState에 도달한 Task 정리
-        self._cleanup_completed_tasks()
+        # 2. Worker 상태 업데이트 (WorkerService 사용, 연속 실행 포함)
+        for worker in self.workers:
+            await self._worker_service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=self.tasks,
+                dispatch_service=self._dispatch_service,
+                task_service=self._task_service,
+                mode=self.mode,
+                paused=self._paused,
+            )
 
-        # 3. Worker 상태 업데이트
-        await self._update_worker_states()
-
-        # 3.5. Worker의 current_step을 WBS 상태 기반으로 업데이트
-        self._sync_worker_steps()
-
-        # 4. 실행 가능 Task 필터링 (assigned_worker 기반)
-        executable = await filter_executable_tasks(
-            self.tasks,
-            self.mode,
+        # 3. Worker의 current_step 동기화 (WorkerService 사용)
+        self._worker_service.sync_worker_steps(
+            tasks=self.tasks,
+            get_next_command=lambda t, m: get_next_workflow_command(t, m),
+            mode=self.mode.value,
         )
 
-        # 5. idle Worker에 Task 분배 (일시정지 상태가 아닐 때만)
-        logger.debug(f"_tick: executable={len(executable)}개, paused={self._paused}")
+        # 4. 유휴 Worker에 Task 분배 (DispatchService 사용)
         if not self._paused:
-            # 현재 Worker들이 실행 중인 Task ID 집합 (중복 방지용)
-            running_task_ids = {w.current_task for w in self.workers if w.current_task}
+            await self._dispatch_idle_workers()
 
-            for worker in self.workers:
-                if not executable:
-                    break
-                logger.debug(
-                    f"Worker {worker.id}: state={worker.state.value}, "
-                    f"manually_paused={worker.is_manually_paused}"
-                )
-                if worker.state == WorkerState.IDLE and not worker.is_manually_paused:
-                    task = executable.pop(0)
-
-                    # 중복 실행 방지: 다른 Worker가 이미 실행 중인 Task인지 확인
-                    if task.id in running_task_ids:
-                        logger.warning(
-                            f"중복 실행 방지: {task.id}는 이미 다른 Worker에서 실행 중"
-                        )
-                        continue
-
-                    # Race condition 방지: dispatch 전에 즉시 할당 상태 설정
-                    task.assigned_worker = worker.id
-                    worker.state = WorkerState.BUSY
-                    worker.current_task = task.id
-                    running_task_ids.add(task.id)  # 중복 방지 집합에 추가
-                    logger.info(f"Dispatch: {task.id} -> Worker {worker.id}")
-                    await self._dispatch_to_worker(worker, task)
-
-        # 6. 상태 출력
+        # 5. 상태 출력
         self.print_status()
 
-    def _sync_worker_steps(self) -> None:
-        """Worker의 current_step을 WBS 상태 기반으로 동기화.
+    async def _dispatch_idle_workers(self) -> None:
+        """유휴 Worker에 실행 가능 Task를 분배합니다.
 
-        Note: 이미 step이 설정된 Worker는 sync하지 않음.
-        dispatch 시점에 설정된 step을 덮어쓰면 안 됨.
+        Phase 2.4: 새로 추가된 헬퍼 메서드.
         """
-        # Task ID → Task 매핑
-        task_map = {t.id: t for t in self.tasks}
+        # 실행 가능 Task 조회
+        executable = self._task_service.get_executable_tasks(self.mode)
+        running_task_ids = self._worker_service.running_task_ids()
+
+        logger.debug(f"_dispatch_idle_workers: executable={len(executable)}개")
 
         for worker in self.workers:
-            if not worker.current_task:
+            if not executable:
+                break
+
+            if worker.state != WorkerState.IDLE or worker.is_manually_paused:
                 continue
 
-            # 이미 step이 설정되어 있으면 sync 건너뛰기
-            # (dispatch 시점에 설정된 정확한 step 보호)
-            if worker.current_step:
+            task = executable.pop(0)
+
+            # 중복 실행 방지
+            if task.id in running_task_ids:
+                logger.warning(f"중복 실행 방지: {task.id}는 이미 다른 Worker에서 실행 중")
                 continue
 
-            # Worker가 작업 중인 Task 찾기
-            task = task_map.get(worker.current_task)
-            if not task:
-                continue
+            # Race condition 방지: dispatch 전에 즉시 할당 상태 설정
+            task.assigned_worker = worker.id
+            worker.state = WorkerState.BUSY
+            worker.current_task = task.id
+            running_task_ids.add(task.id)
 
-            # Task 상태를 step으로 변환
-            status_to_step = {
-                "[ ]": "start",
-                "[bd]": "design",
-                "[dd]": "draft",
-                "[ap]": "approve",
-                "[im]": "build",
-                "[vf]": "verify",
-                "[xx]": "done",
-                "[an]": "analyze",
-                "[fx]": "fix",
-                "[ds]": "design",
-            }
-            new_step = status_to_step.get(task.status.value, worker.current_step)
+            logger.info(f"Dispatch: {task.id} -> Worker {worker.id}")
 
-            if new_step and new_step != worker.current_step:
-                worker.current_step = new_step
-
-    def _cleanup_completed_tasks(self) -> None:
-        """stopAtState에 도달한 Task를 active에서 제거.
-
-        모드별 stopAtState:
-        - design: [dd] (상세설계)
-        - quick/force: [xx] (완료)
-        - develop: [im] (구현)
-        """
-        # 모드별 stopAtState 매핑
-        stop_state_map: dict[ExecutionMode, set[TaskStatus]] = {
-            ExecutionMode.DESIGN: {TaskStatus.DETAIL_DESIGN, TaskStatus.DONE},
-            ExecutionMode.QUICK: {TaskStatus.DONE},
-            ExecutionMode.DEVELOP: {TaskStatus.IMPLEMENT, TaskStatus.VERIFY, TaskStatus.DONE},
-            ExecutionMode.FORCE: {TaskStatus.DONE},
-        }
-
-        stop_statuses = stop_state_map.get(self.mode, {TaskStatus.DONE})
-
-        # WBS에서 stopAtState 이상인 Task들의 ID 수집
-        {t.id for t in self.tasks if t.status in stop_statuses}
-
-        # 완료된 Task의 할당 해제
-        for task in self.tasks:
-            if task.status in stop_statuses and task.assigned_worker is not None:
-                task.assigned_worker = None
-
-    async def _update_worker_states(self) -> None:
-        """모든 Worker의 상태를 업데이트."""
-        for worker in self.workers:
-            # Grace period: dispatch 직후에는 상태 체크 건너뛰기
-            if worker.dispatch_time:
-                elapsed = (datetime.now() - worker.dispatch_time).total_seconds()
-                if elapsed < self.config.dispatch.grace_period:
-                    logger.debug(
-                        f"Worker {worker.id}: grace period ({elapsed:.1f}s < "
-                        f"{self.config.dispatch.grace_period}s)"
-                    )
-                    continue  # 상태 체크 건너뛰기
-
-            # Worker가 현재 Task를 실행 중인지 여부 전달
-            has_active_task = worker.current_task is not None
-            state, done_info = await detect_worker_state(worker.pane_id, has_active_task)
-
-            # 상태 매핑
-            state_map = {
-                "dead": WorkerState.DEAD,
-                "done": WorkerState.DONE,
-                "paused": WorkerState.PAUSED,
-                "error": WorkerState.ERROR,
-                "blocked": WorkerState.BLOCKED,
-                "idle": WorkerState.IDLE,
-                "busy": WorkerState.BUSY,
-            }
-            new_state = state_map.get(state, WorkerState.BUSY)
-
-            # done 상태 처리: 연속 실행 또는 할당 해제
-            if new_state == WorkerState.DONE:
-                # 현재 Task의 DONE 신호인지 확인 (이전 Task의 신호 무시)
-                if done_info and worker.current_task and done_info.task_id != worker.current_task:
-                    logger.debug(
-                        f"Worker {worker.id}: 이전 Task DONE 신호 무시 "
-                        f"(신호={done_info.task_id}, 현재={worker.current_task})"
-                    )
-                    # 상태 변경 없이 BUSY 유지
-                    continue
-
-                # 현재 step의 DONE 신호인지 확인 (이전 step의 신호 무시)
-                if done_info and worker.current_step and done_info.action != worker.current_step:
-                    logger.debug(
-                        f"Worker {worker.id}: 이전 step DONE 신호 무시 "
-                        f"(신호={done_info.action}, 현재={worker.current_step})"
-                    )
-                    # 상태 변경 없이 BUSY 유지
-                    continue
-
-                if worker.state == WorkerState.DONE:
-                    # DONE 상태가 연속 감지 → IDLE로 강제 전환
-                    # (ORCHAY_DONE 신호가 화면에 남아있어도 두 번째 tick에서 전환)
-                    worker.reset()
-                else:
-                    # 처음 DONE 감지: 연속 실행 체크
-                    task_id = done_info.task_id if done_info else worker.current_task
-                    if task_id:
-                        task = next((t for t in self.tasks if t.id == task_id), None)
-                        if task:
-                            # WBS 재파싱 (스킬이 변경한 상태 반영)
-                            await self._refresh_task_status(task)
-
-                            # done_info.action을 전달하여 다음 action 결정
-                            last_action = done_info.action if done_info else None
-                            next_cmd = get_next_workflow_command(
-                                task, mode=self.mode, last_action=last_action
-                            )
-                            manual_cmds = get_manual_commands(self.mode)
-
-                            if next_cmd and next_cmd not in manual_cmds:
-                                # pause 상태면 연속 실행 중단
-                                if self._paused:
-                                    logger.info(
-                                        f"연속 실행 중단 (paused): {task.id} → /wf:{next_cmd}"
-                                    )
-                                    task.assigned_worker = None
-                                else:
-                                    # 자동: 즉시 다음 단계 dispatch (같은 Worker)
-                                    logger.info(
-                                        f"연속 실행: {task.id} → /wf:{next_cmd} (Worker {worker.id})"
-                                    )
-                                    await self._dispatch_next_step(worker, task, last_action)
-                                    continue  # 다음 Worker로 (상태 유지)
-                            else:
-                                # 수동: 할당 해제
-                                task.assigned_worker = None
-                                logger.info(
-                                    f"수동 대기: {task.id} (다음: {next_cmd})"
-                                )
-
-                    # DONE 상태로 유지 (다음 tick에서 IDLE로 전환됨)
-                    worker.state = WorkerState.DONE
-                    worker.current_task = None
-                    worker.current_step = None
-
-            elif new_state == WorkerState.IDLE:
-                # DONE → IDLE 전환: ORCHAY_DONE 신호가 사라짐
-                if worker.state == WorkerState.DONE:
-                    worker.reset()
-                # BUSY → IDLE 전환: Task 완료로 간주
-                elif worker.state == WorkerState.BUSY:
-                    # 추가 검증: dispatch 후 최소 시간 경과 확인
-                    # 너무 빨리 끝나면 잘못된 idle 판정일 수 있음
-                    if worker.dispatch_time:
-                        elapsed = (datetime.now() - worker.dispatch_time).total_seconds()
-                        if elapsed < self.config.dispatch.min_task_duration:
-                            logger.warning(
-                                f"Worker {worker.id}: 비정상 조기 완료 "
-                                f"({elapsed:.1f}s < {self.config.dispatch.min_task_duration}s), "
-                                f"idle 전환 거부"
-                            )
-                            # idle 전환 거부, BUSY 상태 유지
-                            continue
-
-                    if worker.current_task:
-                        task = next((t for t in self.tasks if t.id == worker.current_task), None)
-                        if task:
-                            task.assigned_worker = None
-                    worker.reset()
-                else:
-                    worker.state = new_state
-            else:
-                worker.state = new_state
-
-    async def _refresh_task_status(self, task: Task) -> None:
-        """단일 Task의 WBS 상태를 재로드합니다.
-
-        스킬이 WBS 파일을 변경한 후 최신 상태를 반영합니다.
-        """
-        try:
-            new_tasks = await self.parser.parse()
-            for new_task in new_tasks:
-                if new_task.id == task.id:
-                    # 상태 관련 필드만 업데이트
-                    task.status = new_task.status
-                    task.title = new_task.title
-                    task.priority = new_task.priority
-                    task.category = new_task.category
-                    task.depends = new_task.depends
-                    task.blocked_by = new_task.blocked_by
-                    logger.debug(f"Task 상태 갱신: {task.id} → {task.status.value}")
-                    break
-        except Exception as e:
-            logger.warning(f"Task 상태 갱신 실패: {task.id} - {e}")
-
-    async def _dispatch_next_step(
-        self, worker: Worker, task: Task, last_action: str | None = None
-    ) -> None:
-        """같은 Worker에 다음 워크플로우 단계를 dispatch합니다.
-
-        연속 실행을 위해 DONE 상태 감지 후 즉시 다음 명령어를 전송합니다.
-
-        Args:
-            worker: 대상 Worker
-            task: 대상 Task
-            last_action: 마지막으로 완료된 action (연속 실행 시)
-        """
-        next_workflow = get_next_workflow_command(task, mode=self.mode, last_action=last_action)
-        if next_workflow is None:
-            logger.warning(f"다음 워크플로우 없음: {task.id}")
-            task.assigned_worker = None
-            worker.reset()
-            return
-
-        # approve 단계 특별 처리
-        if next_workflow == "approve":
-            success = await handle_approve(task, self.wbs_path, self.mode)
-            if success:
-                # 승인 완료 → 다음 단계 진행 (재귀 호출)
-                console.print(f"[green]자동 승인:[/] {task.id} → [ap]")
-                await self._dispatch_next_step(worker, task, last_action="approve")
-            else:
-                # 수동 승인 대기
-                console.print(f"[yellow]수동 승인 대기:[/] {task.id}")
-                task.assigned_worker = None
-                worker.reset()
-            return
-
-        # Worker 상태 업데이트 (BUSY 유지)
-        worker.state = WorkerState.BUSY
-        worker.current_task = task.id
-        worker.dispatch_time = datetime.now()
-        worker.current_step = next_workflow
-
-        # Task 할당 유지
-        task.assigned_worker = worker.id
-
-        # /clear 전송 (연속 실행 시에도 context 초기화 필요)
-        if self.config.dispatch.clear_before_dispatch:
-            try:
-                await wezterm_send_text(worker.pane_id, "/clear")
-                await asyncio.sleep(5.0)  # /clear 처리 대기
-                await wezterm_send_text(worker.pane_id, "\r")
-                await asyncio.sleep(1.0)
-            except Exception as e:
-                logger.warning(f"Worker {worker.id} /clear 실패 (연속 실행): {e}")
-
-        # 명령어 전송
-        command = f"/wf:{next_workflow} {self.project_name}/{task.id}"
-        try:
-            await wezterm_send_text(worker.pane_id, command)
-            await asyncio.sleep(1.0)
-            await wezterm_send_text(worker.pane_id, "\r")
-            await asyncio.sleep(1.0)
-            console.print(
-                f"[cyan]연속 실행:[/] {task.id} ({task.status.value}) → Worker {worker.id} "
-                f"(/wf:{next_workflow})"
+            # DispatchService 사용
+            result = await self._dispatch_service.dispatch_task(
+                worker, task, check_state=True
             )
-        except Exception as e:
-            logger.error(f"Worker {worker.id} 연속 실행 실패: {e}")
-            task.assigned_worker = None
-            worker.reset()
-
-    async def _dispatch_to_worker(self, worker: Worker, task: Task) -> None:
-        """Worker에 Task를 분배."""
-        # 명령 전송 전 Worker 실제 상태 확인 (dispatch 전이므로 has_active_task=False)
-        actual_state, _ = await detect_worker_state(worker.pane_id, has_active_task=False)
-        # idle 또는 done 상태일 때만 dispatch 가능
-        # done: 이전 작업 완료 후 ORCHAY_DONE 신호가 화면에 남아있는 상태
-        if actual_state not in ("idle", "done"):
-            logger.warning(
-                f"Worker {worker.id} dispatch 취소: 실제 상태가 {actual_state} (idle/done 아님)"
-            )
-            task.assigned_worker = None
-            worker.reset()
-            return
-
-        # Worker 상태 업데이트 (TaskQueue 할당은 이미 완료됨)
-        await dispatch_task(worker, task, self.mode)
-
-        # 워크플로우 명령 결정 (먼저 확인하여 /clear 낭비 방지)
-        # 형식: /wf:{workflow} {project}/{task_id}
-        # Task 상태에 따라 다음 workflow 결정 (첫 dispatch이므로 last_action=None)
-        next_workflow = get_next_workflow_command(task, mode=self.mode)
-
-        # transition이 없으면 dispatch 안 함 (/clear도 전송하지 않음)
-        if next_workflow is None:
-            console.print(
-                f"[red]Error:[/] {task.id} ({task.status.value}) - "
-                f"다음 transition을 찾을 수 없음 (category: {task.category.value})"
-            )
-            task.assigned_worker = None
-            worker.reset()
-            return
-
-        # approve 단계 특별 처리 (Worker dispatch 대신 직접 처리)
-        if next_workflow == "approve":
-            success = await handle_approve(task, self.wbs_path, self.mode)
-            if success:
-                # 승인 완료 → 다음 단계 진행
-                console.print(f"[green]자동 승인:[/] {task.id} → [ap]")
-                await self._dispatch_next_step(worker, task, last_action="approve")
-            else:
-                # 수동 승인 대기
-                console.print(f"[yellow]수동 승인 대기:[/] {task.id}")
-                task.assigned_worker = None
-                worker.reset()
-            return
-
-        # 실제 dispatch할 명령어로 current_step 설정 (dispatch_task()의 first_step 덮어쓰기)
-        worker.current_step = next_workflow
-
-        # /clear 전송 (옵션) - workflow 명령 직전에 한번만
-        if self.config.dispatch.clear_before_dispatch:
-            try:
-                await wezterm_send_text(worker.pane_id, "/clear")
-                await asyncio.sleep(5.0)  # /clear 처리 대기
-                await wezterm_send_text(worker.pane_id, "\r")
-                await asyncio.sleep(1.0)  # Enter 처리 대기
-            except Exception as e:
-                logger.warning(f"Worker {worker.id} /clear 실패: {e}")
-
-        command = f"/wf:{next_workflow} {self.project_name}/{task.id}"
-
-        try:
-            # 명령어 전송
-            await wezterm_send_text(worker.pane_id, command)
-            await asyncio.sleep(1.0)  # 명령어 입력 대기
-            await wezterm_send_text(worker.pane_id, "\r")
-            await asyncio.sleep(1.0)  # Enter 처리 대기
-            console.print(
-                f"[cyan]Dispatch:[/] {task.id} ({task.status.value}) → Worker {worker.id} "
-                f"(/wf:{next_workflow})"
-            )
-        except Exception as e:
-            logger.error(f"Worker {worker.id} 명령 전송 실패: {e}")
-            task.assigned_worker = None
-            worker.reset()
+            if not result.success:
+                logger.warning(f"Dispatch 실패: {result.message}")
 
     def print_status(self) -> None:
         """현재 상태 출력."""

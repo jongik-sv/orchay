@@ -147,8 +147,97 @@ class TestLoadConfigMissing:
         assert config.interval == 5
 
 
+class TestLoadConfigYaml:
+    """TC-05: load_config() YAML 파일 로드 테스트."""
+
+    def test_load_config_from_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """유효한 YAML 설정 파일에서 로드."""
+        from orchay.utils.config import load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        config_file = settings_dir / "orchay.yaml"
+        config_file.write_text("workers: 3\ninterval: 8", encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+
+        config = load_config()
+        assert config.workers == 3
+        assert config.interval == 8
+
+    def test_load_config_yaml_priority_over_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """YAML이 JSON보다 우선."""
+        from orchay.utils.config import load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        # YAML 파일
+        yaml_file = settings_dir / "orchay.yaml"
+        yaml_file.write_text("workers: 3", encoding="utf-8")
+        # JSON 파일
+        json_file = settings_dir / "orchay.json"
+        json_file.write_text('{"workers": 5}', encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+
+        config = load_config()
+        assert config.workers == 3  # YAML 값 사용
+
+    def test_load_config_empty_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """빈 YAML 파일은 기본값 사용."""
+        from orchay.utils.config import load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        config_file = settings_dir / "orchay.yaml"
+        config_file.write_text("", encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+
+        config = load_config()
+        assert config.workers == 0  # 기본값
+
+    def test_load_config_invalid_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """잘못된 YAML 형식."""
+        from orchay.utils.config import ConfigLoadError, load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        config_file = settings_dir / "orchay.yaml"
+        config_file.write_text("workers: [invalid yaml", encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(ConfigLoadError):
+            load_config()
+
+    def test_load_config_yaml_invalid_schema(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """YAML 스키마 검증 실패."""
+        from orchay.utils.config import ConfigLoadError, load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        config_file = settings_dir / "orchay.yaml"
+        config_file.write_text("workers: -5", encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(ConfigLoadError):
+            load_config()
+
+
 class TestLoadConfigInvalidJson:
-    """TC-05: load_config() JSON 파싱 오류 테스트."""
+    """TC-06: load_config() JSON 파싱 오류 테스트."""
 
     def test_load_config_invalid_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

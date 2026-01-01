@@ -14,12 +14,17 @@ from orchay.application.worker_service import WorkerService
 from orchay.models import Config, Task, TaskCategory, TaskPriority, TaskStatus, Worker, WorkerState
 
 
-def create_config(workers: int = 0, grace_period: float = 20.0) -> Config:
+def create_config(
+    workers: int = 0,
+    grace_period: float = 20.0,
+    min_task_duration: float = 10.0,
+) -> Config:
     """테스트용 Config를 생성합니다."""
     config = MagicMock(spec=Config)
     config.workers = workers
     config.dispatch = MagicMock()
     config.dispatch.grace_period = grace_period
+    config.dispatch.min_task_duration = min_task_duration
     return config
 
 
@@ -387,3 +392,462 @@ class TestSyncWorkerSteps:
 
         # 변경 없음
         assert worker.current_step == "start"
+
+
+class TestUpdateWorkerStateWithContinuation:
+    """update_worker_state_with_continuation 메서드 테스트."""
+
+    async def test_skips_during_grace_period(self) -> None:
+        """TC-WS-19: Grace period 중에는 상태 업데이트를 건너뜁니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now(),  # 방금 dispatch
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            mock_detect.assert_not_called()
+            assert worker.state == WorkerState.BUSY
+
+    async def test_updates_to_idle_after_grace_period(self) -> None:
+        """TC-WS-20: Grace period 이후 IDLE로 전환합니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = ("idle", None)
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            mock_detect.assert_called_once()
+            assert worker.state == WorkerState.IDLE
+
+    async def test_updates_to_error_state(self) -> None:
+        """TC-WS-21: ERROR 상태로 전환합니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = ("error", None)
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            assert worker.state == WorkerState.ERROR
+
+    async def test_updates_to_blocked_state(self) -> None:
+        """TC-WS-22: BLOCKED 상태로 전환합니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = ("blocked", None)
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            assert worker.state == WorkerState.BLOCKED
+
+    async def test_updates_to_paused_state(self) -> None:
+        """TC-WS-23: PAUSED 상태로 전환합니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = ("paused", None)
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            assert worker.state == WorkerState.PAUSED
+
+    async def test_updates_to_dead_state(self) -> None:
+        """TC-WS-24: DEAD 상태로 전환합니다."""
+        config = create_config(grace_period=20.0)
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        with patch("orchay.application.worker_service.detect_worker_state", new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = ("dead", None)
+            mock_dispatch = AsyncMock()
+            mock_task_service = MagicMock()
+
+            await service.update_worker_state_with_continuation(
+                worker=worker,
+                tasks=[],
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            assert worker.state == WorkerState.DEAD
+
+
+class TestHandleDoneState:
+    """_handle_done_state 메서드 테스트."""
+
+    async def test_ignores_previous_task_done_signal(self) -> None:
+        """TC-WS-25: 이전 Task DONE 신호를 무시합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.BUSY, current_task="T2")
+        service.workers = [worker]
+
+        # 이전 Task의 DONE 신호
+        done_info = MagicMock()
+        done_info.task_id = "T1"  # 다른 Task
+        done_info.action = "build"
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+
+        await service._handle_done_state(
+            worker=worker,
+            done_info=done_info,
+            task_map={},
+            dispatch_service=mock_dispatch,
+            task_service=mock_task_service,
+            mode="quick",
+            paused=False,
+        )
+
+        # 상태가 변경되지 않아야 함
+        assert worker.state == WorkerState.BUSY
+        assert worker.current_task == "T2"
+
+    async def test_ignores_previous_step_done_signal(self) -> None:
+        """TC-WS-26: 이전 step DONE 신호를 무시합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.BUSY, current_task="T1")
+        worker.current_step = "build"
+        service.workers = [worker]
+
+        # 이전 step의 DONE 신호
+        done_info = MagicMock()
+        done_info.task_id = "T1"
+        done_info.action = "start"  # 다른 step
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+
+        await service._handle_done_state(
+            worker=worker,
+            done_info=done_info,
+            task_map={},
+            dispatch_service=mock_dispatch,
+            task_service=mock_task_service,
+            mode="quick",
+            paused=False,
+        )
+
+        # 상태가 변경되지 않아야 함
+        assert worker.state == WorkerState.BUSY
+        assert worker.current_step == "build"
+
+    async def test_consecutive_done_resets_worker(self) -> None:
+        """TC-WS-27: 연속 DONE 감지 시 Worker를 리셋합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.DONE, current_task="T1")
+        service.workers = [worker]
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+
+        await service._handle_done_state(
+            worker=worker,
+            done_info=None,
+            task_map={},
+            dispatch_service=mock_dispatch,
+            task_service=mock_task_service,
+            mode="quick",
+            paused=False,
+        )
+
+        # Worker가 리셋되어야 함
+        assert worker.state == WorkerState.IDLE
+        assert worker.current_task is None
+
+    async def test_continues_to_next_step_when_not_paused(self) -> None:
+        """TC-WS-28: 일시정지가 아닐 때 다음 step으로 계속합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.BUSY, current_task="T1")
+        worker.current_step = "start"
+        service.workers = [worker]
+
+        task = create_task(id="T1", status=TaskStatus.BASIC_DESIGN)
+        task_map = {"T1": task}
+
+        done_info = MagicMock()
+        done_info.task_id = "T1"
+        done_info.action = "start"
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+        mock_task_service.refresh_task_status = AsyncMock()
+
+        with (
+            patch("orchay.application.worker_service.get_next_workflow_command") as mock_next_cmd,
+            patch("orchay.application.worker_service.get_manual_commands") as mock_manual_cmds,
+        ):
+            mock_next_cmd.return_value = "build"
+            mock_manual_cmds.return_value = ["approve"]
+
+            await service._handle_done_state(
+                worker=worker,
+                done_info=done_info,
+                task_map=task_map,
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            mock_dispatch.dispatch_next_step.assert_called_once()
+
+    async def test_stops_continuation_when_paused(self) -> None:
+        """TC-WS-29: 일시정지 시 연속 실행을 중단합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.BUSY, current_task="T1")
+        worker.current_step = "start"
+        service.workers = [worker]
+
+        task = create_task(id="T1", status=TaskStatus.BASIC_DESIGN)
+        task_map = {"T1": task}
+
+        done_info = MagicMock()
+        done_info.task_id = "T1"
+        done_info.action = "start"
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+        mock_task_service.refresh_task_status = AsyncMock()
+
+        with (
+            patch("orchay.application.worker_service.get_next_workflow_command") as mock_next_cmd,
+            patch("orchay.application.worker_service.get_manual_commands") as mock_manual_cmds,
+        ):
+            mock_next_cmd.return_value = "build"
+            mock_manual_cmds.return_value = ["approve"]
+
+            await service._handle_done_state(
+                worker=worker,
+                done_info=done_info,
+                task_map=task_map,
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=True,
+            )
+
+            # paused 상태이므로 dispatch 호출되지 않음
+            mock_dispatch.dispatch_next_step.assert_not_called()
+            assert task.assigned_worker is None
+
+    async def test_manual_command_releases_task(self) -> None:
+        """TC-WS-30: 수동 명령에서는 Task 할당을 해제합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.BUSY, current_task="T1")
+        worker.current_step = "build"
+        service.workers = [worker]
+
+        task = create_task(id="T1", status=TaskStatus.APPROVED)
+        task_map = {"T1": task}
+
+        done_info = MagicMock()
+        done_info.task_id = "T1"
+        done_info.action = "build"
+
+        mock_dispatch = AsyncMock()
+        mock_task_service = MagicMock()
+        mock_task_service.refresh_task_status = AsyncMock()
+
+        with (
+            patch("orchay.application.worker_service.get_next_workflow_command") as mock_next_cmd,
+            patch("orchay.application.worker_service.get_manual_commands") as mock_manual_cmds,
+        ):
+            mock_next_cmd.return_value = "approve"  # 수동 명령
+            mock_manual_cmds.return_value = ["approve"]
+
+            await service._handle_done_state(
+                worker=worker,
+                done_info=done_info,
+                task_map=task_map,
+                dispatch_service=mock_dispatch,
+                task_service=mock_task_service,
+                mode="quick",
+                paused=False,
+            )
+
+            # 수동 명령이므로 dispatch 호출되지 않음
+            mock_dispatch.dispatch_next_step.assert_not_called()
+            assert task.assigned_worker is None
+            assert worker.state == WorkerState.DONE
+
+
+class TestHandleIdleState:
+    """_handle_idle_state 메서드 테스트."""
+
+    def test_done_to_idle_resets_worker(self) -> None:
+        """TC-WS-31: DONE → IDLE 전환 시 Worker를 리셋합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.DONE, current_task="T1")
+        service.workers = [worker]
+
+        service._handle_idle_state(worker, {})
+
+        assert worker.state == WorkerState.IDLE
+        assert worker.current_task is None
+
+    def test_busy_to_idle_releases_task(self) -> None:
+        """TC-WS-32: BUSY → IDLE 전환 시 Task 할당을 해제합니다."""
+        config = create_config()
+        # min_task_duration이 0인 config
+        config.dispatch.min_task_duration = 0
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            current_task="T1",
+            dispatch_time=datetime.now() - timedelta(seconds=30),
+        )
+        service.workers = [worker]
+
+        task = create_task(id="T1")
+        task.assigned_worker = 1
+        task_map = {"T1": task}
+
+        service._handle_idle_state(worker, task_map)
+
+        assert worker.state == WorkerState.IDLE
+        assert worker.current_task is None
+        assert task.assigned_worker is None
+
+    def test_busy_to_idle_rejected_early_completion(self) -> None:
+        """TC-WS-33: 조기 완료 시 IDLE 전환을 거부합니다."""
+        config = create_config()
+        config.dispatch.min_task_duration = 30.0  # 30초 최소
+        service = WorkerService(config)
+
+        worker = create_worker(
+            id=1,
+            state=WorkerState.BUSY,
+            current_task="T1",
+            dispatch_time=datetime.now() - timedelta(seconds=5),  # 5초 전
+        )
+        service.workers = [worker]
+
+        service._handle_idle_state(worker, {})
+
+        # 조기 완료이므로 BUSY 상태 유지
+        assert worker.state == WorkerState.BUSY
+        assert worker.current_task == "T1"
+
+    def test_other_state_to_idle(self) -> None:
+        """TC-WS-34: 다른 상태에서 IDLE로 직접 전환합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        worker = create_worker(id=1, state=WorkerState.ERROR)
+        service.workers = [worker]
+
+        service._handle_idle_state(worker, {})
+
+        assert worker.state == WorkerState.IDLE

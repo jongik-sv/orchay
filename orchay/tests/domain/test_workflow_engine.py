@@ -330,3 +330,100 @@ class TestEmptyConfig:
         """TC-WE-27: 빈 설정에서 None을 반환합니다."""
         cmd = empty_engine.get_next_command(sample_task, ExecutionMode.QUICK)
         assert cmd is None
+
+
+class TestWorkflowConfigEdgeCases:
+    """WorkflowConfig 엣지 케이스 테스트."""
+
+    def test_from_cwd_no_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """TC-WE-28: from_cwd에서 파일이 없으면 빈 config 반환."""
+        monkeypatch.chdir(tmp_path)
+        config = WorkflowConfig.from_cwd()
+        assert config.config_path is None
+        assert config.data == {}
+
+    def test_load_invalid_json(self, tmp_path: Path) -> None:
+        """TC-WE-29: 잘못된 JSON 파일 처리."""
+        config_path = tmp_path / "workflows.json"
+        config_path.write_text("invalid json {{{", encoding="utf-8")
+
+        config = WorkflowConfig(config_path=config_path)
+        config._load()
+
+        assert config.data == {}
+
+    def test_is_stale_no_config_path(self) -> None:
+        """TC-WE-30: config_path가 없으면 is_stale은 False."""
+        config = WorkflowConfig()
+        assert not config.is_stale()
+
+    def test_is_stale_file_deleted(self, tmp_path: Path) -> None:
+        """TC-WE-31: 파일이 삭제되면 is_stale은 False."""
+        config_path = tmp_path / "workflows.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        config = WorkflowConfig(config_path=config_path)
+        config._load()
+
+        # 파일 삭제
+        config_path.unlink()
+
+        # OSError가 발생하므로 False 반환
+        assert not config.is_stale()
+
+    def test_reload_method(self, tmp_path: Path) -> None:
+        """TC-WE-32: reload 메서드 테스트."""
+        config_path = tmp_path / "workflows.json"
+        config_path.write_text('{"test": 1}', encoding="utf-8")
+
+        config = WorkflowConfig(config_path=config_path)
+        config._load()
+
+        # 파일 수정
+        config_path.write_text('{"test": 2}', encoding="utf-8")
+
+        # 강제 reload
+        config.reload()
+
+        assert config.data == {"test": 2}
+
+    def test_reload_if_stale_no_change(self, tmp_path: Path) -> None:
+        """TC-WE-33: 변경이 없으면 reload하지 않음."""
+        config_path = tmp_path / "workflows.json"
+        config_path.write_text('{"test": 1}', encoding="utf-8")
+
+        config = WorkflowConfig(config_path=config_path)
+        config._load()
+
+        # 변경 없음
+        result = config.reload_if_stale()
+        assert result is False
+
+
+class TestWorkflowEngineCategories:
+    """WorkflowEngine 카테고리별 테스트."""
+
+    def test_get_workflow_for_different_categories(
+        self, workflow_engine: WorkflowEngine
+    ) -> None:
+        """TC-WE-34: 다른 카테고리의 workflow 조회."""
+        # development 카테고리가 기본
+        workflow = workflow_engine.config.workflows.get("development")
+        assert workflow is not None
+        assert "transitions" in workflow
+
+    def test_has_transition_with_actions(
+        self, workflow_engine: WorkflowEngine, sample_task: Task
+    ) -> None:
+        """TC-WE-35: action이 있는 상태에서 transition 확인."""
+        sample_task.status = TaskStatus.BASIC_DESIGN
+        # develop 모드에서는 action이 있으므로 transition이 있음
+        assert workflow_engine.has_transition(sample_task, ExecutionMode.DEVELOP)
+
+    def test_get_next_command_with_no_actions(
+        self, workflow_engine: WorkflowEngine, sample_task: Task
+    ) -> None:
+        """TC-WE-36: action이 없는 상태에서 다음 명령어."""
+        sample_task.status = TaskStatus.APPROVED
+        cmd = workflow_engine.get_next_command(sample_task, ExecutionMode.DEVELOP)
+        assert cmd == "build"

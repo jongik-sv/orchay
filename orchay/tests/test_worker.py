@@ -6,7 +6,76 @@ from unittest.mock import patch
 import pytest
 
 import orchay.worker
+from orchay.models.worker import Worker, WorkerState
 from orchay.worker import detect_worker_state, parse_done_signal
+
+
+class TestWorkerModel:
+    """Worker 모델 테스트."""
+
+    def test_is_available_when_idle(self) -> None:
+        """IDLE 상태에서 할당 가능."""
+        worker = Worker(id=1, pane_id=1, state=WorkerState.IDLE)
+        assert worker.is_available() is True
+
+    def test_is_available_when_busy(self) -> None:
+        """BUSY 상태에서 할당 불가."""
+        worker = Worker(id=1, pane_id=1, state=WorkerState.BUSY)
+        assert worker.is_available() is False
+
+    def test_is_available_when_manually_paused(self) -> None:
+        """수동 일시정지 상태에서 할당 불가."""
+        worker = Worker(id=1, pane_id=1, state=WorkerState.IDLE, is_manually_paused=True)
+        assert worker.is_available() is False
+
+    def test_pause(self) -> None:
+        """Worker 수동 일시정지."""
+        worker = Worker(id=1, pane_id=1)
+        assert worker.is_manually_paused is False
+
+        worker.pause()
+
+        assert worker.is_manually_paused is True
+
+    def test_resume(self) -> None:
+        """Worker 수동 일시정지 해제."""
+        worker = Worker(id=1, pane_id=1, is_manually_paused=True)
+        assert worker.is_manually_paused is True
+
+        worker.resume()
+
+        assert worker.is_manually_paused is False
+
+    def test_reset(self) -> None:
+        """Worker 상태 초기화."""
+        worker = Worker(
+            id=1,
+            pane_id=1,
+            state=WorkerState.BUSY,
+            current_task="TSK-01-01",
+            current_step="build",
+            retry_count=2,
+        )
+
+        worker.reset()
+
+        assert worker.state == WorkerState.IDLE
+        assert worker.current_task is None
+        assert worker.current_step is None
+        assert worker.retry_count == 0
+
+    def test_reset_keeps_manually_paused(self) -> None:
+        """reset()은 is_manually_paused를 유지."""
+        worker = Worker(
+            id=1,
+            pane_id=1,
+            state=WorkerState.BUSY,
+            is_manually_paused=True,
+        )
+
+        worker.reset()
+
+        assert worker.is_manually_paused is True
 
 
 @pytest.fixture(autouse=True)

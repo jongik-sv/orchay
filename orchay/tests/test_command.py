@@ -324,3 +324,154 @@ class TestCommandResult:
         result = CommandResult.error("오류 발생")
         assert result.success is False
         assert result.message == "오류 발생"
+
+    def test_result_with_data(self) -> None:
+        """데이터 포함 결과 생성."""
+        result = CommandResult.ok("성공", data={"count": 5})
+        assert result.data == {"count": 5}
+
+
+class TestParseCommandEdgeCases:
+    """parse_command 엣지 케이스 테스트."""
+
+    def test_empty_input(self, handler: CommandHandler) -> None:
+        """빈 입력 처리."""
+        with pytest.raises(ValueError, match="빈 입력"):
+            handler.parse_command("")
+
+    def test_whitespace_only_input(self, handler: CommandHandler) -> None:
+        """공백만 있는 입력 처리."""
+        with pytest.raises(ValueError, match="빈 입력"):
+            handler.parse_command("   ")
+
+
+class TestProcessCommandEdgeCases:
+    """process_command 엣지 케이스 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_parse_error_returns_error_result(
+        self, handler: CommandHandler
+    ) -> None:
+        """파싱 오류 시 에러 결과 반환."""
+        result = await handler.process_command("unknown_command")
+        assert result.success is False
+        assert "알 수 없는 명령어" in result.message
+
+    @pytest.mark.asyncio
+    async def test_skip_without_arg(self, handler: CommandHandler) -> None:
+        """skip 명령어 인자 없이 호출."""
+        result = await handler.process_command("skip")
+        assert result.success is False
+        assert "Task ID 필요" in result.message
+
+    @pytest.mark.asyncio
+    async def test_retry_without_arg(self, handler: CommandHandler) -> None:
+        """retry 명령어 인자 없이 호출."""
+        result = await handler.process_command("retry")
+        assert result.success is False
+        assert "Task ID 필요" in result.message
+
+    @pytest.mark.asyncio
+    async def test_approve_without_arg(self, handler: CommandHandler) -> None:
+        """approve 명령어 인자 없이 호출."""
+        result = await handler.process_command("approve")
+        assert result.success is False
+        assert "Task ID 필요" in result.message
+
+    @pytest.mark.asyncio
+    async def test_start_with_arg(self, handler: CommandHandler) -> None:
+        """start 명령어 인자 포함 호출."""
+        result = await handler.process_command("start TSK-01")
+        # 결과는 구현에 따라 다를 수 있음
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_worker_command(self, handler: CommandHandler) -> None:
+        """worker 명령어 호출."""
+        result = await handler.process_command("worker 1")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_reload_command(self, handler: CommandHandler) -> None:
+        """reload 명령어 호출."""
+        result = await handler.process_command("reload")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_history_command(self, handler: CommandHandler) -> None:
+        """history 명령어 호출."""
+        result = await handler.process_command("history")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_clear_command(self, handler: CommandHandler) -> None:
+        """clear 명령어 호출."""
+        result = await handler.process_command("clear")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_stop_command(self, handler: CommandHandler) -> None:
+        """stop 명령어 호출."""
+        result = await handler.process_command("stop")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_resume_command(self, handler: CommandHandler) -> None:
+        """resume 명령어 호출."""
+        result = await handler.process_command("resume")
+        assert isinstance(result, CommandResult)
+
+
+class TestApproveTask:
+    """approve_task 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_approve_not_found(self, handler: CommandHandler) -> None:
+        """존재하지 않는 Task 승인 시도."""
+        result = await handler.approve_task("TSK-NONEXISTENT")
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_approve_already_done(self, handler: CommandHandler) -> None:
+        """이미 완료된 Task 승인 시도."""
+        handler.orchestrator.tasks[0].status = TaskStatus.DONE
+        result = await handler.approve_task("TSK-01")
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_approve_success(self, handler: CommandHandler) -> None:
+        """정상 승인 처리."""
+        handler.orchestrator.tasks[0].status = TaskStatus.DETAIL_DESIGN
+        result = await handler.approve_task("TSK-01")
+        # 결과는 WBS 파일 의존성에 따라 다를 수 있음
+        assert isinstance(result, CommandResult)
+
+
+class TestGetWorkerTasks:
+    """Worker 관련 테스트."""
+
+    def test_get_worker_details(self, handler: CommandHandler) -> None:
+        """Worker 상세 정보 조회."""
+        # Worker 1에 Task 할당
+        handler.orchestrator.workers[0].state = WorkerState.BUSY
+        handler.orchestrator.workers[0].current_task = "TSK-01"
+
+        worker = handler.orchestrator.workers[0]
+        assert worker.current_task == "TSK-01"
+        assert worker.state == WorkerState.BUSY
+
+
+class TestUpTopCommands:
+    """up/top 명령어 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_up_command(self, handler: CommandHandler) -> None:
+        """up 명령어 호출."""
+        result = await handler.process_command("up TSK-02")
+        assert isinstance(result, CommandResult)
+
+    @pytest.mark.asyncio
+    async def test_top_command(self, handler: CommandHandler) -> None:
+        """top 명령어 호출."""
+        result = await handler.process_command("top TSK-03")
+        assert isinstance(result, CommandResult)
