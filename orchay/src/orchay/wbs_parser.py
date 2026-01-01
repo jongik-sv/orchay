@@ -500,6 +500,87 @@ async def update_task_status(
         return False
 
 
+async def update_task_blocked_by(
+    wbs_path: Path,
+    task_id: str,
+    blocked_by: str | None,
+) -> bool:
+    """WBS 파일의 Task blocked-by 속성을 업데이트.
+
+    Args:
+        wbs_path: wbs.md 파일 경로
+        task_id: 업데이트할 Task ID (예: TSK-01-01)
+        blocked_by: blocked-by 값 (None이면 제거/"-"로 설정)
+
+    Returns:
+        성공 여부
+
+    Example:
+        # 스킵
+        await update_task_blocked_by(path, "TSK-01-01", "skipped")
+        # 복구
+        await update_task_blocked_by(path, "TSK-01-01", None)
+    """
+    try:
+        if not wbs_path.exists():
+            logger.error(f"WBS 파일이 존재하지 않습니다: {wbs_path}")
+            return False
+
+        content = wbs_path.read_text(encoding="utf-8")
+        lines = content.split("\n")
+
+        # Task 섹션 찾기
+        task_pattern = re.compile(rf"^###\s+{re.escape(task_id)}:\s*")
+        in_task_section = False
+        task_section_start = -1
+        task_section_end = len(lines)
+        blocked_by_line_idx = -1
+
+        for i, line in enumerate(lines):
+            # Task 헤더 감지
+            if task_pattern.match(line):
+                in_task_section = True
+                task_section_start = i
+                continue
+
+            # 다른 Task나 WP 헤더를 만나면 섹션 종료
+            if in_task_section and (line.startswith("### ") or line.startswith("## ")):
+                task_section_end = i
+                break
+
+            # blocked-by 라인 찾기
+            if in_task_section and line.strip().startswith("- blocked-by:"):
+                blocked_by_line_idx = i
+
+        if task_section_start == -1:
+            logger.warning(f"[{task_id}] Task 섹션을 찾을 수 없습니다")
+            return False
+
+        # blocked-by 값 설정
+        new_value = blocked_by if blocked_by else "-"
+
+        if blocked_by_line_idx >= 0:
+            # 기존 라인 업데이트
+            lines[blocked_by_line_idx] = f"- blocked-by: {new_value}"
+            logger.info(f"[{task_id}] blocked-by 업데이트: {new_value}")
+        else:
+            # 새 라인 추가 (status 라인 다음에)
+            for i in range(task_section_start + 1, task_section_end):
+                if lines[i].strip().startswith("- status:"):
+                    lines.insert(i + 1, f"- blocked-by: {new_value}")
+                    logger.info(f"[{task_id}] blocked-by 추가: {new_value}")
+                    break
+
+        # 파일 저장
+        new_content = "\n".join(lines)
+        wbs_path.write_text(new_content, encoding="utf-8")
+        return True
+
+    except Exception as e:
+        logger.error(f"WBS blocked-by 업데이트 오류: {e}")
+        return False
+
+
 class WbsFileHandler(FileSystemEventHandler):
     """WBS 파일 변경 이벤트 핸들러."""
 

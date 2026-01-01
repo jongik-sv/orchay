@@ -17,7 +17,7 @@
 ### TSK-01-01: 프로젝트 초기화 및 핵심 모델
 - category: infrastructure
 - domain: infra
-- status: done [xx]
+- status: [xx]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-28 ~ 2025-12-28
@@ -51,7 +51,7 @@
 ### TSK-01-02: WBS 파서 구현
 - category: development
 - domain: backend
-- status: done [xx]
+- status: [xx]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29 ~ 2025-12-29
@@ -84,7 +84,7 @@
 ### TSK-01-03: 스케줄러 코어 구현
 - category: development
 - domain: backend
-- status: done [xx]
+- status: [xx]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-30 ~ 2025-12-31
@@ -118,7 +118,7 @@
 ### TSK-01-04: Worker 관리 및 WezTerm CLI 통합
 - category: development
 - domain: backend
-- status: done [xx]
+- status: [xx]
 - priority: critical
 - assignee: -
 - schedule: 2026-01-01 ~ 2026-01-03
@@ -160,7 +160,7 @@
 ### TSK-02-01: 자동 재개 메커니즘
 - category: development
 - domain: backend
-- status: done [xx]
+- status: [xx]
 - priority: high
 - assignee: -
 - schedule: 2026-01-04 ~ 2026-01-05
@@ -193,7 +193,7 @@
 ### TSK-02-02: TUI 메인 화면
 - category: development
 - domain: frontend
-- status: done [xx]
+- status: [xx]
 - priority: high
 - assignee: -
 - schedule: 2026-01-04 ~ 2026-01-06
@@ -227,7 +227,7 @@
 ### TSK-02-03: TUI 인터랙티브 기능
 - category: development
 - domain: frontend
-- status: done [xx]
+- status: [xx]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-06 ~ 2026-01-08
@@ -261,7 +261,7 @@
 ### TSK-02-04: CLI 및 설정 관리
 - category: development
 - domain: backend
-- status: done [xx]
+- status: [xx]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-04 ~ 2026-01-05
@@ -295,7 +295,7 @@
 ### TSK-02-05: 테스트 및 문서화
 - category: development
 - domain: test
-- status: done [xx]
+- status: [xx]
 - priority: medium
 - assignee: -
 - schedule: 2026-01-08 ~ 2026-01-10
@@ -328,7 +328,7 @@
 ### TSK-02-06: 워커 단위 Pause/Resume 및 스케줄러 상태 표시
 - category: development
 - domain: frontend
-- status: done [xx]
+- status: [xx]
 - priority: medium
 - assignee: -
 - schedule: 2025-12-28 ~ 2025-12-28

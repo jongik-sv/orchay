@@ -538,6 +538,11 @@ class OrchayApp(App[None]):
                 )
                 yield DataTable(id="queue-table")
 
+            # Test 모드 선택 패널 (기본 숨김)
+            with Vertical(id="test-section"):
+                yield Static("Test Mode  (Space:Select  A:All  T:Run)", id="test-title")
+                yield TestSelectionPanel()
+
             # Worker 패널 (스크롤 가능)
             with Vertical(id="workers-section"):
                 yield Static("Workers  (↑↓:Select  P:Pause  R:Reset)", id="workers-title")
@@ -548,11 +553,6 @@ class OrchayApp(App[None]):
             with Vertical(id="log-section"):
                 yield Static("Logs  (F6:Expand)", id="log-title")
                 yield RichLog(id="log-panel", highlight=True, markup=True)
-
-            # Test 모드 선택 패널 (기본 숨김)
-            with Vertical(id="test-section"):
-                yield Static("Test Mode  (Space:Select  A:All  T:Run)", id="test-title")
-                yield TestSelectionPanel()
 
         # 모달 위젯들 (기본 숨김)
         yield HelpModal()

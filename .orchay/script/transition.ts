@@ -165,19 +165,18 @@ function findTaskInContent(content: string, taskId: string): TaskInfo | null {
   const categoryMatch = taskBlock.match(/^-\s*category:\s*(\S+)/m);
   const category = categoryMatch ? categoryMatch[1] : 'development';
 
-  // status 추출: "- status: todo [ ]" 또는 "- status: done [xx]"
-  const statusMatch = taskBlock.match(/^-\s*status:\s*(\S+)\s*(\[[^\]]*\])/m);
+  // status 추출: "- status: [xx]" 또는 "- status: done [xx]" (하위 호환)
+  const statusMatch = taskBlock.match(/^-\s*status:\s*(?:\S+\s+)?(\[[^\]]*\])/m);
   if (!statusMatch) {
     return null;
   }
 
-  const statusLabel = statusMatch[1]; // "todo", "done", etc.
-  const statusCode = statusMatch[2];  // "[ ]", "[xx]", etc.
+  const statusCode = statusMatch[1];  // "[ ]", "[xx]", etc.
 
   return {
     id: taskId,
     category,
-    status: `${statusLabel} ${statusCode}`,
+    status: statusCode,
     statusCode: extractStatusCode(statusCode),
   };
 }
@@ -185,23 +184,17 @@ function findTaskInContent(content: string, taskId: string): TaskInfo | null {
 /**
  * wbs.md에서 Task 상태 업데이트
  *
- * "- status: todo [ ]" → "- status: detail-design [dd]"
+ * "- status: [ ]" → "- status: [dd]"
+ * "- status: todo [ ]" → "- status: [dd]" (하위 호환)
  */
 function updateTaskStatusInContent(
   content: string,
   taskId: string,
-  newStatusCode: string,
-  workflows: WorkflowsConfig
+  newStatusCode: string
 ): string {
-  // 상태 코드 → 라벨 매핑 (workflows.json의 states에서)
-  const stateInfo = Object.entries(workflows.states).find(
-    ([code]) => extractStatusCode(code) === newStatusCode.replace(/[\[\]]/g, '')
-  );
-  const newLabel = stateInfo ? stateInfo[1].id.replace(/-/g, '-') : 'unknown';
-
-  // Task 블록 시작 찾기
+  // Task 블록 시작 찾기 (라벨 선택적)
   const taskHeaderPattern = new RegExp(
-    `(###\\s*${escapeRegex(taskId)}\\s*:[^]*?)(-\\s*status:\\s*)(\\S+)\\s*(\\[[^\\]]*\\])`,
+    `(###\\s*${escapeRegex(taskId)}\\s*:[^]*?)(-\\s*status:\\s*)(?:\\S+\\s+)?(\\[[^\\]]*\\])`,
     'i'
   );
 
@@ -212,18 +205,10 @@ function updateTaskStatusInContent(
 
   // 상태 라인 교체
   const fullMatch = match[0];
-  const prefix = match[1];      // "### TSK-01-01: ... - status: "
+  const prefix = match[1];      // "### TSK-01-01: ..."
   const statusKey = match[2];   // "- status: "
-  const oldLabel = match[3];    // "todo"
-  const oldCode = match[4];     // "[ ]"
 
-  // 새 상태 문자열: workflows.json의 states에서 id 사용
-  const stateEntry = Object.entries(workflows.states).find(
-    ([code]) => code === newStatusCode
-  );
-  const newLabelFromState = stateEntry ? stateEntry[1].id : newLabel;
-
-  const newStatusLine = `${statusKey}${newLabelFromState} ${newStatusCode}`;
+  const newStatusLine = `${statusKey}${newStatusCode}`;
   const replacement = prefix + newStatusLine;
 
   return content.replace(fullMatch, replacement);
@@ -305,8 +290,7 @@ async function executeTransition(
   const newContent = updateTaskStatusInContent(
     content,
     taskId,
-    transition.to,
-    workflows
+    transition.to
   );
 
   // 5. WBS 파일 저장

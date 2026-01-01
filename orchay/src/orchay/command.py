@@ -255,6 +255,10 @@ class CommandHandler:
         Returns:
             CommandResult
         """
+        from pathlib import Path
+
+        from orchay.wbs_parser import update_task_blocked_by
+
         # BR-001: 실행 중인 Task는 skip 불가
         if task_id in self.orchestrator.running_tasks:
             return CommandResult.error(f"실행 중인 Task는 스킵할 수 없습니다: {task_id}")
@@ -263,6 +267,11 @@ class CommandHandler:
 
         if task is None:
             return CommandResult.error(f"Task '{task_id}'를 찾을 수 없습니다")
+
+        # WBS 파일 경로
+        wbs_path: Path | None = getattr(self.orchestrator, "wbs_path", None)
+        if wbs_path:
+            await update_task_blocked_by(wbs_path, task_id, "skipped")
 
         task.blocked_by = "skipped"
         return CommandResult.ok(f"{task_id} → 스킵됨")
@@ -276,6 +285,10 @@ class CommandHandler:
         Returns:
             CommandResult
         """
+        from pathlib import Path
+
+        from orchay.wbs_parser import update_task_blocked_by
+
         task = next((t for t in self.orchestrator.tasks if t.id == task_id), None)
 
         if task is None:
@@ -283,6 +296,11 @@ class CommandHandler:
 
         if task.blocked_by is None:
             return CommandResult.ok(f"{task_id}는 스킵 상태가 아닙니다")
+
+        # WBS 파일 경로
+        wbs_path: Path | None = getattr(self.orchestrator, "wbs_path", None)
+        if wbs_path:
+            await update_task_blocked_by(wbs_path, task_id, None)
 
         task.blocked_by = None
         return CommandResult.ok(f"{task_id} → 큐로 복구")

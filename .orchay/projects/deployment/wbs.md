@@ -20,7 +20,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: verify [vf]
+- status: [vf]
 - priority: critical
 - assignee: -
 - schedule: 2025-12-29
@@ -45,7 +45,7 @@
 
 - category: infrastructure
 - domain: infra
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: critical
 - assignee: -
@@ -70,7 +70,7 @@
 
 - category: development
 - domain: backend
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -102,7 +102,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -128,7 +128,7 @@
 
 - category: development
 - domain: backend
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -153,7 +153,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: medium
 - assignee: -
@@ -178,7 +178,7 @@
 
 - category: development
 - domain: qa
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -235,7 +235,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -262,7 +262,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
@@ -287,7 +287,7 @@
 
 - category: infrastructure
 - domain: devops
-- status: verify [vf]
+- status: [vf]
 - test-result: pass
 - priority: high
 - assignee: -
