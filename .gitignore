@@ -26,6 +26,19 @@ lerna-debug.log*
 # Electron
 **/dist-electron/
 
+# Tauri
+**/src-tauri/target/
+**/src-tauri/Cargo.lock
+**/src-tauri/gen/
+**/tauri-build/
+*.exe
+*.msi
+*.dmg
+*.app/
+*.deb
+*.rpm
+*.AppImage
+
 # Python
 **/__pycache__/
 *.py[cod]
@@ -70,6 +83,41 @@ logs/
 # Misc
 *.zip
 
+# Screenshot / Temporary images
+image_*.png
+image_*.jpg
+screenshot_*.png
+
+# Project logs and caches
+.orchay/logs/
+.orchay/builds/
+.turbo/
+.parcel/
+.next/
+.turbopack/
+
 # Tool caches
 .agent/
 .serena/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+*.xcarchive
+*.xcworkspace/
+xcuserdata/
+
+# Windows specific
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# WebView cache
+**/WebView2/
+**/webview2/
+
+# Runtime files
+.PID
+*.lock
