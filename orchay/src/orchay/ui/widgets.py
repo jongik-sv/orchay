@@ -31,7 +31,8 @@ class HelpModal(VerticalScroll):
 
 -- Schedule Queue Keys -----------------------------------------------
   Up/Down  Task 선택         Enter  상세 보기
-  Space    스킵/복구 토글    ESC    전체화면 해제
+  Space    스킵/복구 토글    Y      수동 승인 ([dd]→[ap])
+  ESC      전체화면 해제
 
 -- Worker Keys -------------------------------------------------------
   Up/Down  Worker 선택    P   Worker Pause

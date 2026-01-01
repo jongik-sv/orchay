@@ -387,6 +387,8 @@ class OrchayApp(App[None]):
         # Test mode 전용 키
         Binding("t", "run_tests", "Run Tests", show=False, priority=True),
         Binding("a", "toggle_select_all", "Select All", show=False, priority=True),
+        # 수동 승인 키
+        Binding("y", "approve_task", "Approve", show=False, priority=True),
     ]
 
     def __init__(
@@ -531,7 +533,7 @@ class OrchayApp(App[None]):
             # 스케줄 큐 테이블
             with Vertical(id="queue-section"):
                 yield Static(
-                    "Schedule Queue  (Enter:Detail  Space:Skip/Retry)",
+                    "Schedule Queue  (Enter:Detail  Space:Skip/Retry  Y:Approve)",
                     id="queue-title",
                 )
                 yield DataTable(id="queue-table")
@@ -1261,6 +1263,38 @@ class OrchayApp(App[None]):
             else:
                 self.notify(result.message, severity="error")
             self._update_queue_table(preserve_cursor_task_id=task.id)
+
+    async def action_approve_task(self) -> None:
+        """선택된 Task 수동 승인 (Y키).
+
+        [dd] 상태의 idle Task를 [ap]로 변경합니다.
+        force 모드에서는 자동 승인이므로 불필요 메시지를 표시합니다.
+        """
+        # test 모드에서는 무시
+        if self._mode == "test":
+            return
+
+        # force 모드 체크 (자동 승인이므로 불필요)
+        if self._mode == "force":
+            self.notify("force 모드에서는 자동 승인됩니다", severity="warning")
+            return
+
+        task = self._get_selected_task()
+        if task is None:
+            self.notify("Task를 선택하세요", severity="warning")
+            return
+
+        # approve_task 호출
+        result = await self._command_handler.approve_task(task.id)
+
+        if result.success:
+            self.notify(result.message)
+            self.write_log(f"수동 승인: {task.id}", "info")
+        else:
+            self.notify(result.message, severity="error")
+
+        # 테이블 업데이트 (커서 유지)
+        self._update_queue_table(preserve_cursor_task_id=task.id)
 
     async def action_reset_worker(self) -> None:
         """선택된 Worker를 idle 상태로 강제 리셋."""
