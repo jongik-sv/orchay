@@ -336,7 +336,9 @@ class CommandHandler:
             return CommandResult.error(f"실행 중인 Task는 변경할 수 없습니다: {task_id}")
 
         # 상태값 추출 (버그 수정: enum이든 str이든 처리)
-        status_value = task.status.value if hasattr(task.status, "value") else str(task.status)
+        raw_status = task.status.value if hasattr(task.status, "value") else str(task.status)
+        # Rich markup 이스케이프 (대괄호가 스타일 태그로 해석되지 않도록)
+        status_value = raw_status.replace("[", "\\[") if raw_status else ""
 
         # 토글 로직: [dd] ↔ [ap]
         if task.status == TaskStatus.DETAIL_DESIGN:
@@ -351,7 +353,7 @@ class CommandHandler:
             action = "취소됨"
         else:
             return CommandResult.error(
-                f"[dd] 또는 [ap] 상태만 변경 가능합니다 (현재: {status_value})"
+                f"\\[dd] 또는 \\[ap] 상태만 변경 가능합니다 (현재: {status_value})"
             )
 
         # WBS 파일 경로
