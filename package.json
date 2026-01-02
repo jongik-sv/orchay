@@ -1,7 +1,9 @@
 {
   "name": "orchay-monorepo",
   "private": true,
-  "workspaces": ["orchay_web"],
+  "workspaces": [
+    "orchay_web"
+  ],
   "scripts": {
     "web:dev": "npm run dev -w orchay_web",
     "web:build": "npm run build -w orchay_web",
@@ -9,5 +11,9 @@
     "web:test": "npm run test -w orchay_web",
     "web:test:unit": "npm run test:unit -w orchay_web",
     "web:test:e2e": "npm run test:e2e -w orchay_web"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.1"
   }
 }

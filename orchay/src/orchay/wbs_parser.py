@@ -1,6 +1,6 @@
 """WBS 파서 모듈.
 
-wbs.md 파일을 파싱하여 Task 리스트를 반환하고,
+wbs.yaml 파일을 파싱하여 Task 리스트를 반환하고,
 파일 변경을 감지하여 콜백을 실행합니다.
 """
 
@@ -9,27 +9,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import re
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
+import yaml
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from orchay.models import Task, TaskCategory, TaskPriority, TaskStatus
+from orchay.models import ExecutionInfo, Task, TaskCategory, TaskPriority, TaskStatus
 
 if TYPE_CHECKING:
     from watchdog.observers.api import BaseObserver
 
 logger = logging.getLogger(__name__)
-
-# 정규식 패턴
-TASK_HEADER_PATTERN = re.compile(r"^###\s+(TSK-\d+-\d+(?:-\d+)?):\s*(.+)$")
-STATUS_PATTERN = re.compile(r"\[([^\]]*)\]")
-ATTRIBUTE_PATTERN = re.compile(r"^-\s*(\w+(?:-\w+)?):\s*(.*)$")
-METADATA_PATTERN = re.compile(r"^>\s*([\w-]+):\s*(.*)$")
 
 
 class WbsParseError(Exception):
@@ -38,25 +32,6 @@ class WbsParseError(Exception):
     def __init__(self, message: str, line_number: int | None = None) -> None:
         self.line_number = line_number
         super().__init__(f"{message} (line {line_number})" if line_number else message)
-
-
-def extract_status_code(status_line: str) -> str:
-    """상태 라인에서 코드 추출.
-
-    Args:
-        status_line: 상태가 포함된 라인 (예: '- status: todo [ ]')
-
-    Returns:
-        상태 코드 (예: '[ ]', '[im]')
-    """
-    match = STATUS_PATTERN.search(status_line)
-    if match:
-        code = match.group(1)
-        # 빈 상태 또는 공백만 있는 경우 [ ]로 반환
-        if not code.strip():
-            return "[ ]"
-        return f"[{code}]"
-    return "[ ]"
 
 
 def _parse_status(status_code: str) -> TaskStatus:
@@ -98,38 +73,36 @@ def _parse_priority(priority_str: str) -> TaskPriority:
     return priority_map.get(priority_str.lower(), TaskPriority.MEDIUM)
 
 
-def _parse_list(value: str) -> list[str]:
-    """콤마로 구분된 값을 리스트로 변환."""
-    if not value or value == "-":
-        return []
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
 class WbsParser:
     """WBS 파일 파서.
 
-    wbs.md 파일을 파싱하여 Task 리스트를 반환합니다.
+    wbs.yaml 파일을 파싱하여 Task 리스트를 반환합니다.
     파싱 실패 시 이전 캐시를 반환합니다.
     """
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
         self._cache: list[Task] = []
-        self._metadata: dict[str, str] = {}
+        self._metadata: dict[str, Any] = {}
         self._last_parsed: datetime | None = None
 
     @property
     def project_root(self) -> str | None:
-        """project-root 메타데이터 값 반환."""
-        return self._metadata.get("project-root")
+        """projectRoot 메타데이터 값 반환."""
+        wbs_meta = self._metadata.get("wbs", {})
+        if isinstance(wbs_meta, dict):
+            wbs_dict = cast(dict[str, Any], wbs_meta)
+            project_root = wbs_dict.get("projectRoot")
+            return str(project_root) if project_root else None
+        return None
 
     @property
-    def metadata(self) -> dict[str, str]:
+    def metadata(self) -> dict[str, Any]:
         """전체 메타데이터 반환."""
         return self._metadata.copy()
 
     async def parse(self) -> list[Task]:
-        """wbs.md 파일을 파싱하여 Task 리스트 반환.
+        """wbs.yaml 파일을 파싱하여 Task 리스트 반환.
 
         Returns:
             Task 객체 리스트
@@ -144,8 +117,19 @@ class WbsParser:
                 return [] if not self._cache else self._cache
 
             content = self._path.read_text(encoding="utf-8")
-            self._parse_metadata(content)
-            new_tasks = self._parse_content(content)
+            data = yaml.safe_load(content)
+
+            if not data:
+                logger.warning("YAML 파일이 비어있습니다")
+                return self._cache if self._cache else []
+
+            # 메타데이터 저장
+            self._metadata = {
+                "project": data.get("project", {}),
+                "wbs": data.get("wbs", {}),
+            }
+
+            new_tasks = self._parse_content(data)
 
             # 파싱 결과가 비어있고 이전 캐시가 있으면 캐시 반환 (BR-01)
             if not new_tasks and self._cache:
@@ -204,202 +188,168 @@ class WbsParser:
         existing.api_spec = new.api_spec
         existing.ui_spec = new.ui_spec
         existing.raw_content = new.raw_content
+        existing.execution = new.execution
         # assigned_worker는 업데이트하지 않음 (런타임 상태)
 
-    def _parse_metadata(self, content: str) -> None:
-        """메타데이터 블록 파싱.
-
-        wbs.md 상단의 `> key: value` 형식 메타데이터를 파싱합니다.
-        """
-        self._metadata.clear()
-        for line in content.split("\n"):
-            # 빈 줄이나 구분선(---)을 만나면 메타데이터 블록 종료
-            stripped = line.strip()
-            if stripped.startswith("---"):
-                break
-            if not stripped:
-                continue
-
-            match = METADATA_PATTERN.match(line)
-            if match:
-                key, value = match.groups()
-                self._metadata[key] = value.strip()
-
-    def _parse_content(self, content: str) -> list[Task]:
-        """마크다운 콘텐츠를 파싱하여 Task 리스트 반환."""
+    def _parse_content(self, data: dict[str, Any]) -> list[Task]:
+        """YAML 데이터를 파싱하여 Task 리스트 반환."""
         tasks: list[Task] = []
-        lines = content.split("\n")
 
-        current_task: dict[str, str | list[str]] | None = None
-        current_list_key: str | None = None  # 현재 파싱 중인 중첩 리스트 키
-        raw_lines: list[str] = []  # Task의 raw content 저장용
-        i = 0
+        work_packages = data.get("workPackages", [])
+        if not isinstance(work_packages, list):
+            return tasks
 
-        while i < len(lines):
-            line = lines[i]
-
-            # Task 헤더 감지 (### TSK-...)
-            header_match = TASK_HEADER_PATTERN.match(line)
-            if header_match:
-                # 이전 Task 저장
-                if current_task:
-                    current_task["raw_content"] = "\n".join(raw_lines).strip()
-                    task = self._create_task(current_task)
-                    if task:
-                        tasks.append(task)
-
-                # 새 Task 시작
-                current_task = {
-                    "id": header_match.group(1),
-                    "title": header_match.group(2).strip(),
-                }
-                raw_lines = []  # raw content 초기화
-                current_list_key = None
-                i += 1
+        work_packages_list = cast(list[Any], work_packages)
+        for wp in work_packages_list:
+            if not isinstance(wp, dict):
                 continue
 
-            # WP 헤더 감지 (## WP-...) - 현재 Task 저장 후 초기화
-            # 이렇게 하면 WP 속성이 Task에 적용되지 않음
-            if line.startswith("## "):
-                if current_task:
-                    current_task["raw_content"] = "\n".join(raw_lines).strip()
-                    task = self._create_task(current_task)
-                    if task:
-                        tasks.append(task)
-                    current_task = None
-                raw_lines = []
-                current_list_key = None
-                i += 1
+            wp_dict = cast(dict[str, Any], wp)
+            wp_tasks = wp_dict.get("tasks", [])
+            if not isinstance(wp_tasks, list):
                 continue
 
-            # 속성 파싱 (현재 Task가 있을 때만)
-            if current_task:
-                # raw content에 추가
-                raw_lines.append(line)
-                # 중첩 리스트 항목 감지 (  - item)
-                if line.startswith("  - ") and current_list_key:
-                    item = line[4:].strip()
-                    if current_list_key not in current_task:
-                        current_task[current_list_key] = []
-                    list_val = current_task[current_list_key]
-                    if isinstance(list_val, list):
-                        list_val.append(item)
-                    i += 1
+            wp_tasks_list = cast(list[Any], wp_tasks)
+            for task_data in wp_tasks_list:
+                if not isinstance(task_data, dict):
                     continue
 
-                attr_match = ATTRIBUTE_PATTERN.match(line)
-                if attr_match:
-                    key = attr_match.group(1)
-                    value = attr_match.group(2).strip()
-                    # 중첩 리스트 시작 감지 (value가 비어있으면 다음 줄부터 리스트)
-                    if key in ("requirements", "acceptance", "tech-spec", "api-spec", "ui-spec"):
-                        if value:
-                            # 단일 줄 값
-                            current_task[key] = value
-                        else:
-                            # 빈 값이면 중첩 리스트 시작
-                            current_task[key] = []
-                        current_list_key = key
-                    else:
-                        current_task[key] = value
-                        current_list_key = None
-                else:
-                    # 속성이 아닌 줄이면 리스트 파싱 종료
-                    if not line.strip().startswith("-") and not line.strip().startswith("#"):
-                        current_list_key = None
-
-            i += 1
-
-        # 마지막 Task 저장
-        if current_task:
-            current_task["raw_content"] = "\n".join(raw_lines).strip()
-            task = self._create_task(current_task)
-            if task:
-                tasks.append(task)
+                task_dict = cast(dict[str, Any], task_data)
+                task = self._create_task(task_dict)
+                if task:
+                    tasks.append(task)
 
         return tasks
 
-    def _create_task(self, data: dict[str, str | list[str]]) -> Task | None:
+    def _create_task(self, data: dict[str, Any]) -> Task | None:
         """딕셔너리에서 Task 객체 생성."""
         try:
-            raw_id = data.get("id", "")
-            raw_title = data.get("title", "")
-            task_id = raw_id if isinstance(raw_id, str) else ""
-            title = raw_title if isinstance(raw_title, str) else ""
+            task_id = str(data.get("id", ""))
+            title = str(data.get("title", ""))
 
             if not task_id or not title:
                 return None
 
-            # 문자열 값 가져오기 헬퍼
-            def get_str(key: str, default: str = "") -> str:
-                val = data.get(key, default)
-                return val if isinstance(val, str) else default
-
-            # 리스트 값 가져오기 헬퍼
-            def get_list(key: str) -> list[str]:
-                val = data.get(key)
-                if isinstance(val, list):
-                    return val
-                if isinstance(val, str) and val:
-                    return _parse_list(val)
-                return []
-
-            # 상태 코드 추출
-            status_line = get_str("status", "[ ]")
-            status_code = extract_status_code(f"- status: {status_line}")
+            # 상태 코드 파싱
+            status_code = str(data.get("status", "[ ]"))
             status = _parse_status(status_code)
 
             # 카테고리
-            category_str = get_str("category", "development")
+            category_str = str(data.get("category", "development"))
             category = _parse_category(category_str)
 
             # 우선순위
-            priority_str = get_str("priority", "medium")
+            priority_str = str(data.get("priority", "medium"))
             priority = _parse_priority(priority_str)
 
-            blocked_by_value = get_str("blocked-by")
-            blocked_by: str | None = (
-                blocked_by_value if blocked_by_value and blocked_by_value != "-" else None
-            )
+            # depends 처리
+            depends_raw = data.get("depends", [])
+            depends: list[str] = []
+            if isinstance(depends_raw, list):
+                depends_list = cast(list[Any], depends_raw)
+                depends = [str(d) for d in depends_list if d]
+            elif isinstance(depends_raw, str):
+                depends = [depends_raw] if depends_raw else []
+
+            # tags 처리
+            tags_raw = data.get("tags", [])
+            tags: list[str] = []
+            if isinstance(tags_raw, list):
+                tags_list = cast(list[Any], tags_raw)
+                tags = [str(t) for t in tags_list if t]
+
+            # blocked-by
+            blocked_by_value: Any = data.get("blocked-by", data.get("blockedBy"))
+            blocked_by: str | None = None
+            if blocked_by_value and str(blocked_by_value) != "-":
+                blocked_by = str(blocked_by_value)
+
+            # requirements 중첩 구조 처리
+            requirements_data = data.get("requirements", {})
+            prd_ref: str = ""
+            requirements: list[str] = []
+            acceptance: list[str] = []
+            tech_spec: list[str] = []
+            api_spec: list[str] = []
+            ui_spec: list[str] = []
+
+            if isinstance(requirements_data, dict):
+                req_dict = cast(dict[str, Any], requirements_data)
+                prd_ref_val = req_dict.get("prdRef", "")
+                prd_ref = str(prd_ref_val) if prd_ref_val else ""
+                requirements = self._get_list(req_dict, "items")
+                acceptance = self._get_list(req_dict, "acceptance")
+                tech_spec = self._get_list(req_dict, "techSpec")
+                api_spec = self._get_list(req_dict, "apiSpec")
+                ui_spec = self._get_list(req_dict, "uiSpec")
+            elif isinstance(requirements_data, list):
+                req_list = cast(list[Any], requirements_data)
+                requirements = [str(r) for r in req_list if r]
+
+            # execution 필드 처리
+            execution_data = data.get("execution")
+            execution: ExecutionInfo | None = None
+            if isinstance(execution_data, dict):
+                exec_dict = cast(dict[str, Any], execution_data)
+                command_val = exec_dict.get("command", "")
+                desc_val = exec_dict.get("description")
+                started_val = exec_dict.get("startedAt", "")
+                worker_val = exec_dict.get("worker")
+                execution = ExecutionInfo(
+                    command=str(command_val) if command_val else "",
+                    description=str(desc_val) if desc_val else None,
+                    startedAt=str(started_val) if started_val else "",
+                    worker=int(worker_val) if worker_val is not None else None,
+                )
 
             return Task(
                 id=task_id,
                 title=title,
                 category=category,
-                domain=get_str("domain", ""),
+                domain=str(data.get("domain", "")),
                 status=status,
                 priority=priority,
-                assignee=get_str("assignee", "-"),
-                schedule=get_str("schedule", ""),
-                tags=_parse_list(get_str("tags", "")),
-                depends=_parse_list(get_str("depends", "")),
+                assignee=str(data.get("assignee", "-")),
+                schedule=str(data.get("schedule", "")),
+                tags=tags,
+                depends=depends,
                 blocked_by=blocked_by,
-                workflow=get_str("workflow", "design"),
-                # TSK-06-02: 요구사항/기술 스펙 필드
-                prd_ref=get_str("prd-ref", ""),
-                requirements=get_list("requirements"),
-                acceptance=get_list("acceptance"),
-                tech_spec=get_list("tech-spec"),
-                api_spec=get_list("api-spec"),
-                ui_spec=get_list("ui-spec"),
-                raw_content=get_str("raw_content", ""),
+                workflow=str(data.get("workflow", "design")),
+                prd_ref=prd_ref,
+                requirements=requirements,
+                acceptance=acceptance,
+                tech_spec=tech_spec,
+                api_spec=api_spec,
+                ui_spec=ui_spec,
+                raw_content="",  # YAML에서는 raw_content 불필요
+                execution=execution,
             )
         except Exception as e:
             logger.error(f"Task 생성 오류: {e}")
             return None
 
+    def _get_list(self, data: dict[str, Any], key: str) -> list[str]:
+        """딕셔너리에서 리스트 값 추출."""
+        value = data.get(key, [])
+        if isinstance(value, list):
+            value_list = cast(list[Any], value)
+            return [str(v) for v in value_list if v]
+        if isinstance(value, str):
+            return [value] if value else []
+        return []
+
 
 async def parse_wbs(path: str | Path) -> list[Task]:
-    """wbs.md 파일을 파싱하여 Task 리스트 반환.
+    """wbs.yaml 파일을 파싱하여 Task 리스트 반환.
 
     Args:
-        path: wbs.md 파일 경로
+        path: wbs.yaml 파일 경로
 
     Returns:
         Task 객체 리스트
 
     Example:
-        tasks = await parse_wbs(".orchay/projects/orchay/wbs.md")
+        tasks = await parse_wbs(".orchay/projects/orchay/wbs.yaml")
         for task in tasks:
             print(f"{task.id}: {task.status}")
     """
@@ -422,6 +372,36 @@ STATUS_CODE_TO_NAME: dict[str, str] = {
 }
 
 
+def _find_task_in_yaml(
+    data: dict[str, Any], task_id: str
+) -> tuple[dict[str, Any] | None, int, int]:
+    """YAML 데이터에서 Task를 찾아 반환.
+
+    Returns:
+        (task_dict, wp_index, task_index) 또는 (None, -1, -1)
+    """
+    work_packages = data.get("workPackages", [])
+    if not isinstance(work_packages, list):
+        return None, -1, -1
+
+    work_packages_list = cast(list[Any], work_packages)
+    for wp_idx, wp in enumerate(work_packages_list):
+        if not isinstance(wp, dict):
+            continue
+        wp_dict = cast(dict[str, Any], wp)
+        tasks = wp_dict.get("tasks", [])
+        if not isinstance(tasks, list):
+            continue
+        tasks_list = cast(list[Any], tasks)
+        for task_idx, task in enumerate(tasks_list):
+            if isinstance(task, dict):
+                task_dict = cast(dict[str, Any], task)
+                if task_dict.get("id") == task_id:
+                    return task_dict, wp_idx, task_idx
+
+    return None, -1, -1
+
+
 async def update_task_status(
     wbs_path: Path,
     task_id: str,
@@ -430,7 +410,7 @@ async def update_task_status(
     """WBS 파일의 Task 상태 코드를 업데이트.
 
     Args:
-        wbs_path: wbs.md 파일 경로
+        wbs_path: wbs.yaml 파일 경로
         task_id: 업데이트할 Task ID (예: TSK-01-01)
         new_status_code: 새 상태 코드 (예: "[ap]", "[im]")
 
@@ -439,7 +419,7 @@ async def update_task_status(
 
     Example:
         success = await update_task_status(
-            Path(".orchay/projects/orchay/wbs.md"),
+            Path(".orchay/projects/orchay/wbs.yaml"),
             "TSK-01-01",
             "[ap]"
         )
@@ -450,49 +430,28 @@ async def update_task_status(
             return False
 
         content = wbs_path.read_text(encoding="utf-8")
-        lines = content.split("\n")
+        data = yaml.safe_load(content)
 
-        # Task 섹션 찾기
-        task_pattern = re.compile(rf"^###\s+{re.escape(task_id)}:\s*")
-        in_task_section = False
-        updated = False
-
-        for i, line in enumerate(lines):
-            # Task 헤더 감지
-            if task_pattern.match(line):
-                in_task_section = True
-                continue
-
-            # 다른 Task나 WP 헤더를 만나면 섹션 종료
-            if in_task_section and (line.startswith("### ") or line.startswith("## ")):
-                break
-
-            # status 라인 찾기 및 업데이트
-            if in_task_section and line.strip().startswith("- status:"):
-                # 현재 상태 코드 추출
-                current_code = extract_status_code(line)
-                if current_code == new_status_code:
-                    logger.info(f"[{task_id}] 상태가 이미 {new_status_code}입니다")
-                    return True
-
-                # 새 상태 이름 가져오기
-                status_name = STATUS_CODE_TO_NAME.get(new_status_code, "unknown")
-
-                # 상태 라인 교체: "- status: {name} {code}"
-                # 기존 패턴: "- status: detail-design [dd]" 형태
-                new_line = f"- status: {status_name} {new_status_code}"
-                lines[i] = new_line
-                updated = True
-                logger.info(f"[{task_id}] 상태 변경: {current_code} → {new_status_code}")
-                break
-
-        if not updated:
-            logger.warning(f"[{task_id}] status 라인을 찾을 수 없습니다")
+        if not data:
+            logger.error("YAML 파일이 비어있습니다")
             return False
 
-        # 파일 저장
-        new_content = "\n".join(lines)
-        wbs_path.write_text(new_content, encoding="utf-8")
+        task, _wp_idx, _task_idx = _find_task_in_yaml(data, task_id)
+        if task is None:
+            logger.warning(f"[{task_id}] Task를 찾을 수 없습니다")
+            return False
+
+        current_code = task.get("status", "[ ]")
+        if current_code == new_status_code:
+            logger.info(f"[{task_id}] 상태가 이미 {new_status_code}입니다")
+            return True
+
+        # 상태 업데이트
+        task["status"] = new_status_code
+        logger.info(f"[{task_id}] 상태 변경: {current_code} → {new_status_code}")
+
+        # YAML 저장 (원본 포맷 유지를 위해 커스텀 덤프 사용)
+        _save_yaml(wbs_path, data)
         return True
 
     except Exception as e:
@@ -508,9 +467,9 @@ async def update_task_blocked_by(
     """WBS 파일의 Task blocked-by 속성을 업데이트.
 
     Args:
-        wbs_path: wbs.md 파일 경로
+        wbs_path: wbs.yaml 파일 경로
         task_id: 업데이트할 Task ID (예: TSK-01-01)
-        blocked_by: blocked-by 값 (None이면 제거/"-"로 설정)
+        blocked_by: blocked-by 값 (None이면 필드 제거)
 
     Returns:
         성공 여부
@@ -527,58 +486,48 @@ async def update_task_blocked_by(
             return False
 
         content = wbs_path.read_text(encoding="utf-8")
-        lines = content.split("\n")
+        data = yaml.safe_load(content)
 
-        # Task 섹션 찾기
-        task_pattern = re.compile(rf"^###\s+{re.escape(task_id)}:\s*")
-        in_task_section = False
-        task_section_start = -1
-        task_section_end = len(lines)
-        blocked_by_line_idx = -1
-
-        for i, line in enumerate(lines):
-            # Task 헤더 감지
-            if task_pattern.match(line):
-                in_task_section = True
-                task_section_start = i
-                continue
-
-            # 다른 Task나 WP 헤더를 만나면 섹션 종료
-            if in_task_section and (line.startswith("### ") or line.startswith("## ")):
-                task_section_end = i
-                break
-
-            # blocked-by 라인 찾기
-            if in_task_section and line.strip().startswith("- blocked-by:"):
-                blocked_by_line_idx = i
-
-        if task_section_start == -1:
-            logger.warning(f"[{task_id}] Task 섹션을 찾을 수 없습니다")
+        if not data:
+            logger.error("YAML 파일이 비어있습니다")
             return False
 
-        # blocked-by 값 설정
-        new_value = blocked_by if blocked_by else "-"
+        task, _wp_idx, _task_idx = _find_task_in_yaml(data, task_id)
+        if task is None:
+            logger.warning(f"[{task_id}] Task를 찾을 수 없습니다")
+            return False
 
-        if blocked_by_line_idx >= 0:
-            # 기존 라인 업데이트
-            lines[blocked_by_line_idx] = f"- blocked-by: {new_value}"
-            logger.info(f"[{task_id}] blocked-by 업데이트: {new_value}")
+        if blocked_by:
+            task["blocked-by"] = blocked_by
+            logger.info(f"[{task_id}] blocked-by 설정: {blocked_by}")
         else:
-            # 새 라인 추가 (status 라인 다음에)
-            for i in range(task_section_start + 1, task_section_end):
-                if lines[i].strip().startswith("- status:"):
-                    lines.insert(i + 1, f"- blocked-by: {new_value}")
-                    logger.info(f"[{task_id}] blocked-by 추가: {new_value}")
-                    break
+            # blocked-by 필드 제거
+            if "blocked-by" in task:
+                del task["blocked-by"]
+            if "blockedBy" in task:
+                del task["blockedBy"]
+            logger.info(f"[{task_id}] blocked-by 제거")
 
-        # 파일 저장
-        new_content = "\n".join(lines)
-        wbs_path.write_text(new_content, encoding="utf-8")
+        _save_yaml(wbs_path, data)
         return True
 
     except Exception as e:
         logger.error(f"WBS blocked-by 업데이트 오류: {e}")
         return False
+
+
+def _save_yaml(path: Path, data: dict[str, Any]) -> None:
+    """YAML 파일을 저장 (한글 및 포맷 유지)."""
+    # 커스텀 Dumper 설정 (한글 출력 지원)
+    yaml_content = yaml.dump(
+        data,
+        allow_unicode=True,
+        default_flow_style=False,
+        sort_keys=False,
+        indent=2,
+        width=120,
+    )
+    path.write_text(yaml_content, encoding="utf-8")
 
 
 class WbsFileHandler(FileSystemEventHandler):
@@ -634,7 +583,7 @@ class WbsFileHandler(FileSystemEventHandler):
 class WbsWatcher:
     """WBS 파일 감시자.
 
-    wbs.md 파일 변경을 감지하고 콜백을 실행합니다.
+    wbs.yaml 파일 변경을 감지하고 콜백을 실행합니다.
     """
 
     def __init__(
@@ -679,10 +628,10 @@ def watch_wbs(
     callback: Callable[[list[Task]], Awaitable[None]],
     debounce: float = 0.5,
 ) -> WbsWatcher:
-    """wbs.md 파일 변경 감지 및 콜백 실행.
+    """wbs.yaml 파일 변경 감지 및 콜백 실행.
 
     Args:
-        path: 감시할 wbs.md 파일 경로
+        path: 감시할 wbs.yaml 파일 경로
         callback: 변경 시 호출될 async 콜백 (Task 리스트 전달)
         debounce: 디바운스 시간 (초)
 
@@ -693,7 +642,7 @@ def watch_wbs(
         async def on_change(tasks: list[Task]):
             print(f"Tasks updated: {len(tasks)}")
 
-        watcher = watch_wbs("wbs.md", on_change)
+        watcher = watch_wbs("wbs.yaml", on_change)
         watcher.start()
         # ... 작업 ...
         await watcher.stop()

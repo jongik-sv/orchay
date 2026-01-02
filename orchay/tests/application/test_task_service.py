@@ -83,7 +83,7 @@ def workflow_engine(sample_workflows_path: Path) -> WorkflowEngine:
 def mock_parser() -> MagicMock:
     """Mock WbsParser를 생성합니다."""
     parser = MagicMock()
-    parser.path = Path("/test/wbs.md")
+    parser.path = Path("/test/wbs.yaml")
     parser.parse = AsyncMock(return_value=[])
     return parser
 

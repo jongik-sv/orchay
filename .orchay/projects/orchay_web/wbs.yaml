@@ -1,0 +1,207 @@
+# WBS - orchay_web (AI 기반 프로젝트 관리 도구)
+# wbs.md + project.json 통합 파일
+# execution 필드: Task 실행 상태 (command, description, startedAt, worker)
+
+project:
+  id: orchay_web
+  name: "orchay_web - AI 기반 프로젝트 관리 도구"
+  description: "로컬 환경에서 실행되는 파일 기반 프로젝트 관리 도구"
+  version: "0.1.0"
+  status: active
+  createdAt: "2025-12-13"
+  updatedAt: "2025-12-18"
+  scheduledStart: "2025-12-13"
+  scheduledEnd: "2026-01-25"
+
+wbs:
+  version: "1.0"
+  depth: 4
+  updated: "2025-12-18"
+  start: "2025-12-16"
+
+workPackages:
+  - id: WP-01
+    title: "Platform Infrastructure"
+    priority: critical
+    schedule: "2025-12-13 ~ 2025-12-20"
+    progress: "100%"
+    activities:
+      - id: ACT-01-01
+        title: "Project Setup"
+        schedule: "2025-12-13 ~ 2025-12-16"
+        progress: "100%"
+        tasks:
+          - id: TSK-01-01-01
+            title: "Nuxt 3 프로젝트 초기화"
+            category: infrastructure
+            status: "[xx]"
+            priority: critical
+            assignee: hong
+            schedule: "2025-12-13 ~ 2025-12-13"
+            tags: [nuxt, setup]
+            requirements:
+              prdRef: "PRD 3"
+              items:
+                - "Nuxt 3 프로젝트 생성 (npx nuxi init)"
+                - "TypeScript 설정"
+                - "Standalone 모드 설정 (nitro preset)"
+            completed:
+              ds: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+          - id: TSK-01-01-02
+            title: "PrimeVue 4.x + TailwindCSS 설정"
+            category: infrastructure
+            status: "[xx]"
+            priority: critical
+            schedule: "2025-12-13 ~ 2025-12-14"
+            tags: [primevue, tailwind, ui]
+            depends: [TSK-01-01-01]
+            requirements:
+              prdRef: "PRD 10.1"
+              items:
+                - "PrimeVue 4.x 설치 및 Nuxt 플러그인 설정"
+                - "TailwindCSS 설치 및 nuxt.config 설정"
+                - "Dark Blue 테마 색상 팔레트 적용"
+            completed:
+              ds: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+          - id: TSK-01-01-03
+            title: "Pinia 상태 관리 설정"
+            category: infrastructure
+            status: "[xx]"
+            priority: high
+            schedule: "2025-12-14 ~ 2025-12-14"
+            tags: [pinia, state]
+            depends: [TSK-01-01-01]
+            requirements:
+              prdRef: "PRD 9.3"
+              items:
+                - "Pinia 설치 및 설정"
+                - "기본 스토어 구조 생성 (project, wbs, selection, settings)"
+            completed:
+              ds: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+          - id: TSK-01-01-04
+            title: "프로젝트 디렉토리 구조 설정"
+            category: infrastructure
+            status: "[xx]"
+            priority: high
+            assignee: hong
+            schedule: "2025-12-14 ~ 2025-12-15"
+            tags: [structure, setup]
+            depends: [TSK-01-01-01]
+            requirements:
+              prdRef: "PRD 9"
+              items:
+                - "components/, composables/, stores/, server/api/ 디렉토리 구조"
+                - "공통 타입 정의 (types/)"
+                - "유틸리티 함수 디렉토리 (utils/)"
+            completed:
+              ds: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+          - id: TSK-01-01-05
+            title: "WBS Store API 응답 처리 버그 수정"
+            category: defect
+            status: "[xx]"
+            priority: critical
+            schedule: "2025-12-15 ~ 2025-12-15"
+            tags: [bug, store, api]
+            depends: [TSK-01-01-03]
+            requirements:
+              prdRef: "TSK-04-03 E2E 테스트 결과"
+              items:
+                - "fetchWbs 함수의 API 응답 형식 수정"
+                - "API 응답 `{metadata, tree}` 객체에서 tree 배열 추출"
+                - "\"nodes is not iterable\" 에러 해결"
+            completed:
+              an: "2025-12-15T22:13:00"
+              fx: "2025-12-15T22:13:00"
+              vf: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+      - id: ACT-01-02
+        title: "App Layout"
+        schedule: "2025-12-16 ~ 2025-12-18"
+        progress: "100%"
+        tasks:
+          - id: TSK-01-02-01
+            title: "AppLayout 컴포넌트 구현"
+            category: development
+            status: "[xx]"
+            priority: high
+            schedule: "2025-12-16 ~ 2025-12-17"
+            tags: [layout, component]
+            depends: [TSK-01-01-02]
+            requirements:
+              prdRef: "PRD 6.1"
+              items:
+                - "전체 레이아웃 구조 (Header + Content)"
+                - "좌우 분할 패널 (WBS Tree 60% + Detail 40%)"
+                - "반응형 레이아웃 (최소 1200px)"
+            completed:
+              bd: "2025-12-15T22:13:00"
+              dd: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              vf: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+          - id: TSK-01-02-02
+            title: "AppHeader 컴포넌트 구현"
+            category: development
+            status: "[xx]"
+            priority: high
+            schedule: "2025-12-17 ~ 2025-12-18"
+            tags: [header, navigation]
+            depends: [TSK-01-02-01]
+            requirements:
+              prdRef: "PRD 6.1"
+              items:
+                - "orchay 로고"
+                - "네비게이션 메뉴 (대시보드, 칸반, WBS, Gantt) - WBS만 활성"
+                - "현재 프로젝트명 표시"
+            completed:
+              bd: "2025-12-15T22:13:00"
+              dd: "2025-12-15T22:13:00"
+              im: "2025-12-15T22:13:00"
+              vf: "2025-12-15T22:13:00"
+              xx: "2025-12-15T22:13:00"
+
+  - id: WP-09
+    title: "Multi-Project Support"
+    priority: high
+    schedule: "2025-12-17 ~ 2025-12-20"
+    progress: "90%"
+    tasks:
+      - id: TSK-09-01
+        title: "다중 프로젝트 WBS 통합 뷰"
+        category: development
+        status: "[xx]"
+        priority: high
+        schedule: "2025-12-17 ~ 2025-12-20"
+        tags: [multi-project, wbs, tree, api]
+        depends: [TSK-04-01, TSK-03-02]
+        requirements:
+          prdRef: "PRD 6.5"
+          items:
+            - "GET /api/wbs/all 엔드포인트 추가 (모든 프로젝트 WBS 조회)"
+            - "모든 프로젝트 WBS를 한 트리에 표시 (프로젝트 → WP → ACT → TSK)"
+            - "프로젝트 노드 타입 UI (아이콘, 스타일)"
+            - "프로젝트 상세 패널 컴포넌트 (정보 + 파일 목록)"
+            - "GET /api/projects/:id/files 엔드포인트 (프로젝트 파일 목록)"
+            - "파일 뷰어 (.md: 마크다운, 이미지: 이미지 표시, 기타: Monaco Editor)"
+            - "URL 파라미터 없이 /wbs 접속 시 전체 프로젝트 뷰"
+            - "?project=xxx 파라미터 시 기존 단일 프로젝트 뷰 유지"
+        completed:
+          bd: "2025-12-17T10:00:00"
+          dd: "2025-12-17T11:30:00"
+          im: "2025-12-17T15:30:00"
+          vf: "2025-12-17T16:00:00"
+          xx: "2025-12-17T16:10:00"

@@ -55,7 +55,7 @@ def dispatch_service() -> DispatchService:
     return DispatchService(
         config=config,
         project_name="test",
-        wbs_path=Path("/test/wbs.md"),
+        wbs_path=Path("/test/wbs.yaml"),
         mode=ExecutionMode.QUICK,
     )
 
@@ -100,7 +100,7 @@ class TestDispatchServiceInit:
         service = DispatchService(
             config=config,
             project_name="test",
-            wbs_path=Path("/test/wbs.md"),
+            wbs_path=Path("/test/wbs.yaml"),
             mode=ExecutionMode.QUICK,
         )
 
@@ -348,7 +348,7 @@ class TestSendCommand:
         service = DispatchService(
             config=config,
             project_name="test",
-            wbs_path=Path("/test/wbs.md"),
+            wbs_path=Path("/test/wbs.yaml"),
             mode=ExecutionMode.QUICK,
         )
 

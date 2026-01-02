@@ -37,8 +37,8 @@ def create_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "wbs",
         nargs="?",
-        default=".orchay/projects/orchay/wbs.md",
-        help="WBS 파일 경로 (기본: .orchay/projects/orchay/wbs.md)",
+        default=".orchay/projects/orchay/wbs.yaml",
+        help="WBS 파일 경로 (기본: .orchay/projects/orchay/wbs.yaml)",
     )
     run_parser.add_argument(
         "-w",

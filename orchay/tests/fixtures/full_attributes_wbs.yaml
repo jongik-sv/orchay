@@ -1,0 +1,27 @@
+project:
+  id: test
+  name: Full Attributes Test
+
+wbs:
+  version: "1.0"
+  projectRoot: test
+
+workPackages:
+  - id: WP-01
+    title: Test Work Package
+    tasks:
+      - id: TSK-01-02
+        title: WBS 파서 구현
+        category: development
+        domain: backend
+        status: "[ ]"
+        priority: critical
+        assignee: "-"
+        schedule: 2025-12-29 ~ 2025-12-29
+        tags:
+          - parser
+          - markdown
+          - regex
+        depends:
+          - TSK-01-01
+        blocked-by: "-"

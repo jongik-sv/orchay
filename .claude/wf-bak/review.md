@@ -37,25 +37,6 @@ parallel-processing: true
 
 ## 실행 과정
 
-### 0단계: 사전 검증 ⭐
-
-명령어 실행 전 상태 검증:
-
-```bash
-npx tsx .orchay/script/transition.ts {Task-ID} review -p {project} --start
-```
-
-| 결과 | 처리 |
-|------|------|
-| `canTransition: true` | 다음 단계 진행 |
-| `canTransition: false` | 에러 출력 후 즉시 종료 |
-
-**에러 출력:**
-```
-[ERROR] 현재 상태 [{currentStatus}]에서 'review' 액션을 실행할 수 없습니다.
-필요한 상태: [dd]
-```
-
 ### 1. 검증 대상 문서 수집
 
 ```
@@ -158,14 +139,7 @@ Task: TSK-01-01-01 | 리뷰어: claude-1
 
 ## 완료 신호
 
-작업 완료 후 **반드시** 다음 순서로 실행:
-
-**1. execution 필드 제거:**
-```bash
-npx tsx .orchay/script/transition.ts {task-id} -p {project} --end
-```
-
-**2. 완료 신호 출력:**
+작업 완료 후 **반드시** 다음 형식으로 출력:
 
 **성공:**
 ```

@@ -1,0 +1,8 @@
+# Invalid YAML WBS
+project
+  id: test
+workPackages
+  - id: WP-01
+    tasks:
+      - id TSK-01-01
+        status: [invalid

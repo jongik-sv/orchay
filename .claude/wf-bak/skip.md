@@ -64,25 +64,6 @@ parallel-processing: true
 
 ## 실행 과정
 
-### 0단계: 사전 검증 ⭐
-
-명령어 실행 전 상태 검증:
-
-```bash
-npx tsx .orchay/script/transition.ts {Task-ID} skip -p {project} --start
-```
-
-| 결과 | 처리 |
-|------|------|
-| `canTransition: true` | 다음 단계 진행 |
-| `canTransition: false` | 에러 출력 후 즉시 종료 |
-
-**에러 출력:**
-```
-[ERROR] 현재 상태 [{currentStatus}]에서 'skip' 명령어를 사용할 수 없습니다.
-필요한 상태: [ ]
-```
-
 ### 1단계: Task 검증
 
 - category가 `infrastructure`인지 확인

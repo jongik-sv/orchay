@@ -38,6 +38,15 @@ class TaskPriority(str, Enum):
     LOW = "low"
 
 
+class ExecutionInfo(BaseModel):
+    """실행 중인 워크플로우 정보."""
+
+    command: str = Field(description="실행 중인 워크플로우 명령어 (예: build, review)")
+    description: str | None = Field(default=None, description="워크플로우 설명")
+    startedAt: str = Field(description="실행 시작 시간 (ISO 8601)")
+    worker: int | None = Field(default=None, description="할당된 Worker 번호")
+
+
 class Task(BaseModel):
     """WBS Task 모델."""
 
@@ -62,6 +71,7 @@ class Task(BaseModel):
     api_spec: list[str] = Field(default_factory=list, description="API 스펙 목록")
     ui_spec: list[str] = Field(default_factory=list, description="UI 스펙 목록")
     raw_content: str = Field(default="", description="WBS 원본 텍스트 (제목 제외)")
+    execution: ExecutionInfo | None = Field(default=None, description="실행 중인 워크플로우 정보")
 
     def is_executable(self) -> bool:
         """실행 가능 여부 확인."""

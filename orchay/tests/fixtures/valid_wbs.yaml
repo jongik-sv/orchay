@@ -1,0 +1,74 @@
+project:
+  id: test
+  name: Test Project
+  version: "1.0"
+
+wbs:
+  version: "1.0"
+  depth: 3
+  projectRoot: test
+
+workPackages:
+  - id: WP-01
+    title: Work Package 1
+    status: planned
+    priority: critical
+    tasks:
+      - id: TSK-01-01
+        title: 프로젝트 초기화 및 핵심 모델
+        category: infrastructure
+        domain: infra
+        status: "[xx]"
+        priority: critical
+        assignee: "-"
+        schedule: 2025-12-28 ~ 2025-12-28
+        tags:
+          - setup
+          - pydantic
+          - models
+        depends: []
+
+      - id: TSK-01-02
+        title: WBS 파서 구현
+        category: development
+        domain: backend
+        status: "[ap]"
+        priority: critical
+        assignee: "-"
+        schedule: 2025-12-29 ~ 2025-12-29
+        tags:
+          - parser
+          - markdown
+          - regex
+        depends:
+          - TSK-01-01
+
+      - id: TSK-01-03
+        title: 스케줄러 코어 구현
+        category: development
+        domain: backend
+        status: "[dd]"
+        priority: critical
+        assignee: "-"
+        schedule: 2025-12-30 ~ 2025-12-31
+        tags:
+          - scheduler
+          - queue
+          - async
+        depends:
+          - TSK-01-02
+
+  - id: WP-02
+    title: Work Package 2
+    status: planned
+    priority: high
+    tasks:
+      - id: TSK-02-01
+        title: UI 대시보드
+        category: development
+        domain: frontend
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        depends:
+          - TSK-01-03

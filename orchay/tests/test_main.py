@@ -64,7 +64,7 @@ class TestDetectProject:
     def test_single_project(self, tmp_path: Path) -> None:
         """프로젝트가 1개일 때 자동 선택."""
         (tmp_path / ".orchay" / "projects" / "myproject").mkdir(parents=True)
-        (tmp_path / ".orchay" / "projects" / "myproject" / "wbs.md").touch()
+        (tmp_path / ".orchay" / "projects" / "myproject" / "wbs.yaml").touch()
 
         with patch("orchay.main.find_orchay_root", return_value=tmp_path):
             project, projects = detect_project()
@@ -77,7 +77,7 @@ class TestDetectProject:
         for name in ["proj1", "proj2"]:
             d = tmp_path / ".orchay" / "projects" / name
             d.mkdir(parents=True)
-            (d / "wbs.md").touch()
+            (d / "wbs.yaml").touch()
 
         with patch("orchay.main.find_orchay_root", return_value=tmp_path):
             project, projects = detect_project()
@@ -104,10 +104,10 @@ class TestDetectProject:
         assert projects == []
 
     def test_ignores_dirs_without_wbs(self, tmp_path: Path) -> None:
-        """wbs.md 없는 폴더 무시."""
+        """wbs.yaml 없는 폴더 무시."""
         (tmp_path / ".orchay" / "projects" / "valid").mkdir(parents=True)
-        (tmp_path / ".orchay" / "projects" / "valid" / "wbs.md").touch()
-        (tmp_path / ".orchay" / "projects" / "invalid").mkdir()  # no wbs.md
+        (tmp_path / ".orchay" / "projects" / "valid" / "wbs.yaml").touch()
+        (tmp_path / ".orchay" / "projects" / "invalid").mkdir()  # no wbs.yaml
 
         with patch("orchay.main.find_orchay_root", return_value=tmp_path):
             project, projects = detect_project()
@@ -126,7 +126,7 @@ class TestGetProjectPaths:
         with patch("orchay.main.find_orchay_root", return_value=tmp_path):
             wbs_path, base_dir = get_project_paths("myproject")
 
-        assert wbs_path == tmp_path / ".orchay" / "projects" / "myproject" / "wbs.md"
+        assert wbs_path == tmp_path / ".orchay" / "projects" / "myproject" / "wbs.yaml"
         assert base_dir == tmp_path
 
     def test_fallback_to_cwd(self, tmp_path: Path) -> None:
@@ -207,7 +207,7 @@ class TestOrchestratorInit:
     @pytest.fixture
     def tmp_wbs(self, tmp_path: Path) -> Path:
         """임시 WBS 파일."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.write_text("# WBS\n- [TSK-01] Task 1 #backend @2h [ ]\n")
         return wbs_file
 
@@ -257,7 +257,7 @@ class TestOrchestratorInitialize:
     @pytest.fixture
     def tmp_wbs(self, tmp_path: Path) -> Path:
         """임시 WBS 파일."""
-        wbs_file = tmp_path / ".orchay" / "projects" / "test" / "wbs.md"
+        wbs_file = tmp_path / ".orchay" / "projects" / "test" / "wbs.yaml"
         wbs_file.parent.mkdir(parents=True)
         wbs_file.write_text("# WBS\n- [TSK-01] Task 1 #backend @2h [ ]\n")
         return wbs_file
@@ -351,7 +351,7 @@ class TestOrchestratorTick:
     @pytest.fixture
     def orchestrator(self, tmp_path: Path) -> Orchestrator:
         """테스트용 Orchestrator."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.write_text("# WBS\n")
 
         config = Config()
@@ -435,7 +435,7 @@ class TestOrchestratorDispatchIdleWorkers:
     @pytest.fixture
     def orchestrator(self, tmp_path: Path) -> Orchestrator:
         """테스트용 Orchestrator."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.write_text("# WBS\n")
 
         config = Config()
@@ -541,7 +541,7 @@ class TestOrchestratorRun:
     @pytest.fixture
     def orchestrator(self, tmp_path: Path) -> Orchestrator:
         """테스트용 Orchestrator."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.write_text("# WBS\n")
 
         config = Config()
@@ -587,7 +587,7 @@ class TestOrchestratorPrintStatus:
     @pytest.fixture
     def orchestrator(self, tmp_path: Path) -> Orchestrator:
         """테스트용 Orchestrator."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.write_text("# WBS\n")
 
         config = Config()
@@ -639,7 +639,7 @@ class TestOrchestratorStop:
 
     def test_sets_running_false(self, tmp_path: Path) -> None:
         """_running을 False로 설정."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.touch()
 
         config = Config()
@@ -656,7 +656,7 @@ class TestOrchestratorRunningTasks:
 
     def test_returns_running_task_ids(self, tmp_path: Path) -> None:
         """실행 중인 Task ID 반환."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.touch()
 
         config = Config()
@@ -673,7 +673,7 @@ class TestOrchestratorRunningTasks:
 
     def test_returns_empty_set_when_no_running(self, tmp_path: Path) -> None:
         """실행 중인 Task 없을 때."""
-        wbs_file = tmp_path / "wbs.md"
+        wbs_file = tmp_path / "wbs.yaml"
         wbs_file.touch()
 
         config = Config()

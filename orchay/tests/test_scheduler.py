@@ -631,7 +631,7 @@ class TestHandleApprove:
             status=TaskStatus.DETAIL_DESIGN,
             priority=TaskPriority.HIGH,
         )
-        wbs_path = Path("/fake/wbs.md")
+        wbs_path = Path("/fake/wbs.yaml")
 
         result = await handle_approve(task, wbs_path, ExecutionMode.QUICK)
         assert result is False
@@ -646,7 +646,7 @@ class TestHandleApprove:
             status=TaskStatus.DETAIL_DESIGN,
             priority=TaskPriority.HIGH,
         )
-        wbs_path = Path("/fake/wbs.md")
+        wbs_path = Path("/fake/wbs.yaml")
 
         with patch("orchay.wbs_parser.update_task_status", new_callable=AsyncMock) as mock_update:
             mock_update.return_value = True
@@ -667,7 +667,7 @@ class TestHandleApprove:
             status=TaskStatus.DETAIL_DESIGN,
             priority=TaskPriority.HIGH,
         )
-        wbs_path = Path("/fake/wbs.md")
+        wbs_path = Path("/fake/wbs.yaml")
 
         with patch("orchay.wbs_parser.update_task_status", new_callable=AsyncMock) as mock_update:
             mock_update.return_value = False

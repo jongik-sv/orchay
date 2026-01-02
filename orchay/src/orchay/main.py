@@ -363,11 +363,11 @@ def detect_project() -> tuple[str | None, list[str]]:
     if not projects_dir.exists():
         return None, []
 
-    # wbs.md가 있는 폴더만 프로젝트로 인식
+    # wbs.yaml이 있는 폴더만 프로젝트로 인식
     projects = [
         d.name
         for d in projects_dir.iterdir()
-        if d.is_dir() and (d / "wbs.md").exists()
+        if d.is_dir() and (d / "wbs.yaml").exists()
     ]
 
     if len(projects) == 1:
@@ -390,7 +390,7 @@ def get_project_paths(project_name: str) -> tuple[Path, Path]:
         base_dir = Path.cwd()
 
     orchay_dir = base_dir / ".orchay" / "projects" / project_name
-    wbs_path = orchay_dir / "wbs.md"
+    wbs_path = orchay_dir / "wbs.yaml"
     return wbs_path, base_dir
 
 
@@ -463,7 +463,7 @@ async def async_main() -> int:
             if not projects_dir.exists() or len(projects) == 0:
                 console.print("[red]오류:[/] 프로젝트가 없습니다.")
                 console.print(
-                    f"[dim]{projects_dir}[/] 폴더에 wbs.md 파일을 생성하세요."
+                    f"[dim]{projects_dir}[/] 폴더에 wbs.yaml 파일을 생성하세요."
                 )
                 return 1
 
