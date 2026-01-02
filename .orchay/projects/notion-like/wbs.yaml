@@ -315,8 +315,8 @@ workPackages:
             - "아이콘: w-[78px] h-[78px] text-[78px]"
             - "제목: text-[40px] font-bold"
         execution:
-          command: audit
-          startedAt: "2026-01-02T16:22:24.515Z"
+          command: patch
+          startedAt: "2026-01-02T16:25:09.837Z"
       - id: TSK-01-05
         title: 아이콘 선택기 컴포넌트
         category: development
@@ -629,7 +629,7 @@ workPackages:
         title: 반응형 레이아웃 적용
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-15"
