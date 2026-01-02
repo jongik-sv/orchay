@@ -223,7 +223,7 @@ workPackages:
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
         domain: fullstack
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-05
@@ -246,9 +246,6 @@ workPackages:
             - editor.document → JSON.stringify
             - PUT /api/pages/:id
             - debounce 1초
-        execution:
-          command: start
-          startedAt: "2026-01-02T06:37:25.962Z"
       - id: TSK-01-03
         title: Notion 스타일 에디터 CSS 적용
         category: development
