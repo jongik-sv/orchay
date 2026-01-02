@@ -79,10 +79,11 @@ workPackages:
     title: 프로젝트 구조 및 기본 레이아웃 생성
     category: infrastructure
     domain: fullstack
-    status: '[im]'
+    status: '[vf]'
     priority: high
     assignee: '-'
     schedule: 2026-01-02 ~ 2026-01-03
+    test_result: pass
     tags:
     - setup
     - structure
@@ -105,7 +106,7 @@ workPackages:
     title: SQLite 데이터베이스 초기화
     category: infrastructure
     domain: database
-    status: '[dd]'
+    status: '[ap]'
     priority: high
     assignee: '-'
     schedule: '2026-01-03'
@@ -331,6 +332,9 @@ workPackages:
       uiSpec:
       - Notion 스타일 드롭다운 그림자
       - 그리드 8열
+    execution:
+      command: start
+      startedAt: '2026-01-02T14:19:45.877Z'
   - id: TSK-01-99
     title: WP-01 통합 검증
     category: simple-dev
