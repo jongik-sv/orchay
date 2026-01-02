@@ -79,8 +79,8 @@ workPackages:
             - app/, components/, lib/, types/ 폴더
             - PRD 섹션 4 데이터 모델 기반 타입
         execution:
-          command: patch
-          startedAt: "2026-01-02T06:04:32.540Z"
+          command: verify
+          startedAt: "2026-01-02T06:09:30.484Z"
       - id: TSK-00-03
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
@@ -111,7 +111,7 @@ workPackages:
             - TailwindCSS 스타일 적용 확인
         execution:
           command: build
-          startedAt: "2026-01-02T05:43:08.195Z"
+          startedAt: "2026-01-02T06:09:41.322Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -122,7 +122,7 @@ workPackages:
         title: SQLite 데이터베이스 설정 및 스키마 생성
         category: development
         domain: backend
-        status: "[ap]"
+        status: "[im]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -154,9 +154,6 @@ workPackages:
             - "menus: id, category_id, name, price, image_url, is_sold_out"
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
-        execution:
-          command: build
-          startedAt: "2026-01-02T06:02:24.404Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
