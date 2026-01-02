@@ -1,2 +1,5 @@
 // MenuCard 컴포넌트 - 메뉴 카드
 // TSK-03-01에서 구현 예정
+export default function MenuCard() {
+  return null;
+}

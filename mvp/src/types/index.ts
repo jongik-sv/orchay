@@ -46,14 +46,14 @@ export interface Order {
   id: number;
   table_id: number;
   status: OrderStatus;
-  created_at: string;
+  createdAt: string;
 }
 
 export type OrderStatus = 'pending' | 'cooking' | 'completed';
 
-// 주문 항목 포함 타입
+// 주문 항목 포함 타입 (메뉴 정보 포함)
 export interface OrderWithItems extends Order {
-  items: OrderItem[];
+  items: OrderItemWithMenu[];
   table_number: number;
 }
 
@@ -90,9 +90,45 @@ export interface CreateOrderRequest {
   }[];
 }
 
+// POST /api/orders 응답
+export interface CreateOrderResponse {
+  id: number;
+  tableId: number;
+  status: OrderStatus;
+  createdAt: string;
+  items: OrderItemWithMenu[];
+}
+
 // PATCH /api/orders/{id}/status 요청
 export interface UpdateOrderStatusRequest {
   status: OrderStatus;
+}
+
+// PATCH /api/orders/{id}/status 응답
+export interface UpdateOrderStatusResponse {
+  id: number;
+  status: OrderStatus;
+  updatedAt: string;
+}
+
+// GET /api/categories 응답
+export interface CategoriesResponse {
+  categories: Category[];
+}
+
+// GET /api/menus 응답
+export interface MenusResponse {
+  menus: MenuWithCategory[];
+}
+
+// GET /api/orders 응답
+export interface OrdersResponse {
+  orders: OrderWithItems[];
+}
+
+// GET /api/kitchen/orders 응답
+export interface KitchenOrdersResponse {
+  orders: OrderWithItems[];
 }
 
 // ===================================

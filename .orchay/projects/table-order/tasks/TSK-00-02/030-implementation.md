@@ -186,8 +186,34 @@ import { Table, Category, Menu, Order, OrderItem, CreateOrderRequest,
 
 ---
 
+## 7. 코드 리뷰 반영 이력
+
+### 반영 일시: 2026-01-02
+### 기준 리뷰: 031-code-review-claude-2.md
+
+| # | 항목 | 유형 | 파일 | 상태 |
+|---|------|------|------|------|
+| R-001 | API 응답 타입 정의 추가 | Major (P2) | `src/types/index.ts` | ✅ 반영 |
+| R-002 | OrderWithItems.items 타입 명확화 | Minor (P3) | `src/types/index.ts` | ✅ 반영 |
+| R-004 | created_at → createdAt 네이밍 | Minor (P3) | `src/types/index.ts` | ✅ 반영 |
+| R-005 | Placeholder 컴포넌트 export 추가 | Minor (P3) | `src/components/*.tsx` | ✅ 반영 |
+
+### 추가된 API 응답 타입 (R-001)
+- `CreateOrderResponse` - POST /api/orders 응답
+- `UpdateOrderStatusResponse` - PATCH /api/orders/{id}/status 응답
+- `CategoriesResponse` - GET /api/categories 응답
+- `MenusResponse` - GET /api/menus 응답
+- `OrdersResponse` - GET /api/orders 응답
+- `KitchenOrdersResponse` - GET /api/kitchen/orders 응답
+
+### 미반영 사항
+없음 - 모든 지적사항 반영 완료
+
+---
+
 ## 변경 이력
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0.0 | 2026-01-02 | Claude | 최초 작성 |
+| 1.1.0 | 2026-01-02 | Claude | 코드 리뷰 반영 (R-001~R-005) |
