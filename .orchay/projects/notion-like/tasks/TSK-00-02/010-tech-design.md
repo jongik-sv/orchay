@@ -206,6 +206,7 @@ npm run dev
 
 - @blocknote/mantine은 @mantine/core를 피어 의존성으로 요구
 - 반드시 함께 설치해야 함
+- TRD에 명시된 @mantine/core ^7.0.0 버전은 @blocknote/mantine ^0.18.0과 호환됨
 
 ---
 
@@ -214,3 +215,4 @@ npm run dev
 | 버전 | 일자 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0 | 2026-01-02 | Claude | 최초 작성 |
+| 1.1 | 2026-01-02 | Claude | 리뷰 반영: @mantine/core 호환성 명시 |
