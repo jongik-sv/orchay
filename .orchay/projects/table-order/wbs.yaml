@@ -617,7 +617,7 @@ workPackages:
         title: E2E 플로우 테스트
         category: development
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-05 ~ 2026-01-05
@@ -642,6 +642,3 @@ workPackages:
             - 주문이 주방 화면에 실시간으로 표시
             - 주방에서 조리 상태 변경 가능
             - 상태 변경이 고객 화면에 실시간 반영
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:36:20.216Z"
