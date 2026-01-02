@@ -187,7 +187,7 @@ workPackages:
           note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
         execution:
           command: build
-          startedAt: "2026-01-02T14:45:25.568Z"
+          startedAt: "2026-01-02T15:32:40.748Z"
   - id: WP-01
     title: 핵심 에디터 (BlockNote)
     status: planned
@@ -351,10 +351,11 @@ workPackages:
         title: WP-01 통합 검증
         category: development
         domain: test
-        status: "[im]"
+        status: "[vf]"
         priority: high
         assignee: "-"
         schedule: "2026-01-08"
+        test_result: pass
         tags:
           - integration
           - verify
@@ -475,7 +476,7 @@ workPackages:
         title: 페이지 생성/삭제/이동 기능
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-11 ~ 2026-01-12
@@ -498,11 +499,14 @@ workPackages:
           apiSpec:
             - POST /api/pages { parentId? }
             - DELETE /api/pages/:id
+        execution:
+          command: build
+          startedAt: "2026-01-02T15:33:01.118Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-12 ~ 2026-01-13
@@ -525,6 +529,9 @@ workPackages:
           techSpec:
             - Next.js App Router 동적 라우트
             - useParams, useRouter
+        execution:
+          command: build
+          startedAt: "2026-01-02T15:33:07.532Z"
       - id: TSK-02-06
         title: 즐겨찾기 기능
         category: development
@@ -548,6 +555,9 @@ workPackages:
             - Favorites 섹션에 즐겨찾기 페이지 표시
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
+        execution:
+          command: start
+          startedAt: "2026-01-02T15:22:20.569Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
