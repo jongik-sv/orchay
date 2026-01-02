@@ -106,10 +106,11 @@ workPackages:
         title: SQLite 데이터베이스 초기화
         category: infrastructure
         domain: database
-        status: "[im]"
+        status: "[xx]"
         priority: high
         assignee: "-"
         schedule: "2026-01-03"
+        test_result: pass
         tags:
           - database
           - sqlite
@@ -161,7 +162,7 @@ workPackages:
         title: WP-00 통합 검증
         category: infrastructure
         domain: test
-        status: "[ ]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: "2026-01-03"
@@ -184,6 +185,9 @@ workPackages:
             - DB에서 페이지 목록 조회 가능
             - 스토어 상태 변경 시 UI 반영
           note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
+        execution:
+          command: build
+          startedAt: "2026-01-02T14:45:25.568Z"
   - id: WP-01
     title: 핵심 에디터 (BlockNote)
     status: planned
@@ -278,6 +282,9 @@ workPackages:
             - .bn-block 마진 1px
             - .bn-side-menu 호버 시 opacity 1
             - "H1 font-size: 1.875rem"
+        execution:
+          command: verify
+          startedAt: "2026-01-02T14:43:47.061Z"
       - id: TSK-01-04
         title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
         category: development
@@ -311,7 +318,7 @@ workPackages:
         title: 아이콘 선택기 컴포넌트
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-07"
@@ -334,8 +341,8 @@ workPackages:
             - Notion 스타일 드롭다운 그림자
             - 그리드 8열
         execution:
-          command: build
-          startedAt: "2026-01-02T14:22:21.137Z"
+          command: verify
+          startedAt: "2026-01-02T14:44:09.924Z"
       - id: TSK-01-99
         title: WP-01 통합 검증
         category: development
@@ -363,6 +370,9 @@ workPackages:
             - 슬래시 명령어로 블록 생성 → 드래그 앤 드롭 → 저장
             - 기본 블록 유형 (텍스트, 제목, 리스트, 인용, 코드) 모두 동작
           note: WP-01의 모든 에디터 기능이 연동되어 정상 동작하는지 검증
+        execution:
+          command: build
+          startedAt: "2026-01-02T14:44:12.665Z"
   - id: WP-02
     title: 페이지 구조 (사이드바 + 네비게이션)
     status: planned
@@ -429,7 +439,7 @@ workPackages:
             - "섹션 구분선: border-[#E9E9E7]"
         execution:
           command: verify
-          startedAt: "2026-01-02T14:29:14.407Z"
+          startedAt: "2026-01-02T14:44:17.082Z"
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
