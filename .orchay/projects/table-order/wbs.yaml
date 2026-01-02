@@ -116,8 +116,8 @@ workPackages:
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
         execution:
-          command: review
-          startedAt: "2026-01-02T04:52:01.806Z"
+          command: apply
+          startedAt: "2026-01-02T04:54:54.498Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -161,9 +161,6 @@ workPackages:
             - "menus: id, category_id, name, price, image_url, is_sold_out"
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
-        execution:
-          command: review
-          startedAt: "2026-01-02T04:52:15.667Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
@@ -195,11 +192,14 @@ workPackages:
             - "GET /api/categories → { categories: Category[] }"
             - "GET /api/menus → { menus: Menu[] }"
             - GET /api/menus?includeSoldOut=true
+        execution:
+          command: apply
+          startedAt: "2026-01-02T04:55:55.846Z"
       - id: TSK-01-03
         title: 주문 생성/조회 API 구현
         category: development
         domain: backend
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-03
