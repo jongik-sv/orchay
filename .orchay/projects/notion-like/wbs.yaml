@@ -289,7 +289,7 @@ workPackages:
         title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: "2026-01-06"
@@ -314,6 +314,9 @@ workPackages:
             - "커버: h-[200px] object-cover"
             - "아이콘: w-[78px] h-[78px] text-[78px]"
             - "제목: text-[40px] font-bold"
+        execution:
+          command: build
+          startedAt: "2026-01-02T16:06:39.950Z"
       - id: TSK-01-05
         title: 아이콘 선택기 컴포넌트
         category: development
@@ -499,7 +502,7 @@ workPackages:
             - DELETE /api/pages/:id
         execution:
           command: verify
-          startedAt: "2026-01-02T15:58:59.076Z"
+          startedAt: "2026-01-02T16:06:33.038Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
@@ -536,7 +539,7 @@ workPackages:
         title: 즐겨찾기 기능
         category: development
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-13"
@@ -556,13 +559,13 @@ workPackages:
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
         execution:
-          command: build
-          startedAt: "2026-01-02T15:53:12.798Z"
+          command: verify
+          startedAt: "2026-01-02T16:06:41.554Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
         domain: fullstack
-        status: "[ ]"
+        status: "[dd]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-14"
