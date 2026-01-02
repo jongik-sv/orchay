@@ -27,6 +27,6 @@
 body {
   background: linear-gradient(to bottom right, var(--color-gradient-start), var(--color-gradient-mid), var(--color-gradient-end));
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   min-height: 100vh;
 }
