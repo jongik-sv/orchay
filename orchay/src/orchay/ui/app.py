@@ -875,10 +875,9 @@ class OrchayApp(App[None]):
 
     def _get_sorted_tasks(self) -> list[Task]:
         """정렬된 Task 목록 반환 (Queue 테이블과 동일한 순서)."""
-        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         return sorted(
             [t for t in self._tasks if t.status != TaskStatus.DONE],
-            key=lambda t: priority_order.get(t.priority.value, 99),
+            key=lambda t: t.id,
         )
 
     def _get_selected_task(self) -> Task | None:

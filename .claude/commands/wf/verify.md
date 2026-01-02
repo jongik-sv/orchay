@@ -155,6 +155,9 @@ Task: TSK-01-01-01 | Category: development
 📄 생성: 070-integration-test.md
 
 다음: /wf:done TSK-01-01-01
+
+---
+ORCHAY_DONE:TSK-01-01-01:verify:success
 ```
 
 ### defect
@@ -180,6 +183,9 @@ Task: TSK-02-01-01 | Category: defect
 📄 생성: 070-test-results.md
 
 다음: /wf:done TSK-02-01-01
+
+---
+ORCHAY_DONE:TSK-02-01-01:verify:success
 ```
 
 ### infrastructure
