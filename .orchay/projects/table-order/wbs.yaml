@@ -82,7 +82,7 @@ workPackages:
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
         domain: test
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -106,9 +106,6 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
-        execution:
-          command: build
-          startedAt: "2026-01-02T06:09:41.322Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -152,8 +149,8 @@ workPackages:
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
         execution:
-          command: audit
-          startedAt: "2026-01-02T06:11:28.354Z"
+          command: patch
+          startedAt: "2026-01-02T06:13:40.914Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
@@ -184,6 +181,9 @@ workPackages:
             - "GET /api/categories → { categories: Category[] }"
             - "GET /api/menus → { menus: Menu[] }"
             - GET /api/menus?includeSoldOut=true
+        execution:
+          command: build
+          startedAt: "2026-01-02T06:12:52.288Z"
       - id: TSK-01-03
         title: 주문 생성/조회 API 구현
         category: development
