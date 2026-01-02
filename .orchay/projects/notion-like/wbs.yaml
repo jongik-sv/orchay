@@ -341,9 +341,9 @@ workPackages:
           startedAt: "2026-01-02T14:22:21.137Z"
       - id: TSK-01-99
         title: WP-01 통합 검증
-        category: infrastructure
+        category: simple-dev
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: "2026-01-08"
