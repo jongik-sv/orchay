@@ -22,7 +22,7 @@ workPackages:
         title: Next.js 프로젝트 생성 및 기본 설정
         category: infrastructure
         domain: infra
-        status: "implement [im]"
+        status: "[xx]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-02"
@@ -46,17 +46,15 @@ workPackages:
             - React 19.x
             - TypeScript 5.x
             - Tailwind CSS 3.x
-        execution:
-          command: review
-          startedAt: "2026-01-02T07:16:45.584Z"
       - id: TSK-00-02
         title: 핵심 의존성 설치 및 설정
         category: infrastructure
         domain: infra
-        status: "[im]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-02"
+        test_result: pass
         tags:
           - setup
           - dependencies
@@ -194,7 +192,7 @@ workPackages:
         title: BlockNote 에디터 기본 통합
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-04"
@@ -203,6 +201,7 @@ workPackages:
           - blocknote
         depends:
           - TSK-00-99
+        test_result: pass
         requirements:
           prdRef: PRD 2.1 블록 기반 에디터
           items:
@@ -218,13 +217,14 @@ workPackages:
             - "@blocknote/react useCreateBlockNote"
             - "@blocknote/mantine BlockNoteView"
         execution:
-          command: build
-          startedAt: "2026-01-02T12:45:13.667Z"
+          command: verify
+          startedAt: "2026-01-02T23:30:00.000Z"
+          completedAt: "2026-01-02T23:45:00.000Z"
       - id: TSK-01-02
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-05
@@ -248,8 +248,8 @@ workPackages:
             - PUT /api/pages/:id
             - debounce 1초
         execution:
-          command: review
-          startedAt: "2026-01-02T07:16:54.709Z"
+          command: build
+          startedAt: "2026-01-02T13:54:53.338Z"
       - id: TSK-01-03
         title: Notion 스타일 에디터 CSS 적용
         category: development
@@ -370,7 +370,7 @@ workPackages:
         title: 메인 레이아웃 (사이드바 + 에디터 영역)
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-09"
@@ -392,11 +392,14 @@ workPackages:
           uiSpec:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
+        execution:
+          command: build
+          startedAt: "2026-01-02T13:55:00.296Z"
       - id: TSK-02-02
         title: 사이드바 컴포넌트
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-09 ~ 2026-01-10
