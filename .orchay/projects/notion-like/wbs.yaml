@@ -132,7 +132,7 @@ workPackages:
         title: Zustand 스토어 설정
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-03"
@@ -155,9 +155,6 @@ workPackages:
           techSpec:
             - Zustand 5.x create 함수
             - TypeScript 타입 정의
-        execution:
-          command: start
-          startedAt: "2026-01-02T14:17:47.086Z"
       - id: TSK-00-99
         title: WP-00 통합 검증
         category: simple-dev
