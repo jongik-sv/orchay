@@ -232,7 +232,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 
 > ⚠️ **완료 신호 전 필수 확인**: 010, 025, 026 문서 모두 생성 + transition.ts 실행 완료
 
-작업 완료 후 **반드시** 다음 형식으로 출력:
+작업의 **모든 출력이 끝난 후 가장 마지막에** 다음 형식으로 출력:
 
 **성공:**
 ```

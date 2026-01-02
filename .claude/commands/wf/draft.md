@@ -193,7 +193,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} draft -p {project}
 
 ## 완료 신호
 
-작업 완료 후 **반드시** 다음 형식으로 출력:
+작업의 **모든 출력이 끝난 후 가장 마지막에** 다음 형식으로 출력:
 
 **성공:**
 ```

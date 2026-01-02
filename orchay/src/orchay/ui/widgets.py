@@ -98,15 +98,102 @@ class TaskDetailModal(VerticalScroll):
         yield self._content_widget
 
     def _update_content(self) -> None:
-        """Task raw_content로 내용 업데이트."""
+        """Task 상세 정보 업데이트."""
         if self._content_widget is None or self._current_task is None:
             return
 
-        # Task ID와 raw content 표시
-        header = f"[{self._current_task.id}] {self._current_task.title}\n"
-        header += "─" * 50 + "\n"
-        content = header + self._current_task.raw_content
-        self._content_widget.update(content)
+        task = self._current_task
+        lines: list[str] = []
+
+        # 헤더
+        lines.append(f"[{task.id}] {task.title}")
+        lines.append("─" * 60)
+
+        # raw_content가 있으면 사용 (MD 파서 호환)
+        if task.raw_content:
+            lines.append(task.raw_content)
+        else:
+            # YAML 필드들을 포맷하여 표시
+            # 기본 정보
+            lines.append(f"Status:   {task.status.value}")
+            lines.append(f"Category: {task.category.value}")
+            lines.append(f"Priority: {task.priority.value}")
+            if task.domain:
+                lines.append(f"Domain:   {task.domain}")
+            if task.assignee and task.assignee != "-":
+                lines.append(f"Assignee: {task.assignee}")
+            if task.schedule:
+                lines.append(f"Schedule: {task.schedule}")
+
+            # 의존성
+            if task.depends:
+                lines.append("")
+                lines.append("Dependencies:")
+                for dep in task.depends:
+                    lines.append(f"  - {dep}")
+
+            # 태그
+            if task.tags:
+                lines.append("")
+                lines.append(f"Tags: {', '.join(task.tags)}")
+
+            # PRD 참조
+            if task.prd_ref:
+                lines.append("")
+                lines.append(f"PRD Ref: {task.prd_ref}")
+
+            # 요구사항
+            if task.requirements:
+                lines.append("")
+                lines.append("Requirements:")
+                for req in task.requirements:
+                    lines.append(f"  • {req}")
+
+            # 인수 조건
+            if task.acceptance:
+                lines.append("")
+                lines.append("Acceptance Criteria:")
+                for acc in task.acceptance:
+                    lines.append(f"  ✓ {acc}")
+
+            # 기술 스펙
+            if task.tech_spec:
+                lines.append("")
+                lines.append("Tech Spec:")
+                for spec in task.tech_spec:
+                    lines.append(f"  - {spec}")
+
+            # API 스펙
+            if task.api_spec:
+                lines.append("")
+                lines.append("API Spec:")
+                for api in task.api_spec:
+                    lines.append(f"  - {api}")
+
+            # UI 스펙
+            if task.ui_spec:
+                lines.append("")
+                lines.append("UI Spec:")
+                for ui in task.ui_spec:
+                    lines.append(f"  - {ui}")
+
+            # 실행 정보
+            if task.execution:
+                lines.append("")
+                lines.append("Execution:")
+                lines.append(f"  Command:   {task.execution.command}")
+                if task.execution.description:
+                    lines.append(f"  Desc:      {task.execution.description}")
+                lines.append(f"  StartedAt: {task.execution.startedAt}")
+                if task.execution.worker is not None:
+                    lines.append(f"  Worker:    {task.execution.worker}")
+
+            # Blocked 정보
+            if task.blocked_by:
+                lines.append("")
+                lines.append(f"⚠ Blocked by: {task.blocked_by}")
+
+        self._content_widget.update("\n".join(lines))
 
 
 class TestSelectionPanel(VerticalScroll):

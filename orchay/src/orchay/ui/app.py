@@ -706,10 +706,11 @@ class OrchayApp(App[None]):
                         "info",
                     )
                 elif curr_state == WorkerState.DONE:
-                    self.write_log(
-                        f"Worker {worker.id}: Task 완료 ({prev_task})",
-                        "info",
-                    )
+                    if prev_task is not None:
+                        self.write_log(
+                            f"Worker {worker.id}: Task 완료 ({prev_task})",
+                            "info",
+                        )
                 elif curr_state == WorkerState.ERROR:
                     self.write_log(
                         f"Worker {worker.id}: 오류 발생",
@@ -763,11 +764,10 @@ class OrchayApp(App[None]):
 
         table.clear()
 
-        # 우선순위 순서
-        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        # Task ID 순서로 정렬
         sorted_tasks = sorted(
             [t for t in self._tasks if t.status != TaskStatus.DONE],
-            key=lambda t: priority_order.get(t.priority.value, 99),
+            key=lambda t: t.id,
         )
 
         # 현재 작업 중인 Task 찾기 (첫 번째)

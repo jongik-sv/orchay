@@ -79,7 +79,7 @@ workPackages:
 tasks:
   - id: TSK-01-01
     title: "Task 제목"
-    category: development # development, defect, infrastructure, simple-dev
+    category: development # .orchay/settings/workflows.json의 categories 참조
     domain: backend # backend, frontend, infra, test, fullstack, database
     status: "[ ]" # "[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"
     priority: high # critical, high, medium, low
