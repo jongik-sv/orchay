@@ -17,46 +17,46 @@
 ### 1.1 배경 및 문제 정의
 
 **현재 상황:**
-- TSK-01-01에서 BlockNote 에디터가 기본 통합되어 텍스트 입력 및 기본 블록 유형이 동작함
-- 에디터에서 작성한 콘텐츠가 메모리에만 존재하고 새로고침 시 유실됨
-- 페이지 로드 시 항상 빈 에디터가 표시됨
+- TSK-01-01에서 BlockNote 에디터 기본 통합 완료
+- 에디터에서 텍스트 입력 및 블록 조작이 가능한 상태
+- 하지만 에디터의 콘텐츠가 저장되지 않아 새로고침 시 모든 내용이 사라짐
 
 **해결하려는 문제:**
 - 사용자가 작성한 콘텐츠가 영구적으로 저장되지 않음
-- 페이지를 다시 열었을 때 이전에 작성한 내용을 복원할 수 없음
-- 편집 중 데이터 손실 위험이 존재함
+- 페이지 새로고침이나 재방문 시 이전 작성 내용 복원 불가
+- 실시간 자동 저장 부재로 인한 데이터 손실 위험
 
 ### 1.2 목적 및 기대 효과
 
 **목적:**
-- 에디터 콘텐츠를 SQLite 데이터베이스에 영구 저장
-- 페이지 로드 시 저장된 콘텐츠를 자동으로 복원
-- 사용자 편집 경험의 연속성 보장
+- BlockNote 에디터의 콘텐츠를 SQLite 데이터베이스에 저장하고 로드하는 기능 구현
+- 자동 저장 기능으로 사용자 데이터 손실 방지
 
 **기대 효과:**
-- 사용자 관점: 작성한 내용이 자동으로 저장되어 데이터 손실 걱정 없이 작업 가능
-- 비즈니스 관점: Notion과 유사한 신뢰성 있는 편집 경험 제공
+- 사용자 관점: 작성한 내용이 자동으로 저장되어 언제든 이어서 작업 가능
+- 비즈니스 관점: 데이터 영속성 확보로 신뢰성 있는 노트 애플리케이션 제공
 
 ### 1.3 범위
 
 **포함:**
 - 에디터 onChange 콜백을 통한 콘텐츠 JSON 추출
 - PUT /api/pages/:id API를 통한 DB 저장
-- 페이지 로드 시 initialContent 전달
-- 자동 저장 (debounce 1초 적용)
-- 저장 중 상태 표시 (선택적)
+- 페이지 로드 시 initialContent로 콘텐츠 복원
+- 1초 debounce 기반 자동 저장
+- 저장 상태 표시 (선택)
 
 **제외:**
 - 실시간 협업 동기화 (향후 과제)
-- 버전 히스토리 관리 (향후 과제)
-- 오프라인 저장 큐 (향후 과제)
+- 오프라인 동기화 (향후 과제)
+- 버전 히스토리 (향후 과제)
+- 다중 탭 동시 편집 충돌 처리 (향후 과제)
 
 ### 1.4 참조 문서
 
 | 문서 | 경로 | 관련 섹션 |
 |------|------|----------|
 | PRD | `.orchay/projects/notion-like/prd.md` | 2.1 블록 기반 에디터 |
-| TRD | `.orchay/projects/notion-like/trd.md` | 3.3 에디터 영역, 5 데이터베이스, 7 API 엔드포인트 |
+| TRD | `.orchay/projects/notion-like/trd.md` | 3.3 에디터 영역, 5.2 데이터베이스 유틸리티, 7. API 엔드포인트 |
 
 ---
 
@@ -66,16 +66,16 @@
 
 | 사용자 유형 | 특성 | 주요 니즈 |
 |------------|------|----------|
-| 일반 사용자 | 문서 작성자, 기술 수준 다양 | 작성 내용이 자동으로 안전하게 저장되길 원함 |
-| 파워 유저 | 많은 문서를 관리, 높은 기술 이해도 | 빠른 저장, 저장 상태 확인 원함 |
+| 일반 사용자 | 문서 작성 및 메모 용도 | 작성 내용의 안전한 저장 |
+| 파워 유저 | 대량의 문서 작성 | 빠른 자동 저장, 저장 상태 확인 |
 
 ### 2.2 사용자 페르소나
 
-**페르소나 1: 김작성**
-- 역할: 일반 사용자, 문서 작성자
-- 목표: 아이디어와 메모를 빠르게 기록하고 언제든 접근
-- 불만: 저장 버튼을 누르지 않아 작성 내용이 날아간 경험
-- 시나리오: 회의 중 노트 작성, 브라우저 탭 닫았다가 다시 열었을 때 내용 유지 기대
+**페르소나 1: 김개발**
+- 역할: 소프트웨어 개발자
+- 목표: 기술 문서 및 메모 작성
+- 불만: 저장 버튼 누르는 것을 잊어 내용 손실
+- 시나리오: 코딩하면서 메모 작성, 브라우저 탭 전환 빈번
 
 ---
 
@@ -86,111 +86,116 @@
 ```mermaid
 flowchart LR
     subgraph 시스템
-        UC01[UC-01: 에디터 콘텐츠 저장]
-        UC02[UC-02: 페이지 콘텐츠 로드]
-        UC03[UC-03: 자동 저장]
+        UC01[UC-01: 콘텐츠 자동 저장]
+        UC02[UC-02: 콘텐츠 로드]
+        UC03[UC-03: 저장 상태 확인]
     end
 
     사용자((사용자)) --> UC01
     사용자 --> UC02
-    시스템자동((시스템)) --> UC03
+    사용자 --> UC03
 ```
 
 ### 3.2 유즈케이스 상세
 
-#### UC-01: 에디터 콘텐츠 저장
+#### UC-01: 콘텐츠 자동 저장
 
 | 항목 | 내용 |
 |------|------|
-| 액터 | 사용자 (간접적으로 시스템) |
-| 목적 | 에디터에서 수정된 콘텐츠를 DB에 저장 |
-| 사전 조건 | 페이지가 로드되어 있고 에디터가 활성화됨 |
-| 사후 조건 | 콘텐츠가 pages 테이블의 content 컬럼에 JSON 형태로 저장됨 |
-| 트리거 | 에디터 내용 변경 후 1초 debounce 완료 |
+| 액터 | 문서 작성 사용자 |
+| 목적 | 에디터에서 작성한 내용을 자동으로 저장 |
+| 사전 조건 | 페이지가 로드되어 있고 에디터가 활성화된 상태 |
+| 사후 조건 | 콘텐츠가 DB에 저장됨 |
+| 트리거 | 에디터 내용 변경 후 1초 경과 |
 
 **기본 흐름:**
-1. 사용자가 에디터에서 텍스트를 입력하거나 블록을 수정한다
-2. onChange 콜백이 호출되어 editor.document를 JSON으로 직렬화한다
-3. debounce (1초) 후 PUT /api/pages/:id API를 호출한다
-4. API가 pages 테이블의 content 컬럼을 업데이트한다
-5. 저장 성공 시 저장 상태 표시가 사라진다 (선택)
+1. 사용자가 에디터에서 텍스트를 입력하거나 블록을 조작한다
+2. 에디터의 onChange 이벤트가 발생한다
+3. 시스템이 1초 debounce 타이머를 시작한다
+4. 1초 동안 추가 변경이 없으면 API 호출을 수행한다
+5. PUT /api/pages/:id 요청으로 콘텐츠를 저장한다
+6. 저장 완료 후 상태 표시가 업데이트된다
+
+**대안 흐름:**
+- 3a. 1초 내에 추가 변경이 발생하면:
+  - 기존 타이머를 취소하고 새로운 1초 타이머를 시작한다
 
 **예외 흐름:**
-- 4a. API 호출 실패 시:
-  - 콘솔에 에러 로그 출력
-  - 재시도 로직은 이번 범위에서 제외 (향후)
+- 5a. 네트워크 오류가 발생하면:
+  - 에러 토스트를 표시한다
+  - 일정 시간 후 재시도한다
 
-#### UC-02: 페이지 콘텐츠 로드
+#### UC-02: 콘텐츠 로드
 
 | 항목 | 내용 |
 |------|------|
-| 액터 | 사용자 |
+| 액터 | 문서 열람 사용자 |
 | 목적 | 저장된 콘텐츠를 에디터에 표시 |
-| 사전 조건 | 유효한 pageId로 페이지 라우트 접근 |
-| 사후 조건 | 에디터에 저장된 콘텐츠가 렌더링됨 |
-| 트리거 | 페이지 URL 접근 또는 사이드바에서 페이지 클릭 |
+| 사전 조건 | 유효한 페이지 ID로 접근 |
+| 사후 조건 | 에디터에 저장된 콘텐츠가 표시됨 |
+| 트리거 | 페이지 URL 접근 또는 사이드바에서 페이지 선택 |
 
 **기본 흐름:**
-1. 사용자가 /[pageId] URL로 접근한다
-2. 서버에서 GET /api/pages/:id를 호출하여 페이지 데이터를 가져온다
-3. content 컬럼의 JSON을 파싱하여 initialContent로 전달한다
-4. BlockNote 에디터가 initialContent를 기반으로 블록을 렌더링한다
+1. 사용자가 페이지 URL로 접근하거나 사이드바에서 페이지를 클릭한다
+2. 시스템이 GET /api/pages/:id 요청을 수행한다
+3. API가 페이지 데이터(content 포함)를 반환한다
+4. 에디터 컴포넌트가 initialContent prop으로 JSON 콘텐츠를 받는다
+5. 에디터가 저장된 블록 구조로 렌더링된다
 
 **예외 흐름:**
-- 3a. content가 null이거나 빈 문자열이면:
-  - 빈 에디터로 시작 (기본 paragraph 블록)
+- 3a. 페이지가 존재하지 않으면:
+  - 404 에러 페이지를 표시한다
+- 4a. content가 null이면:
+  - 빈 에디터를 표시한다 (새 문서)
 
-#### UC-03: 자동 저장
+#### UC-03: 저장 상태 확인
 
 | 항목 | 내용 |
 |------|------|
-| 액터 | 시스템 (자동) |
-| 목적 | 사용자 개입 없이 주기적으로 콘텐츠 저장 |
-| 사전 조건 | 에디터 내용이 변경됨 |
-| 사후 조건 | 최신 콘텐츠가 DB에 저장됨 |
-| 트리거 | onChange 이벤트 발생 후 1초 debounce |
+| 액터 | 문서 작성 사용자 |
+| 목적 | 현재 저장 상태를 시각적으로 확인 |
+| 사전 조건 | 에디터가 활성화된 상태 |
+| 사후 조건 | 저장 상태가 화면에 표시됨 |
+| 트리거 | 저장 상태 변경 시 |
 
 **기본 흐름:**
-1. 에디터에서 변경이 감지된다 (onChange)
-2. debounce 타이머가 시작된다 (1초)
-3. 1초 내에 추가 변경이 없으면 저장 API를 호출한다
-4. 1초 내에 추가 변경이 있으면 타이머를 리셋한다
+1. 콘텐츠 변경 시 "저장 중..." 상태 표시
+2. 저장 완료 시 상태 표시 제거 또는 "저장됨" 표시
+3. 일정 시간 후 상태 표시 사라짐
 
 ---
 
 ## 4. 사용자 시나리오
 
-### 4.1 시나리오 1: 일반적인 문서 작성
+### 4.1 시나리오 1: 기본 문서 작성 및 저장
 
 **상황 설명:**
-사용자가 노트 페이지를 열고 회의 내용을 기록한다. 작성 중간에 다른 탭으로 이동했다가 돌아오면 작성 내용이 그대로 유지되어 있다.
+사용자가 새 페이지를 열고 문서를 작성한다. 작성 중 다른 탭으로 이동했다가 돌아와도 내용이 유지되어야 한다.
 
 **단계별 진행:**
 
 | 단계 | 사용자 행동 | 시스템 반응 | 사용자 기대 |
 |------|-----------|------------|------------|
-| 1 | 페이지 클릭 | DB에서 콘텐츠 로드, 에디터에 표시 | 이전 작성 내용 표시 |
-| 2 | 텍스트 입력 | onChange 감지, debounce 시작 | 자연스러운 타이핑 |
-| 3 | 1초 대기 | PUT API 호출, DB 저장 | (사용자는 인지 못함) |
-| 4 | 브라우저 새로고침 | 페이지 다시 로드 | 작성 내용 그대로 표시 |
+| 1 | 사이드바에서 페이지 클릭 | 페이지 로드, 에디터 표시 | 이전 내용 표시 |
+| 2 | 에디터에 텍스트 입력 | onChange 이벤트 발생 | 타이핑 반응 |
+| 3 | 입력 멈춤 (1초 대기) | API 호출, DB 저장 | 자동 저장 |
+| 4 | 브라우저 새로고침 | 페이지 재로드 | 작성 내용 유지 |
 
 **성공 조건:**
-- 새로고침 후 모든 콘텐츠가 정확히 복원됨
-- 블록 순서, 서식, 내용이 저장 전과 동일
+- 새로고침 후에도 모든 작성 내용이 그대로 표시됨
 
-### 4.2 시나리오 2: 빠른 연속 편집
+### 4.2 시나리오 2: 네트워크 오류 상황
 
 **상황 설명:**
-사용자가 빠르게 여러 문장을 연속으로 입력한다. debounce가 제대로 동작하여 불필요한 API 호출을 방지한다.
+문서 작성 중 네트워크 연결이 끊어져 저장이 실패하는 상황
 
 **단계별 진행:**
 
-| 단계 | 사용자 행동 | 시스템 반응 | 기대 결과 |
+| 단계 | 사용자 행동 | 시스템 반응 | 복구 방법 |
 |------|-----------|------------|----------|
-| 1 | 첫 문장 입력 | debounce 타이머 시작 (1초) | API 호출 없음 |
-| 2 | 0.5초 후 두 번째 문장 입력 | 타이머 리셋 | API 호출 없음 |
-| 3 | 0.5초 후 세 번째 문장 입력 | 타이머 리셋 | API 호출 없음 |
-| 4 | 1초 대기 | PUT API 1회 호출 | 최종 콘텐츠만 저장 |
+| 1 | 에디터에 텍스트 입력 | 저장 시도 | - |
+| 2 | (네트워크 끊김) | 저장 실패, 에러 표시 | 네트워크 복구 대기 |
+| 3 | 네트워크 복구 | 자동 재시도 | 저장 완료 |
 
 ---
 
@@ -200,66 +205,60 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[페이지 로드] --> B[DB에서 콘텐츠 조회]
-    B --> C{콘텐츠 존재?}
-    C -->|Yes| D[initialContent로 에디터 초기화]
-    C -->|No| E[빈 에디터 초기화]
-    D --> F[에디터 표시]
-    E --> F
-    F --> G[사용자 편집]
-    G --> H[onChange 발생]
-    H --> I[debounce 1초]
-    I --> J[PUT API 호출]
-    J --> G
+    A[페이지 접근] --> B[API 로드]
+    B --> C[에디터 렌더링<br/>initialContent]
+    C --> D[사용자 편집]
+    D --> E[onChange 발생]
+    E --> F[1초 debounce]
+    F --> G[API 저장]
+    G --> H{성공?}
+    H -->|Yes| I[저장 완료 표시]
+    H -->|No| J[에러 표시]
+    J --> F
+    D --> E
 ```
 
 ### 5.2 화면별 상세
 
-#### 화면 1: 에디터 페이지 (기존 화면에 저장 기능 추가)
+#### 화면 1: 에디터 페이지 (저장 기능 통합)
 
 **화면 목적:**
-TSK-01-01에서 구현된 에디터에 저장/로드 기능 연동
+BlockNote 에디터와 자동 저장 기능이 통합된 메인 편집 화면
 
 **진입 경로:**
-- /[pageId] URL 직접 접근
+- URL 직접 접근: `/[pageId]`
 - 사이드바에서 페이지 클릭
 
 **와이어프레임:**
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                    페이지 헤더                       │   │
-│  │  📄 아이콘    페이지 제목                           │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                                                     │   │
-│  │              BlockNote 에디터 영역                   │   │
-│  │                                                     │   │
-│  │   [저장된 콘텐츠가 initialContent로 표시]           │   │
-│  │                                                     │   │
-│  │   사용자 편집 → onChange → debounce → 자동 저장     │   │
-│  │                                                     │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌───────────────────────────────────────────┐             │
-│  │  (선택) 저장 상태 표시: "저장 중..." / "저장됨"      │   │
-│  └───────────────────────────────────────────┘             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  [Sidebar]      │           [Editor Area]               │
+│                 │  ┌─────────────────────────────────┐  │
+│  ├─ Page A      │  │  📄 페이지 제목                  │  │
+│  ├─ Page B  ◀── │  ├─────────────────────────────────┤  │
+│  └─ Page C      │  │                                 │  │
+│                 │  │  에디터 콘텐츠 영역              │  │
+│                 │  │                                 │  │
+│                 │  │  저장 상태: [저장됨 ✓]           │  │
+│                 │  │                                 │  │
+│                 │  └─────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 **화면 요소 설명:**
 
 | 영역 | 설명 | 사용자 인터랙션 |
 |------|------|----------------|
-| BlockNote 에디터 | 콘텐츠 편집 영역 | 텍스트 입력, 블록 조작 |
-| 저장 상태 표시 (선택) | 현재 저장 상태 | 읽기 전용 |
+| 에디터 영역 | BlockNote 에디터 | 텍스트 입력, 블록 조작 |
+| 저장 상태 | 현재 저장 상태 표시 (선택) | 읽기 전용 |
 
-**사용자 행동 시나리오:**
-1. 사용자가 페이지에 진입하면 저장된 콘텐츠가 에디터에 표시됨
-2. 텍스트를 입력하거나 블록을 수정하면 자동으로 저장됨
-3. 새로고침해도 콘텐츠가 유지됨
+**저장 상태 표시 (선택적 구현):**
+
+| 상태 | 표시 | 위치 |
+|------|------|------|
+| 저장 중 | "저장 중..." 또는 스피너 | 헤더 우측 또는 제목 옆 |
+| 저장 완료 | "저장됨" 또는 체크 아이콘 | 동일 위치 |
+| 에러 | "저장 실패" 빨간색 | 동일 위치 |
 
 ---
 
@@ -269,17 +268,28 @@ TSK-01-01에서 구현된 에디터에 저장/로드 기능 연동
 
 | 사용자 액션 | 즉각 피드백 | 결과 피드백 | 에러 피드백 |
 |------------|-----------|------------|------------|
-| 에디터 편집 | 텍스트 표시 | (자동 저장됨) | 콘솔 로그 |
-| 페이지 로드 | 로딩 상태 | 콘텐츠 표시 | 에러 페이지 |
+| 에디터 입력 | 텍스트 표시 | 저장 중 표시 (1초 후) | - |
+| 자동 저장 | 저장 중... | 저장됨 ✓ | 저장 실패 |
 
 ### 6.2 상태별 화면 변화
 
 | 상태 | 화면 표시 | 사용자 안내 |
 |------|----------|------------|
-| 콘텐츠 로드 중 | 에디터 스켈레톤 (또는 빈 에디터) | - |
-| 저장 중 | (선택) "저장 중..." 텍스트 | 작업 진행 중 |
-| 저장 완료 | (선택) "저장됨" 또는 표시 사라짐 | 안전하게 저장됨 |
-| 저장 실패 | 콘솔 에러 | (MVP에서는 별도 UI 없음) |
+| 초기 로딩 | 에디터 스켈레톤 | "불러오는 중..." |
+| 콘텐츠 없음 | 빈 에디터 | placeholder 표시 |
+| 저장 중 | 저장 인디케이터 | "저장 중..." |
+| 저장 완료 | 완료 표시 | "저장됨" (2초 후 사라짐) |
+| 저장 실패 | 에러 표시 | "저장 실패. 재시도 중..." |
+
+### 6.3 Debounce 동작
+
+```
+[사용자 입력] ─→ [타이머 시작 1초]
+                        │
+[추가 입력] ─────→ [타이머 리셋 1초]
+                        │
+[1초 경과, 입력 없음] ─→ [API 호출]
+```
 
 ---
 
@@ -289,39 +299,54 @@ TSK-01-01에서 구현된 에디터에 저장/로드 기능 연동
 
 | 데이터 | 설명 | 출처 | 용도 |
 |--------|------|------|------|
-| page.id | 페이지 고유 식별자 | URL params (pageId) | API 호출 시 대상 지정 |
-| page.content | BlockNote 문서 JSON | pages 테이블 content 컬럼 | 에디터 initialContent |
-| editor.document | 현재 에디터 블록 배열 | BlockNote API | 저장할 콘텐츠 |
+| pageId | 페이지 고유 식별자 | URL 파라미터 | API 요청 식별 |
+| content | BlockNote JSON 문서 | 에디터 인스턴스 | DB 저장/로드 |
 
-### 7.2 데이터 관계
+### 7.2 데이터 구조
 
-```mermaid
-erDiagram
-    pages ||--o| content : contains
-    pages {
-        text id PK
-        text title
-        text icon
-        text cover_url
-        text parent_id FK
-        text content "BlockNote JSON"
-        integer is_favorite
-        integer sort_order
-        text created_at
-        text updated_at
-    }
+**BlockNote Document 구조:**
+```typescript
+type Block = {
+  id: string;
+  type: string;  // "paragraph", "heading", "bulletListItem" 등
+  props: Record<string, unknown>;
+  content: InlineContent[];
+  children: Block[];
+};
+
+// 에디터 문서 = Block 배열
+type Document = Block[];
 ```
 
-**관계 설명:**
-- pages 테이블의 content 컬럼에 BlockNote document를 JSON 문자열로 저장
-- JSON 구조: `[{ type: "paragraph", content: [...], ... }, ...]`
+**API 요청/응답:**
+
+```typescript
+// PUT /api/pages/:id 요청
+{
+  content: string  // JSON.stringify(editor.document)
+}
+
+// GET /api/pages/:id 응답
+{
+  id: string;
+  title: string;
+  icon: string | null;
+  cover_url: string | null;
+  parent_id: string | null;
+  content: string | null;  // JSON 문자열 또는 null
+  is_favorite: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+```
 
 ### 7.3 데이터 유효성 규칙
 
-| 데이터 필드 | 규칙 | 위반 시 메시지 |
-|------------|------|---------------|
-| content | JSON 형식 | "유효하지 않은 콘텐츠 형식" |
-| pageId | 존재하는 페이지 | "페이지를 찾을 수 없습니다" (404) |
+| 데이터 필드 | 규칙 | 위반 시 처리 |
+|------------|------|-------------|
+| content | 유효한 JSON 문자열 | 에러 반환 (400) |
+| content | BlockNote 스키마 준수 | 에디터 기본 오류 처리 |
 
 ---
 
@@ -331,28 +356,29 @@ erDiagram
 
 | 규칙 ID | 규칙 설명 | 적용 상황 | 예외 |
 |---------|----------|----------|------|
-| BR-01 | 콘텐츠 변경 시 자동 저장 | 에디터에서 모든 변경 발생 시 | debounce 중 추가 변경 발생 |
-| BR-02 | debounce 간격 1초 | 마지막 변경 후 1초 대기 | 없음 |
-| BR-03 | 콘텐츠는 JSON 문자열로 저장 | DB 저장 시 | 없음 |
+| BR-01 | 자동 저장은 1초 debounce 적용 | 모든 콘텐츠 변경 | 없음 |
+| BR-02 | 저장 실패 시 자동 재시도 | 네트워크 오류 | 5회 실패 시 중단 |
+| BR-03 | 빈 콘텐츠도 저장 가능 | 모든 경우 | 없음 |
 
 ### 8.2 규칙 상세 설명
 
-**BR-01: 자동 저장**
+**BR-01: 1초 Debounce**
 
-설명: 사용자가 에디터에서 어떤 변경을 하더라도 (텍스트 입력, 블록 추가/삭제, 드래그 앤 드롭 등) 시스템이 자동으로 저장한다. 사용자는 별도의 저장 버튼을 누를 필요가 없다.
-
-예시:
-- 텍스트 입력 시: 1초 후 자동 저장
-- 블록 순서 변경 시: 1초 후 자동 저장
-- 블록 삭제 시: 1초 후 자동 저장
-
-**BR-02: debounce 간격**
-
-설명: 연속적인 입력 시 매번 API를 호출하면 서버 부하가 증가하고 성능이 저하된다. 마지막 변경 후 1초 동안 추가 변경이 없을 때만 저장을 실행한다.
+설명: 사용자가 타이핑을 멈춘 후 1초가 지나면 저장을 수행한다. 이를 통해 불필요한 API 호출을 줄이고 서버 부하를 낮춘다.
 
 예시:
-- 0.5초 간격으로 3번 입력: API 호출 1회 (마지막 입력 후 1초 뒤)
-- 2초 간격으로 3번 입력: API 호출 3회 (각 입력 후 1초 뒤)
+- 사용자가 연속으로 타이핑: 마지막 입력 후 1초 뒤 저장
+- 사용자가 1초 간격으로 입력: 매 입력마다 저장 (각 입력 후 1초 대기)
+
+**BR-02: 자동 재시도**
+
+설명: 네트워크 오류로 저장이 실패하면 지수 백오프로 재시도한다.
+
+예시:
+- 1회 실패: 2초 후 재시도
+- 2회 실패: 4초 후 재시도
+- 3회 실패: 8초 후 재시도
+- 5회 실패: 사용자에게 수동 재시도 안내
 
 ---
 
@@ -362,28 +388,26 @@ erDiagram
 
 | 상황 | 원인 | 사용자 메시지 | 복구 방법 |
 |------|------|--------------|----------|
-| 페이지 없음 | 잘못된 pageId | 404 페이지 표시 | 올바른 URL로 이동 |
-| 저장 실패 | 네트워크 오류 | 콘솔 로그 (MVP) | 페이지 새로고침 후 재시도 |
-| JSON 파싱 오류 | 손상된 content | 빈 에디터로 시작 | 수동 복구 필요 |
+| 네트워크 오류 | 연결 끊김 | "저장 실패. 연결을 확인하세요." | 자동 재시도 |
+| 서버 오류 | 500 에러 | "서버 오류. 잠시 후 다시 시도해주세요." | 자동 재시도 |
+| 페이지 없음 | 404 에러 | "페이지를 찾을 수 없습니다." | 페이지 목록으로 이동 |
+| JSON 파싱 오류 | 잘못된 데이터 | "데이터 오류가 발생했습니다." | 새로고침 안내 |
 
 ### 9.2 에러 표시 방식
 
 | 에러 유형 | 표시 위치 | 표시 방법 |
 |----------|----------|----------|
-| 페이지 없음 | 전체 화면 | 404 에러 페이지 |
-| 저장 실패 | 콘솔 | console.error (MVP) |
-| 로드 실패 | 에디터 영역 | 빈 에디터 + 콘솔 로그 |
+| 저장 실패 | 헤더 영역 | 빨간색 텍스트 또는 토스트 |
+| 로드 실패 | 에디터 영역 | 에러 메시지 박스 |
 
 ---
 
 ## 10. 연관 문서
 
-> 상세 테스트 명세 및 요구사항 추적은 별도 문서에서 관리합니다.
-
 | 문서 | 경로 | 용도 |
 |------|------|------|
-| 요구사항 추적 매트릭스 | `025-traceability-matrix.md` | PRD → 설계 → 테스트 양방향 추적 |
-| 테스트 명세서 | `026-test-specification.md` | 단위/E2E/매뉴얼 테스트 상세 정의 |
+| 요구사항 추적 매트릭스 | `025-traceability-matrix.md` | PRD → 설계 → 테스트 추적 |
+| 테스트 명세서 | `026-test-specification.md` | 저장/로드 테스트 케이스 |
 
 ---
 
@@ -393,154 +417,99 @@ erDiagram
 
 | 영역 | 변경 내용 | 영향도 |
 |------|----------|--------|
-| src/components/editor/Editor.tsx | onChange 콜백 추가, initialContent 연동 | 높음 |
-| src/app/[pageId]/page.tsx | 페이지 데이터 fetch, 에디터에 전달 | 높음 |
-| src/app/api/pages/[id]/route.ts | PUT API content 저장 (기존 구현 확인) | 중간 |
+| Editor.tsx | onChange 콜백 추가, initialContent prop | 높음 |
+| [pageId]/page.tsx | 페이지 데이터 로드 로직 | 높음 |
+| API /api/pages/[id] | PUT 엔드포인트 활용 | 중간 |
 
 ### 11.2 의존성
 
 | 의존 항목 | 이유 | 상태 |
 |----------|------|------|
-| TSK-01-01 | BlockNote 에디터 기본 통합 필요 | 대기중 |
-| TSK-00-04 | SQLite DB 및 pages 테이블 필요 | 대기중 |
+| TSK-01-01 | BlockNote 에디터 기본 통합 필요 | 진행중 |
+| TSK-00-04 | SQLite 데이터베이스 초기화 필요 | 대기 |
 
 ### 11.3 제약 사항
 
 | 제약 | 설명 | 대응 방안 |
 |------|------|----------|
-| 실시간 동기화 없음 | MVP에서 단일 사용자만 가정 | 향후 Y.js 통합 |
-| 오프라인 저장 없음 | 네트워크 필수 | 향후 Service Worker 추가 |
+| 동시 편집 미지원 | 다중 탭/사용자 동시 편집 시 충돌 | 마지막 저장 우선 적용 |
+| 오프라인 미지원 | 네트워크 끊김 시 저장 불가 | 에러 표시 및 재시도 |
 
 ---
 
 ## 12. 기술 명세
 
-### 12.1 에디터 컴포넌트 수정
+### 12.1 컴포넌트 구조
 
 ```typescript
-// src/components/editor/Editor.tsx
-"use client";
-
-import { useCreateBlockNote } from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/mantine";
-import "@blocknote/mantine/style.css";
-import { useCallback, useState } from "react";
-
+// Editor.tsx 변경
 interface EditorProps {
   pageId: string;
-  initialContent?: string;
+  initialContent?: string;  // JSON 문자열
+  onSave?: (content: string) => void;
 }
 
-export function Editor({ pageId, initialContent }: EditorProps) {
-  const [isSaving, setIsSaving] = useState(false);
-
+export function Editor({ pageId, initialContent, onSave }: EditorProps) {
   const editor = useCreateBlockNote({
     initialContent: initialContent ? JSON.parse(initialContent) : undefined,
   });
 
-  // debounce 저장 함수
-  const saveContent = useCallback(
-    debounce(async (content: string) => {
-      setIsSaving(true);
-      try {
-        await fetch(`/api/pages/${pageId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        });
-      } catch (error) {
-        console.error("Failed to save content:", error);
-      } finally {
-        setIsSaving(false);
-      }
+  // Debounced save
+  const debouncedSave = useMemo(
+    () => debounce((content: string) => {
+      onSave?.(content);
     }, 1000),
-    [pageId]
+    [onSave]
   );
 
   return (
-    <div className="px-[96px] py-4 max-w-[900px] mx-auto">
-      {isSaving && (
-        <div className="text-sm text-[#787774] mb-2">저장 중...</div>
-      )}
-      <BlockNoteView
-        editor={editor}
-        theme="light"
-        onChange={() => {
-          const content = JSON.stringify(editor.document);
-          saveContent(content);
-        }}
-      />
-    </div>
+    <BlockNoteView
+      editor={editor}
+      theme="light"
+      onChange={() => {
+        const content = JSON.stringify(editor.document);
+        debouncedSave(content);
+      }}
+    />
   );
 }
+```
 
-// debounce 유틸리티 함수
-function debounce<T extends (...args: any[]) => any>(
+### 12.2 API 활용
+
+```typescript
+// 페이지 데이터 로드
+const loadPage = async (pageId: string) => {
+  const response = await fetch(`/api/pages/${pageId}`);
+  if (!response.ok) throw new Error('Page not found');
+  return response.json();
+};
+
+// 콘텐츠 저장
+const saveContent = async (pageId: string, content: string) => {
+  const response = await fetch(`/api/pages/${pageId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) throw new Error('Save failed');
+  return response.json();
+};
+```
+
+### 12.3 Debounce 유틸리티
+
+```typescript
+// lodash-es 또는 직접 구현
+function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);
   };
-}
-```
-
-### 12.2 페이지 컴포넌트
-
-```typescript
-// src/app/[pageId]/page.tsx
-import { getPage } from "@/lib/db";
-import { Editor } from "@/components/editor/Editor";
-import { PageHeader } from "@/components/editor/PageHeader";
-import { notFound } from "next/navigation";
-
-export default async function PageView({
-  params,
-}: {
-  params: { pageId: string };
-}) {
-  const page = getPage(params.pageId);
-
-  if (!page) {
-    notFound();
-  }
-
-  return (
-    <div className="flex-1 overflow-auto">
-      <PageHeader
-        icon={page.icon}
-        coverUrl={page.cover_url}
-        title={page.title}
-        pageId={page.id}
-      />
-      <Editor
-        pageId={page.id}
-        initialContent={page.content || undefined}
-      />
-    </div>
-  );
-}
-```
-
-### 12.3 API 엔드포인트 (기존 확인)
-
-```typescript
-// src/app/api/pages/[id]/route.ts
-// PUT 메서드에서 content 필드 저장 확인 필요
-
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const data = await request.json();
-  // data.content가 포함되면 DB에 저장됨
-  const page = updatePage(params.id, data);
-  if (!page) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-  return NextResponse.json(page);
 }
 ```
 
@@ -559,7 +528,6 @@ export async function PUT(
 - [x] 데이터 요구사항 정의 완료
 - [x] 비즈니스 규칙 정의 완료
 - [x] 에러 처리 정의 완료
-- [x] 기술 명세 작성 완료
 
 ### 13.2 연관 문서 작성
 
@@ -568,7 +536,7 @@ export async function PUT(
 
 ### 13.3 구현 준비
 
-- [x] 구현 우선순위 결정 (TSK-01-01 완료 후)
+- [x] 구현 우선순위 결정
 - [x] 의존성 확인 완료
 - [x] 제약 사항 검토 완료
 
