@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { Editor } from "@/components/editor/Editor";
 
 interface PageData {
@@ -147,41 +149,43 @@ export default function PageContent() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {/* 헤더 영역 */}
-      <div className="flex items-center justify-between px-12 py-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          {pageData.icon && (
-            <span className="text-4xl">{pageData.icon}</span>
-          )}
-          <h1 className="text-3xl font-bold">{pageData.title}</h1>
+    <MainLayout sidebar={<Sidebar />}>
+      <div className="flex flex-col h-full w-full">
+        {/* 헤더 영역 */}
+        <div className="flex items-center justify-between px-12 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            {pageData.icon && (
+              <span className="text-4xl">{pageData.icon}</span>
+            )}
+            <h1 className="text-3xl font-bold">{pageData.title}</h1>
+          </div>
+
+          {/* 저장 상태 표시 */}
+          <div className="text-sm">
+            {saveState.status === "saving" && (
+              <span className="text-blue-600">저장 중...</span>
+            )}
+            {saveState.status === "saved" && (
+              <span className="text-green-600">저장됨 ✓</span>
+            )}
+            {saveState.status === "error" && (
+              <span className="text-red-600">{saveState.message}</span>
+            )}
+          </div>
         </div>
 
-        {/* 저장 상태 표시 */}
-        <div className="text-sm">
-          {saveState.status === "saving" && (
-            <span className="text-blue-600">저장 중...</span>
-          )}
-          {saveState.status === "saved" && (
-            <span className="text-green-600">저장됨 ✓</span>
-          )}
-          {saveState.status === "error" && (
-            <span className="text-red-600">{saveState.message}</span>
-          )}
+        {/* 에디터 영역 */}
+        <div className="flex-1 overflow-auto bg-white">
+          <div className="px-12 py-8">
+            <Editor
+              initialContent={pageData.content || undefined}
+              onChange={(content) => {
+                debouncedSave(content);
+              }}
+            />
+          </div>
         </div>
       </div>
-
-      {/* 에디터 영역 */}
-      <div className="flex-1 overflow-auto bg-white">
-        <div className="px-12 py-8">
-          <Editor
-            initialContent={pageData.content || undefined}
-            onChange={(content) => {
-              debouncedSave(content);
-            }}
-          />
-        </div>
-      </div>
-    </div>
+    </MainLayout>
   );
 }

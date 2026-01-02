@@ -79,7 +79,7 @@ workPackages:
     title: 프로젝트 구조 및 기본 레이아웃 생성
     category: infrastructure
     domain: fullstack
-    status: '[ ]'
+    status: '[dd]'
     priority: high
     assignee: '-'
     schedule: 2026-01-02 ~ 2026-01-03
