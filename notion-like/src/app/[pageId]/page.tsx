@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, notFound } from "next/navigation";
 import { Star } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -53,6 +53,18 @@ export default function PageContent() {
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
+
+  // [MINOR-004] setTimeout cleanup을 위한 ref
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // [MINOR-004] 컴포넌트 언마운트 시 timeout cleanup
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // URL 변경 시 Zustand 상태 동기화
   useEffect(() => {
@@ -107,9 +119,9 @@ export default function PageContent() {
     }
   }, [notFoundState, loading]);
 
-  // 콘텐츠 저장 함수
-  const saveContent = useCallback(
-    async (content: string) => {
+  // [MAJOR-002] 공통 페이지 업데이트 함수 - DRY 원칙 적용
+  const updatePage = useCallback(
+    async (updates: Partial<PageData>, errorMessage: string) => {
       if (!pageId) return;
 
       try {
@@ -118,133 +130,61 @@ export default function PageContent() {
         const response = await fetch(`/api/pages/${pageId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify(updates),
         });
 
         if (!response.ok) {
-          throw new Error(`Save failed with status ${response.status}`);
+          throw new Error(`Update failed with status ${response.status}`);
         }
 
         const updatedPage = await response.json();
         setPageData(updatedPage);
         setSaveState({ status: "saved" });
 
-        // 2초 후 상태 초기화
-        setTimeout(() => {
+        // [MINOR-004] timeout cleanup 적용
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
           setSaveState({ status: "idle" });
         }, 2000);
       } catch (error) {
-        console.error("[PageContent] Failed to save content:", error);
+        console.error("[PageContent] Update failed:", error);
         setSaveState({
           status: "error",
-          message: "저장 실패. 다시 시도해주세요.",
+          message: errorMessage,
         });
       }
     },
     [pageId]
+  );
+
+  // 콘텐츠 저장 함수
+  const saveContent = useCallback(
+    (content: string) => updatePage({ content }, "저장 실패. 다시 시도해주세요."),
+    [updatePage]
   );
 
   // Debounce된 저장 함수 (1초)
   const debouncedSave = useMemo(() => debounce(saveContent, 1000), [saveContent]);
 
-  // 즐겨찾기 토글
-  const toggleFavorite = useCallback(async () => {
-    if (!pageId || !pageData) return;
-
+  // 즐겨찾기 토글 - [MAJOR-002] 공통 함수 사용
+  const toggleFavorite = useCallback(() => {
+    if (!pageData) return;
     const newFavoriteState = pageData.is_favorite === 0 ? true : false;
+    updatePage({ is_favorite: newFavoriteState ? 1 : 0 }, "즐겨찾기 변경에 실패했습니다.");
+  }, [pageData, updatePage]);
 
-    try {
-      const response = await fetch(`/api/pages/${pageId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_favorite: newFavoriteState }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to toggle favorite");
-      }
-
-      const updatedPage = await response.json();
-      setPageData(updatedPage);
-    } catch (error) {
-      console.error("[PageContent] Failed to toggle favorite:", error);
-      setSaveState({
-        status: "error",
-        message: "즐겨찾기 변경에 실패했습니다.",
-      });
-    }
-  }, [pageId, pageData]);
-
-  // 제목 변경 핸들러
+  // 제목 변경 핸들러 - [MAJOR-002] 공통 함수 사용
   const handleTitleChange = useCallback(
-    async (title: string) => {
-      if (!pageId) return;
-
-      try {
-        setSaveState({ status: "saving" });
-
-        const response = await fetch(`/api/pages/${pageId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update title");
-        }
-
-        const updatedPage = await response.json();
-        setPageData(updatedPage);
-        setSaveState({ status: "saved" });
-
-        setTimeout(() => {
-          setSaveState({ status: "idle" });
-        }, 2000);
-      } catch (error) {
-        console.error("[PageContent] Failed to update title:", error);
-        setSaveState({
-          status: "error",
-          message: "제목 저장에 실패했습니다.",
-        });
-      }
-    },
-    [pageId]
+    (title: string) => updatePage({ title }, "제목 저장에 실패했습니다."),
+    [updatePage]
   );
 
-  // 아이콘 변경 핸들러
+  // 아이콘 변경 핸들러 - [MAJOR-002] 공통 함수 사용
   const handleIconChange = useCallback(
-    async (icon: string) => {
-      if (!pageId) return;
-
-      try {
-        setSaveState({ status: "saving" });
-
-        const response = await fetch(`/api/pages/${pageId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ icon }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update icon");
-        }
-
-        const updatedPage = await response.json();
-        setPageData(updatedPage);
-        setSaveState({ status: "saved" });
-
-        setTimeout(() => {
-          setSaveState({ status: "idle" });
-        }, 2000);
-      } catch (error) {
-        console.error("[PageContent] Failed to update icon:", error);
-        setSaveState({
-          status: "error",
-          message: "아이콘 저장에 실패했습니다.",
-        });
-      }
-    },
-    [pageId]
+    (icon: string) => updatePage({ icon }, "아이콘 저장에 실패했습니다."),
+    [updatePage]
   );
 
   if (loading) {
