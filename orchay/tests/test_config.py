@@ -26,7 +26,8 @@ class TestConfigDefaultValues:
         config = Config()
         assert config.detection.done_pattern is not None
         assert len(config.detection.prompt_patterns) > 0
-        assert config.recovery.resume_text == "계속"
+        assert config.worker_command.resume == "/resume"
+        assert config.worker_command.clear == "/clear"
         assert config.dispatch.clear_before_dispatch is True
         assert config.history.enabled is True
 

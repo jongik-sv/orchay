@@ -106,6 +106,9 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
+        execution:
+          command: patch
+          startedAt: "2026-01-02T06:30:33.406Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -150,7 +153,7 @@ workPackages:
             - "order_items: id, order_id, menu_id, quantity, status"
         execution:
           command: patch
-          startedAt: "2026-01-02T06:13:40.914Z"
+          startedAt: "2026-01-02T06:29:21.600Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
@@ -217,8 +220,8 @@ workPackages:
             - "PATCH /api/orders/1/status → { success: true }"
             - "  body: { status: 'cooking' | 'completed' }"
         execution:
-          command: apply
-          startedAt: "2026-01-02T04:59:42.024Z"
+          command: build
+          startedAt: "2026-01-02T06:27:47.429Z"
       - id: TSK-01-04
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
@@ -301,7 +304,6 @@ workPackages:
           - realtime
         depends:
           - TSK-02-01
-        blockedBy: null
         testResult: null
         note: null
         requirements:
@@ -388,8 +390,8 @@ workPackages:
             - backdrop-blur-[16px] bg-white/25
             - 그라데이션 배경 from-[#E8DFFF] via-[#F3E8FF] to-[#FFE4F3]
         execution:
-          command: apply
-          startedAt: "2026-01-02T05:24:09.926Z"
+          command: build
+          startedAt: "2026-01-02T06:27:56.329Z"
       - id: TSK-03-02
         title: 장바구니 및 주문 기능 구현
         category: development

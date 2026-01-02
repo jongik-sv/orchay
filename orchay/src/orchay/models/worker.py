@@ -26,6 +26,15 @@ class WorkerState(str, Enum):
     DONE = "done"
 
 
+class PausedInfo(BaseModel):
+    """Paused 상태 정보 (토큰 한도 등)."""
+
+    reason: str = Field(description="일시정지 사유 (예: 'rate limit', 'hit limit')")
+    resume_at: datetime = Field(description="재개 가능 시간")
+    detected_at: datetime = Field(description="감지 시간")
+    message: str = Field(default="", description="원본 메시지")
+
+
 class Worker(BaseModel):
     """Claude Code Worker 모델."""
 
@@ -37,6 +46,8 @@ class Worker(BaseModel):
     dispatch_time: datetime | None = Field(default=None, description="Task 분배 시간")
     retry_count: int = Field(default=0, description="재시도 횟수")
     is_manually_paused: bool = Field(default=False, description="수동 일시정지 여부")
+    resume_at: datetime | None = Field(default=None, description="자동 재개 시간 (토큰 한도 등)")
+    paused_info: PausedInfo | None = Field(default=None, description="일시정지 상세 정보")
 
     def is_available(self) -> bool:
         """작업 할당 가능 여부.
@@ -62,4 +73,6 @@ class Worker(BaseModel):
         self.current_step = None
         self.dispatch_time = None
         self.retry_count = 0
+        self.resume_at = None
+        self.paused_info = None
         # is_manually_paused는 유지 (수동 일시정지는 명시적 해제 필요)

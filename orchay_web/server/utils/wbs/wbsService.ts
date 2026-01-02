@@ -3,18 +3,18 @@
  * Task: TSK-03-02, TSK-09-01
  * 상세설계: 020-detail-design.md 섹션 5.1
  *
- * WBS 트리 조회/저장 비즈니스 로직
+ * WBS 트리 조회/저장 비즈니스 로직 (wbs.yaml 기반)
  */
 
 import { promises as fs } from 'fs';
+import { parse as parseYaml } from 'yaml';
 import type { WbsNode, WbsMetadata, AllWbsResponse, ProjectWbsNode } from '../../../types';
 import type { ProjectListItem } from '../projects/types';
-import { parseWbsMarkdown } from './parser/index';
-import { serializeWbs } from './serializer';
+import { parseWbsYaml } from './yamlParser/index';
+import { serializeWbsToYaml, type SerializeContext } from './yamlSerializer/index';
+import type { YamlWbsRoot } from './yamlParser/_types';
 import { validateWbs } from './validation/index';
 import {
-  readMarkdownFile,
-  writeMarkdownFile,
   fileExists,
   getWbsPath,
   getProjectPath,
@@ -29,46 +29,30 @@ import { getProjectsList } from '../projects/projectsListService';
 import { getProject } from '../projects/projectService';
 
 /**
- * Markdown에서 메타데이터 섹션 파싱
- * @param markdown - wbs.md 파일 내용
- * @returns WbsMetadata
+ * YAML 파일 읽기
  */
-function parseMetadata(markdown: string): WbsMetadata {
-  const lines = markdown.split('\n');
-  const metadata: Partial<WbsMetadata> = {
-    version: '1.0',
-    depth: 4,
-    updated: new Date().toISOString().split('T')[0],
-    start: '',
-  };
-
-  let inMetadataSection = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // 메타데이터 섹션 시작 (> 블록)
-    if (trimmed.startsWith('>')) {
-      inMetadataSection = true;
-      const content = trimmed.substring(1).trim();
-
-      if (content.startsWith('version:')) {
-        metadata.version = content.substring(8).trim();
-      } else if (content.startsWith('depth:')) {
-        const depth = parseInt(content.substring(6).trim());
-        metadata.depth = (depth === 3 || depth === 4 ? depth : 4) as 3 | 4;
-      } else if (content.startsWith('updated:')) {
-        metadata.updated = content.substring(8).trim();
-      } else if (content.startsWith('start:')) {
-        metadata.start = content.substring(6).trim();
-      }
-    } else if (trimmed === '---' && inMetadataSection) {
-      // 메타데이터 섹션 종료
-      break;
+async function readYamlFile(path: string): Promise<string | null> {
+  try {
+    return await fs.readFile(path, 'utf-8');
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      console.error(`Failed to read YAML file: ${path}`, error);
     }
+    return null;
   }
+}
 
-  return metadata as WbsMetadata;
+/**
+ * YAML 파일 쓰기
+ */
+async function writeYamlFile(path: string, content: string): Promise<boolean> {
+  try {
+    await fs.writeFile(path, content, 'utf-8');
+    return true;
+  } catch (error) {
+    console.error(`Failed to write YAML file: ${path}`, error);
+    return false;
+  }
 }
 
 /**
@@ -90,7 +74,7 @@ function checkUpdatedDate(requestUpdated: string, currentUpdated: string): void 
  * WBS 트리 조회
  * @param projectId - 프로젝트 ID
  * @returns { metadata, tree }
- * @throws PROJECT_NOT_FOUND - 프로젝트 또는 wbs.md 없음
+ * @throws PROJECT_NOT_FOUND - 프로젝트 또는 wbs.yaml 없음
  * @throws PARSE_ERROR - 파싱 실패
  * @throws FILE_ACCESS_ERROR - 파일 읽기 실패
  *
@@ -110,9 +94,9 @@ export async function getWbsTree(projectId: string): Promise<{
     throw createNotFoundError(`프로젝트를 찾을 수 없습니다: ${projectId}`);
   }
 
-  // 파일 읽기
-  const markdown = await readMarkdownFile(wbsPath);
-  if (markdown === null) {
+  // YAML 파일 읽기
+  const yamlContent = await readYamlFile(wbsPath);
+  if (yamlContent === null) {
     throw createInternalError(
       'FILE_ACCESS_ERROR',
       'WBS 파일을 읽을 수 없습니다'
@@ -120,11 +104,8 @@ export async function getWbsTree(projectId: string): Promise<{
   }
 
   try {
-    // 메타데이터 파싱
-    const metadata = parseMetadata(markdown);
-
-    // 트리 파싱 (진행률 자동 계산 포함)
-    const tree = parseWbsMarkdown(markdown);
+    // YAML 파싱 (메타데이터 + 트리 + 진행률 자동 계산 포함)
+    const { metadata, tree } = parseWbsYaml(yamlContent);
 
     return { metadata, tree };
   } catch (error) {
@@ -180,13 +161,24 @@ export async function saveWbsTree(
     );
   }
 
-  // 낙관적 잠금 확인 (BR-006)
+  // 기존 YAML 파일 읽기 (project/wbs 섹션 유지용)
   const exists = await fileExists(wbsPath);
+  let context: SerializeContext = {};
+
   if (exists) {
-    const currentMarkdown = await readMarkdownFile(wbsPath);
-    if (currentMarkdown) {
-      const currentMetadata = parseMetadata(currentMarkdown);
-      checkUpdatedDate(metadata.updated, currentMetadata.updated);
+    const currentYaml = await readYamlFile(wbsPath);
+    if (currentYaml) {
+      try {
+        const currentRoot = parseYaml(currentYaml) as YamlWbsRoot;
+        context.existingProject = currentRoot.project;
+        context.existingWbsConfig = currentRoot.wbs;
+
+        // 낙관적 잠금 확인 (BR-006)
+        const currentUpdated = currentRoot.project?.updatedAt ?? '';
+        checkUpdatedDate(metadata.updated, currentUpdated);
+      } catch {
+        // 파싱 실패 시 무시
+      }
     }
   }
 
@@ -196,11 +188,11 @@ export async function saveWbsTree(
       await fs.copyFile(wbsPath, backupPath);
     }
 
-    // 시리얼라이즈 (BR-006: updated 필드 자동 갱신)
-    const markdown = serializeWbs(tree, metadata, { updateDate: true });
+    // YAML 시리얼라이즈 (BR-006: updated 필드 자동 갱신)
+    const yamlContent = serializeWbsToYaml(tree, metadata, { updateDate: true }, context);
 
     // 파일 쓰기
-    const writeSuccess = await writeMarkdownFile(wbsPath, markdown);
+    const writeSuccess = await writeYamlFile(wbsPath, yamlContent);
     if (!writeSuccess) {
       // 롤백 (BR-004)
       if (exists) {
@@ -219,13 +211,12 @@ export async function saveWbsTree(
       });
     }
 
-    // 새로운 updated 날짜 추출
-    const savedMarkdown = await readMarkdownFile(wbsPath);
-    const savedMetadata = savedMarkdown ? parseMetadata(savedMarkdown) : metadata;
+    // 새로운 updated 날짜 반환
+    const newUpdated = new Date().toISOString().split('T')[0];
 
     return {
       success: true,
-      updated: savedMetadata.updated,
+      updated: newUpdated,
     };
   } catch (error) {
     // 롤백 (BR-004)

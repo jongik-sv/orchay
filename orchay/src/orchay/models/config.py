@@ -41,7 +41,6 @@ class DetectionConfig(BaseModel):
 class RecoveryConfig(BaseModel):
     """복구 설정."""
 
-    resume_text: str = Field(default="계속", description="재개 시 전송할 텍스트")
     default_wait_time: int = Field(default=60, description="기본 대기 시간 (초)")
     context_limit_wait: int = Field(default=5, description="컨텍스트 리밋 대기 시간 (초)")
     weekly_limit_default: int = Field(default=3600, description="주간 리밋 파싱 실패 시 대기 (초)")
@@ -84,6 +83,21 @@ class ExecutionConfig(BaseModel):
     allow_mode_switch: bool = Field(default=True, description="실행 중 모드 전환 허용")
 
 
+class WorkerCommandConfig(BaseModel):
+    """워커 명령어 설정."""
+
+    startup: str = Field(
+        default="claude --dangerously-skip-permissions",
+        description="워커 pane 시작 시 실행할 명령어",
+    )
+    template: str = Field(
+        default="/wf:{action} {project}/{task_id}",
+        description="워커 실행 명령어 템플릿 ({action}, {project}, {task_id} 사용 가능)",
+    )
+    clear: str = Field(default="/clear", description="clear 명령어")
+    resume: str = Field(default="/resume", description="resume 명령어")
+
+
 class Config(BaseModel):
     """orchay 전체 설정."""
 
@@ -97,3 +111,4 @@ class Config(BaseModel):
     dispatch: DispatchConfig = Field(default_factory=DispatchConfig)
     history: HistoryConfig = Field(default_factory=HistoryConfig)
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
+    worker_command: WorkerCommandConfig = Field(default_factory=WorkerCommandConfig)

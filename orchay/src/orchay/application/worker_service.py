@@ -4,20 +4,24 @@ Worker 상태를 관리합니다:
 - Worker 초기화
 - 상태 업데이트
 - 유휴 Worker 조회
+- 토큰 limit 자동 재시동
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+import zoneinfo
+
 from orchay.domain.constants import DISPATCH_TIMINGS
 from orchay.domain.workflow import ExecutionMode
-from orchay.models import Worker, WorkerState
+from orchay.models import PausedInfo, Worker, WorkerState
 from orchay.scheduler import get_manual_commands, get_next_workflow_command
-from orchay.utils.wezterm import get_active_pane_id, wezterm_list_panes
+from orchay.utils.wezterm import get_active_pane_id, wezterm_list_panes, wezterm_send_text
 from orchay.worker import detect_worker_state
 
 if TYPE_CHECKING:
@@ -323,6 +327,7 @@ class WorkerService:
         - DONE 연속 감지 → IDLE 전환
         - 연속 실행 체크 및 dispatch_next_step 호출
         - BUSY → IDLE 전환 시 min_task_duration 체크
+        - PAUSED 상태: 토큰 limit 자동 재시동 처리
 
         Args:
             worker: 업데이트할 Worker
@@ -346,7 +351,9 @@ class WorkerService:
 
         # Worker가 현재 Task를 실행 중인지 여부 전달
         has_active_task = worker.current_task is not None
-        state, done_info = await detect_worker_state(worker.pane_id, has_active_task)
+        state, done_or_paused_info = await detect_worker_state(
+            worker.pane_id, has_active_task
+        )
 
         # 상태 매핑
         state_map = {
@@ -360,11 +367,17 @@ class WorkerService:
         }
         new_state = state_map.get(state, WorkerState.BUSY)
 
+        # paused 상태 처리: 자동 재시동 체크
+        if new_state == WorkerState.PAUSED:
+            if isinstance(done_or_paused_info, PausedInfo):
+                await self._handle_paused_worker(worker, done_or_paused_info)
+            else:
+                worker.state = new_state
         # done 상태 처리: 연속 실행 또는 할당 해제
-        if new_state == WorkerState.DONE:
+        elif new_state == WorkerState.DONE:
             await self._handle_done_state(
                 worker=worker,
-                done_info=done_info,
+                done_info=done_or_paused_info,
                 task_map=task_map,
                 dispatch_service=dispatch_service,
                 task_service=task_service,
@@ -375,6 +388,59 @@ class WorkerService:
             self._handle_idle_state(worker, task_map)
         else:
             worker.state = new_state
+
+    async def _handle_paused_worker(
+        self, worker: Worker, paused_info: PausedInfo
+    ) -> None:
+        """Paused 상태의 Worker를 처리합니다.
+
+        resume_at 시간이 지났으면 자동으로 재시동합니다.
+
+        Args:
+            worker: 대상 Worker
+            paused_info: Paused 상태 정보 (재개 시간 포함)
+        """
+        now = datetime.now(zoneinfo.ZoneInfo("Asia/Seoul"))
+
+        if now >= paused_info.resume_at:
+            # 자동 재시동
+            wait_seconds = (now - paused_info.detected_at).total_seconds()
+            logger.info(
+                f"Worker {worker.id}: Resume time reached, "
+                f"auto-continuing (waited {wait_seconds:.0f}s)"
+            )
+
+            try:
+                # "계속" 입력
+                await wezterm_send_text(worker.pane_id, "계속\n")
+
+                # 5초 대기
+                await asyncio.sleep(5)
+
+                # "\r" 전송
+                await wezterm_send_text(worker.pane_id, "\r")
+
+                # 상태 업데이트
+                worker.state = WorkerState.IDLE
+                worker.resume_at = None
+                worker.paused_info = None
+
+                logger.info(f"Worker {worker.id}: Auto-continue completed")
+            except Exception as e:
+                logger.error(f"Worker {worker.id}: Auto-continue failed: {e}")
+                worker.state = WorkerState.PAUSED
+        else:
+            # 대기 필요
+            wait_seconds = (paused_info.resume_at - now).total_seconds()
+            logger.info(
+                f"Worker {worker.id}: Paused until "
+                f"{paused_info.resume_at:%Y-%m-%d %H:%M:%S} "
+                f"(waiting {wait_seconds:.0f}s)"
+            )
+
+            worker.state = WorkerState.PAUSED
+            worker.resume_at = paused_info.resume_at
+            worker.paused_info = paused_info
 
     async def _handle_done_state(
         self,

@@ -9,13 +9,13 @@
 
 import { defineEventHandler, readBody, getRouterParam, createError } from 'h3';
 import { promises as fs } from 'fs';
+import { parse as parseYaml } from 'yaml';
 import type { WbsNode, WbsMetadata } from '../../../../../../../types';
-import { parseWbsMarkdown } from '../../../../../../utils/wbs/parser/index';
-import { serializeWbs } from '../../../../../../utils/wbs/serializer';
+import { parseWbsYaml } from '../../../../../../utils/wbs/yamlParser/index';
+import { serializeWbsToYaml, type SerializeContext } from '../../../../../../utils/wbs/yamlSerializer/index';
+import type { YamlWbsRoot } from '../../../../../../utils/wbs/yamlParser/_types';
 import { findTaskInTree } from '../../../../../../utils/wbs/taskService';
 import {
-  readMarkdownFile,
-  writeMarkdownFile,
   fileExists,
   getWbsPath,
   getProjectPath,
@@ -49,44 +49,31 @@ interface TestResultUpdateResponse {
 }
 
 /**
- * Markdown에서 메타데이터 섹션 파싱
+ * YAML 파일 읽기
  */
-function parseMetadata(markdown: string): WbsMetadata {
-  const lines = markdown.split('\n');
-  const metadata: Partial<WbsMetadata> = {
-    version: '1.0',
-    depth: 4,
-    updated: new Date().toISOString().split('T')[0],
-    start: '',
-  };
-
-  let inMetadataSection = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('>')) {
-      inMetadataSection = true;
-      const content = trimmed.substring(1).trim();
-
-      if (content.startsWith('version:')) {
-        metadata.version = content.substring(8).trim();
-      } else if (content.startsWith('depth:')) {
-        const depth = parseInt(content.substring(6).trim());
-        metadata.depth = (depth === 3 || depth === 4 ? depth : 4) as 3 | 4;
-      } else if (content.startsWith('updated:')) {
-        metadata.updated = content.substring(8).trim();
-      } else if (content.startsWith('start:')) {
-        metadata.start = content.substring(6).trim();
-      }
-    } else if (trimmed === '---' && inMetadataSection) {
-      break;
+async function readYamlFile(path: string): Promise<string | null> {
+  try {
+    return await fs.readFile(path, 'utf-8');
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      console.error(`Failed to read YAML file: ${path}`, error);
     }
+    return null;
   }
-
-  return metadata as WbsMetadata;
 }
 
+/**
+ * YAML 파일 쓰기
+ */
+async function writeYamlFile(path: string, content: string): Promise<boolean> {
+  try {
+    await fs.writeFile(path, content, 'utf-8');
+    return true;
+  } catch (error) {
+    console.error(`Failed to write YAML file: ${path}`, error);
+    return false;
+  }
+}
 
 /**
  * 프로젝트 ID 유효성 검증 (경로 순회 공격 방지)
@@ -184,21 +171,28 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
     throw createNotFoundError(`프로젝트를 찾을 수 없습니다: ${projectId}`);
   }
 
-  const markdown = await readMarkdownFile(wbsPath);
-  if (markdown === null) {
+  const yamlContent = await readYamlFile(wbsPath);
+  if (yamlContent === null) {
     throw createInternalError(
       'FILE_ACCESS_ERROR',
       'WBS 파일을 읽을 수 없습니다'
     );
   }
 
-  // 8. 메타데이터 파싱
-  const metadata = parseMetadata(markdown);
-
-  // 9. WBS 트리 파싱
+  // 8. YAML 파싱
+  let metadata: WbsMetadata;
   let tree: WbsNode[];
+  let context: SerializeContext = {};
+
   try {
-    tree = parseWbsMarkdown(markdown);
+    const result = parseWbsYaml(yamlContent);
+    metadata = result.metadata;
+    tree = result.tree;
+
+    // 기존 project/wbs 섹션 유지용
+    const yamlRoot = parseYaml(yamlContent) as YamlWbsRoot;
+    context.existingProject = yamlRoot.project;
+    context.existingWbsConfig = yamlRoot.wbs;
   } catch (error) {
     throw createInternalError(
       'PARSE_ERROR',
@@ -206,7 +200,7 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
     );
   }
 
-  // 10. Task 노드 탐색 (H-01: 탐색 결과 재사용)
+  // 9. Task 노드 탐색 (H-01: 탐색 결과 재사용)
   const result = findTaskInTree(tree, taskId);
   if (!result) {
     // TSK-03-05: Task not found should return TASK_NOT_FOUND, not PROJECT_NOT_FOUND
@@ -222,13 +216,13 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
 
   const taskNode = result.task;
 
-  // 11. test-result 업데이트
+  // 10. test-result 업데이트
   if (!taskNode.attributes) {
     taskNode.attributes = {};
   }
   taskNode.attributes['test-result'] = body.testResult;
 
-  // 12. 백업 생성 (FR-005, C-02)
+  // 11. 백업 생성 (FR-005, C-02)
   const backupPath = `${wbsPath}.bak`;
   try {
     await fs.copyFile(wbsPath, backupPath);
@@ -240,10 +234,10 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
     );
   }
 
-  // 13. 시리얼라이즈
-  let updatedMarkdown: string;
+  // 12. YAML 시리얼라이즈
+  let updatedYaml: string;
   try {
-    updatedMarkdown = serializeWbs(tree, metadata, { updateDate: true });
+    updatedYaml = serializeWbsToYaml(tree, metadata, { updateDate: true }, context);
   } catch (error) {
     throw createInternalError(
       'SERIALIZATION_ERROR',
@@ -251,8 +245,8 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
     );
   }
 
-  // 14. 파일 쓰기
-  const writeSuccess = await writeMarkdownFile(wbsPath, updatedMarkdown);
+  // 13. 파일 쓰기
+  const writeSuccess = await writeYamlFile(wbsPath, updatedYaml);
   if (!writeSuccess) {
     // 롤백 시도 (H-02)
     try {
@@ -270,19 +264,18 @@ export default defineEventHandler(async (event): Promise<TestResultUpdateRespons
     );
   }
 
-  // 15. 백업 파일 삭제
+  // 14. 백업 파일 삭제
   await fs.unlink(backupPath).catch(() => {
     // 백업 파일 삭제 실패는 무시
   });
 
-  // 16. 새로운 updated 날짜 추출
-  const savedMarkdown = await readMarkdownFile(wbsPath);
-  const savedMetadata = savedMarkdown ? parseMetadata(savedMarkdown) : metadata;
+  // 15. 새로운 updated 날짜 반환
+  const newUpdated = new Date().toISOString().split('T')[0];
 
-  // 17. 성공 응답
+  // 16. 성공 응답
   return {
     success: true,
     testResult: body.testResult,
-    updated: savedMetadata.updated,
+    updated: newUpdated,
   };
 });

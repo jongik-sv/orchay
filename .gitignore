@@ -121,3 +121,9 @@ xcuserdata/
 # Runtime files
 .PID
 *.lock
+
+# 테스트용 프로젝트 (소스코드 + 문서)
+mvp/
+notion-like/
+.orchay/projects/table-order/
+.orchay/projects/notion-like/

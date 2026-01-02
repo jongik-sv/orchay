@@ -3,13 +3,20 @@
 Worker pane의 출력을 분석하여 상태를 감지합니다.
 """
 
+import logging
 import re
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Literal
 
+import zoneinfo
+
 from orchay.domain.constants import WORKER_DETECTION
+from orchay.models.worker import PausedInfo
 from orchay.utils.wezterm import pane_exists, wezterm_get_text
+
+logger = logging.getLogger(__name__)
 
 # 모듈 시작 시간 (idle 감지 지연용)
 _startup_time: float = time.time()
@@ -27,6 +34,7 @@ PAUSE_PATTERNS = [
     re.compile(r"rate.*limit.*exceeded", re.IGNORECASE),
     re.compile(r"rate.*limit.*reached", re.IGNORECASE),
     re.compile(r"hit.*rate.*limit", re.IGNORECASE),
+    re.compile(r"hit.*limit", re.IGNORECASE),  # "hit.*limit" 추가
     re.compile(r"please.*wait", re.IGNORECASE),
     re.compile(r"try.*again.*later", re.IGNORECASE),
     re.compile(r"weekly.*limit.*reached", re.IGNORECASE),
@@ -35,6 +43,15 @@ PAUSE_PATTERNS = [
     re.compile(r"conversation.*too.*long", re.IGNORECASE),
     re.compile(r"overloaded", re.IGNORECASE),
     re.compile(r"at.*capacity", re.IGNORECASE),
+]
+
+# 시간 파싱 패턴 (토큰 limit 재개 시간)
+# "resets 6pm", "rate limit 9:30am", "hit limit resets at 8:15am" 등
+TIME_PATTERNS = [
+    re.compile(
+        r"(?:resets?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)",
+        re.IGNORECASE,
+    ),
 ]
 
 ERROR_PATTERNS = [
@@ -89,6 +106,80 @@ class DoneInfo:
     message: str | None = None
 
 
+def parse_resume_time(text: str, detected_at: datetime) -> datetime:
+    """텍스트에서 재개 시간을 파싱합니다.
+
+    시간 + 10분에 재개합니다 (예: 6pm → 6:10pm).
+분이 있으면 올림 처리합니다 (예: 5:59pm → 6pm → 6:10pm).
+
+    Args:
+        text: "resets 6pm", "rate limit 9:30am" 등
+        detected_at: 감지 시간 (현재 시간)
+
+    Returns:
+        재개 시간 (timezone-aware datetime, Asia/Seoul)
+
+    Raises:
+        ValueError: 시간을 파싱할 수 없는 경우
+
+    Examples:
+        >>> detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=ZoneInfo("Asia/Seoul"))
+        >>> parse_resume_time("resets 6pm", detected_at)
+        datetime(2025, 1, 2, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 6pm + 10분
+
+        >>> detected_at = datetime(2025, 1, 2, 18, 5, tzinfo=ZoneInfo("Asia/Seoul"))
+        >>> parse_resume_time("resets 6pm", detected_at)
+        datetime(2025, 1, 3, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 다음날 6:10pm
+    """
+    for pattern in TIME_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            hour = int(match.group(1))
+            minute = int(match.group(2)) if match.group(2) else 0
+            ampm = match.group(3)
+
+            # 12시간제 → 24시간제 변환
+            if ampm.lower() == "pm" and hour != 12:
+                hour += 12
+            elif ampm.lower() == "am" and hour == 12:
+                hour = 0
+
+            # 분이 있으면 한 시간 올림 (5:59pm → 6pm)
+            if minute > 0:
+                hour += 1
+                # 23:59 → 00:00 (자정 넘기면)
+                if hour >= 24:
+                    hour -= 24
+
+            # 타임존 처리 (Asia/Seoul)
+            tz = zoneinfo.ZoneInfo("Asia/Seoul")
+
+            # 재개 시간 = 지정된 시간 + 10분
+            resume_time = detected_at.replace(
+                hour=hour, minute=10, second=0, microsecond=0, tzinfo=tz
+            )
+
+            # 시간이 지났으면 다음날로
+            if resume_time <= detected_at:
+                resume_time += timedelta(days=1)
+
+            return resume_time
+
+    raise ValueError(f"Cannot parse resume time from: {text}")
+
+
+def get_fallback_resume_time(detected_at: datetime) -> datetime:
+    """시간 파싱 실패 시 fallback: 30분 뒤.
+
+    Args:
+        detected_at: 감지 시간 (현재 시간)
+
+    Returns:
+        30분 뒤의 시간 (timezone-aware datetime)
+    """
+    return detected_at + timedelta(minutes=30)
+
+
 def parse_done_signal(text: str) -> DoneInfo | None:
     """ORCHAY_DONE 신호를 파싱합니다.
 
@@ -130,7 +221,7 @@ WorkerState = Literal["dead", "done", "paused", "error", "blocked", "idle", "bus
 async def detect_worker_state(
     pane_id: int,
     has_active_task: bool = False,
-) -> tuple[WorkerState, DoneInfo | None]:
+) -> tuple[WorkerState, DoneInfo | PausedInfo | None]:
     """Worker 상태를 감지합니다.
 
     pane 출력을 분석하여 상태를 판단합니다.
@@ -142,7 +233,10 @@ async def detect_worker_state(
             False면 프롬프트로 idle 감지 허용 (시작 시, Task 완료 후).
 
     Returns:
-        (상태, DoneInfo 또는 None) 튜플
+        (상태, DoneInfo/PausedInfo 또는 None) 튜플
+        - done: DoneInfo
+        - paused: PausedInfo (시간 정보 포함)
+        - 그 외: None
     """
     # 0. pane 존재 확인
     if not await pane_exists(pane_id):
@@ -163,7 +257,29 @@ async def detect_worker_state(
     # 2. 일시 중단 패턴 (rate limit 등은 실제 제약이므로 우선)
     for pattern in PAUSE_PATTERNS:
         if pattern.search(output):
-            return "paused", None
+            # 시간 파싱 시도
+            detected_at = datetime.now(zoneinfo.ZoneInfo("Asia/Seoul"))
+            try:
+                resume_at = parse_resume_time(output, detected_at)
+                paused_info = PausedInfo(
+                    reason="rate limit",
+                    resume_at=resume_at,
+                    detected_at=detected_at,
+                    message=output[:200],  # 처음 200자만 저장
+                )
+                logger.info(f"Token limit detected, resuming at {resume_at}")
+                return "paused", paused_info
+            except ValueError:
+                # 시간 파싱 실패 시 fallback: 30분 뒤
+                resume_at = get_fallback_resume_time(detected_at)
+                paused_info = PausedInfo(
+                    reason="rate limit",
+                    resume_at=resume_at,
+                    detected_at=detected_at,
+                    message="fallback: 30 minutes",
+                )
+                logger.info(f"Token limit detected (no time), using fallback: {resume_at}")
+                return "paused", paused_info
 
     # 3. 작업 중 패턴 체크 (명시적 busy 상태)
     # Claude Code가 작업 중일 때 나타나는 패턴이 있으면 busy

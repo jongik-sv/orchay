@@ -180,7 +180,6 @@ class WbsParser:
         existing.tags = new.tags
         existing.depends = new.depends
         existing.blocked_by = new.blocked_by
-        existing.workflow = new.workflow
         existing.prd_ref = new.prd_ref
         existing.requirements = new.requirements
         existing.acceptance = new.acceptance
@@ -314,7 +313,6 @@ class WbsParser:
                 tags=tags,
                 depends=depends,
                 blocked_by=blocked_by,
-                workflow=str(data.get("workflow", "design")),
                 prd_ref=prd_ref,
                 requirements=requirements,
                 acceptance=acceptance,

@@ -14,17 +14,26 @@ export type TableStatus = 'available' | 'occupied';
 // Category (카테고리)
 // ===================================
 
-export interface Category {
+// DB 스키마 타입 (snake_case)
+export interface CategoryDb {
   id: number;
   name: string;
   sort_order: number;
+}
+
+// API 응답 타입 (camelCase)
+export interface Category {
+  id: number;
+  name: string;
+  sortOrder: number;
 }
 
 // ===================================
 // Menu (메뉴)
 // ===================================
 
-export interface Menu {
+// DB 스키마 타입 (snake_case)
+export interface MenuDb {
   id: number;
   category_id: number;
   name: string;
@@ -33,9 +42,19 @@ export interface Menu {
   is_sold_out: boolean;
 }
 
-// 카테고리 정보 포함 조인 타입
+// API 응답 타입 (camelCase)
+export interface Menu {
+  id: number;
+  categoryId: number;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  isSoldOut: boolean;
+}
+
+// 카테고리 정보 포함 API 응답 타입
 export interface MenuWithCategory extends Menu {
-  category_name: string;
+  categoryName: string;
 }
 
 // ===================================

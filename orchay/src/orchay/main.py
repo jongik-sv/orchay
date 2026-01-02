@@ -47,7 +47,7 @@ class Orchestrator:
         self.parser = WbsParser(wbs_path)
         self.workers: list[Worker] = []
         self.tasks: list[Task] = []
-        self.mode = ExecutionMode(config.execution.mode)
+        self._mode = ExecutionMode(config.execution.mode)
         self._running = False
         self._paused = config.execution.start_paused
 
@@ -60,10 +60,21 @@ class Orchestrator:
             config=config,
             project_name=project_name,
             wbs_path=wbs_path,
-            mode=self.mode,
+            mode=self._mode,
             workflow_engine=self._workflow_engine,
             output_callback=lambda msg: console.print(msg),
         )
+
+    @property
+    def mode(self) -> ExecutionMode:
+        """현재 실행 모드."""
+        return self._mode
+
+    @mode.setter
+    def mode(self, value: ExecutionMode) -> None:
+        """실행 모드 설정. DispatchService도 함께 업데이트."""
+        self._mode = value
+        self._dispatch_service.mode = value
 
     @property
     def running_tasks(self) -> set[str]:
@@ -197,6 +208,10 @@ class Orchestrator:
 
         # 5. 상태 출력
         self.print_status()
+
+        # 6. 자동 재시동 체크 (WorkerService에서 이미 처리됨)
+        # WorkerService.update_worker_state_with_continuation에서
+        # paused 상태인 Worker의 resume_at을 체크하고 자동 재시동 수행
 
     async def _dispatch_idle_workers(self) -> None:
         """유휴 Worker에 실행 가능 Task를 분배합니다.

@@ -141,7 +141,12 @@ flowchart LR
 **기본 흐름:**
 1. 페이지가 로드되면 GET /api/categories API를 호출한다
 2. 시스템이 카테고리 목록을 탭 또는 섹션 형태로 표시한다
-3. 고객이 카테고리를 선택하면 해당 카테고리의 메뉴가 표시된다
+3. 고객이 카테고리를 선택하면 해당 카테고리 섹션으로 스크롤한다
+
+**카테고리 스크롤 구현 방식:**
+- 각 카테고리 섹션에 `ref` 연결: `categoryRefs.current[categoryId]`
+- 스크롤 시 sticky 헤더 높이 보정: MenuHeader(72px) + CategoryTabs(약 68px) = 140px 오프셋
+- `window.scrollTo({ behavior: 'smooth' })` 사용
 
 #### UC-03: 메뉴 목록 조회
 

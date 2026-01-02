@@ -88,7 +88,6 @@ tasks:
     tags: [api, auth]
     depends: [TSK-01-00]
     blockedBy: null # skipped 등
-    workflow: design
     testResult: null # none, pass, fail
     note: "메모"
 
@@ -216,6 +215,14 @@ start  approve  build   verify   done
 1. `.orchay/projects/{project}/` 폴더 존재 확인
 2. 미존재 시 WP-00 (프로젝트 초기화) 자동 추가
 3. 기존 project.json 읽어서 project 섹션 생성
+4. **projectRoot 확인**: 개발 코드가 저장될 폴더 경로를 사용자에게 질문
+   - 예: "프로젝트 코드를 어디에 생성할까요?"
+   - 옵션 제시:
+     1. `{cwd}/{project}/` (현재 작업 디렉토리 하위, **권장**)
+     2. `{cwd}/../{project}/` (상위 디렉토리와 동일 레벨)
+     3. 사용자 지정 경로
+   - 기본값: `{cwd}/{project}/` (예: `orchay/table-order/`)
+   - 선택된 경로를 wbs.yaml의 `wbs.projectRoot`에 기록
 
 ### 2단계: PRD 분석
 

@@ -180,13 +180,13 @@ def detect_paused_type(output: str) -> PausedType:
 
 async def handle_paused_worker(
     worker: "Worker",
-    config: "RecoveryConfig",
+    config: "Config",
 ) -> bool:
     """일시 중단된 Worker 자동 재개.
 
     Args:
         worker: Worker 객체 (상태 및 pane_id 포함)
-        config: 재개 설정
+        config: 전체 설정 (worker_command.resume 사용)
 
     Returns:
         재개 성공 여부
@@ -206,16 +206,16 @@ async def handle_paused_worker(
         # 파싱 실패 시 기본값 (1시간)
         wait_seconds = calculate_wait_seconds(reset_time) if reset_time else 3600
     elif paused_type == "context_limit":
-        wait_seconds = config.context_limit_wait
+        wait_seconds = config.recovery.context_limit_wait
     else:
         # rate_limit 또는 unknown
-        wait_seconds = config.default_wait_time
+        wait_seconds = config.recovery.default_wait_time
 
     # 대기
     await asyncio.sleep(wait_seconds)
 
-    # "계속" 텍스트 전송
-    await wezterm_send_text(worker.pane_id, f"{config.resume_text}\n")
+    # resume 명령어 전송
+    await wezterm_send_text(worker.pane_id, f"{config.worker_command.resume}\n")
 
     # 잠시 대기 후 상태 재확인
     await asyncio.sleep(3)

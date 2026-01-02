@@ -15,11 +15,18 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
+import * as yaml from 'yaml';
 import * as projectService from '../../../server/utils/projects/projectService';
 import * as paths from '../../../server/utils/projects/paths';
 
 // Mock fs/promises
 vi.mock('fs/promises');
+
+// Mock yaml
+vi.mock('yaml', () => ({
+  parse: vi.fn((content: string) => JSON.parse(content)),
+  stringify: vi.fn((obj: unknown) => JSON.stringify(obj, null, 2)),
+}));
 
 // Mock paths module
 vi.mock('../../../server/utils/projects/paths', () => ({
@@ -44,20 +51,29 @@ describe('ProjectService', () => {
      * @requirement FR-002
      */
     it('UT-002: should return project with team', async () => {
-      // Arrange: Mock 프로젝트 데이터
-      const mockProject = {
-        id: 'test-project',
-        name: '테스트 프로젝트',
-        description: 'E2E 테스트용 프로젝트',
-        version: '0.1.0',
-        status: 'active',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z',
-        scheduledStart: '2025-01-01',
-        scheduledEnd: '2025-06-30',
+      // Arrange: Mock wbs.yaml 데이터 (WbsYaml 구조)
+      const mockWbsYaml = {
+        project: {
+          id: 'test-project',
+          name: '테스트 프로젝트',
+          description: 'E2E 테스트용 프로젝트',
+          version: '0.1.0',
+          status: 'active',
+          wbsDepth: 3,
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-01T00:00:00Z',
+          scheduledStart: '2025-01-01',
+          scheduledEnd: '2025-06-30',
+        },
+        wbs: {
+          version: '1.0',
+          depth: 3,
+          projectRoot: 'test-project',
+        },
+        workPackages: [],
       };
 
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockProject));
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockWbsYaml));
 
       // Act
       const result = await projectService.getProject('test-project');
@@ -124,7 +140,7 @@ describe('ProjectService', () => {
 
       // 폴더 생성 호출 확인
       expect(fs.mkdir).toHaveBeenCalled();
-      // 파일 쓰기 호출 확인 (project.json, team.json)
+      // 파일 쓰기 호출 확인 (wbs.yaml, team.json)
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
     });
 
@@ -168,18 +184,26 @@ describe('ProjectService', () => {
      * @requirement FR-004
      */
     it('UT-005: should update project fields', async () => {
-      // Arrange
-      const existingProject = {
-        id: 'test-project',
-        name: '기존 프로젝트',
-        description: '기존 설명',
-        version: '0.1.0',
-        status: 'active',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z',
+      // Arrange: 기존 wbs.yaml 구조
+      const existingWbsYaml = {
+        project: {
+          id: 'test-project',
+          name: '기존 프로젝트',
+          description: '기존 설명',
+          version: '0.1.0',
+          status: 'active',
+          wbsDepth: 3,
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-01T00:00:00Z',
+        },
+        wbs: {
+          version: '1.0',
+          depth: 3,
+        },
+        workPackages: [],
       };
 
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingProject));
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingWbsYaml));
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const updateDto = {
@@ -194,7 +218,7 @@ describe('ProjectService', () => {
       expect(result.name).toBe('수정된 이름');
       expect(result.description).toBe('수정된 설명');
       expect(result.id).toBe('test-project'); // ID 불변
-      expect(result.updatedAt).not.toBe(existingProject.updatedAt); // updatedAt 갱신
+      expect(result.updatedAt).not.toBe(existingWbsYaml.project.updatedAt); // updatedAt 갱신
       expect(fs.writeFile).toHaveBeenCalled();
     });
 
@@ -214,20 +238,28 @@ describe('ProjectService', () => {
     });
 
     it('should preserve unchanged fields', async () => {
-      // Arrange
-      const existingProject = {
-        id: 'test-project',
-        name: '기존 프로젝트',
-        description: '기존 설명',
-        version: '1.0.0',
-        status: 'active',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z',
-        scheduledStart: '2025-01-01',
-        scheduledEnd: '2025-12-31',
+      // Arrange: 기존 wbs.yaml 구조
+      const existingWbsYaml = {
+        project: {
+          id: 'test-project',
+          name: '기존 프로젝트',
+          description: '기존 설명',
+          version: '1.0.0',
+          status: 'active',
+          wbsDepth: 3,
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-01T00:00:00Z',
+          scheduledStart: '2025-01-01',
+          scheduledEnd: '2025-12-31',
+        },
+        wbs: {
+          version: '1.0',
+          depth: 3,
+        },
+        workPackages: [],
       };
 
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingProject));
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingWbsYaml));
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       // Act: name만 수정

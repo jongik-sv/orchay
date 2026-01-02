@@ -19,11 +19,46 @@ pub struct ProjectConfig {
     pub id: String,
     pub name: String,
     #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
     pub status: Option<String>,
     #[serde(default)]
     pub wbs_depth: Option<u32>,
     #[serde(default)]
     pub created_at: Option<String>,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub scheduled_start: Option<String>,
+    #[serde(default)]
+    pub scheduled_end: Option<String>,
+}
+
+/// WBS 설정 (wbs.yaml의 wbs 섹션)
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WbsConfig {
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub depth: Option<u32>,
+    #[serde(default)]
+    pub project_root: Option<String>,
+    #[serde(default)]
+    pub strategy: Option<String>,
+}
+
+/// WBS YAML 전체 구조
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WbsYaml {
+    pub project: ProjectConfig,
+    #[serde(default)]
+    pub wbs: Option<WbsConfig>,
+    #[serde(default)]
+    pub work_packages: Option<serde_yaml::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,7 +69,7 @@ pub struct ProjectListResponse {
     pub total: usize,
 }
 
-/// 프로젝트 목록 조회 (projects/ 폴더 스캔)
+/// 프로젝트 목록 조회 (projects/ 폴더 스캔, wbs.yaml 읽기)
 #[tauri::command]
 pub async fn get_projects(
     base_path: String,
@@ -62,10 +97,11 @@ pub async fn get_projects(
         }
 
         let project_id = entry.file_name().to_string_lossy().to_string();
-        let project_json_path = entry.path().join("project.json");
+        let wbs_yaml_path = entry.path().join("wbs.yaml");
 
-        if let Ok(content) = fs::read_to_string(&project_json_path) {
-            if let Ok(config) = serde_json::from_str::<ProjectConfig>(&content) {
+        if let Ok(content) = fs::read_to_string(&wbs_yaml_path) {
+            if let Ok(wbs_yaml) = serde_yaml::from_str::<WbsYaml>(&content) {
+                let config = wbs_yaml.project;
                 let status = config.status.unwrap_or_else(|| "active".to_string());
 
                 // 필터 적용
@@ -75,12 +111,17 @@ pub async fn get_projects(
                     }
                 }
 
+                // wbsDepth: project.wbsDepth 또는 wbs.depth 또는 기본값 3
+                let wbs_depth = config.wbs_depth
+                    .or_else(|| wbs_yaml.wbs.as_ref().and_then(|w| w.depth))
+                    .or(Some(3));
+
                 projects.push(ProjectListItem {
                     id: config.id,
                     name: config.name,
                     path: project_id,
                     status,
-                    wbs_depth: config.wbs_depth.or(Some(4)),
+                    wbs_depth,
                     created_at: config.created_at,
                 });
             }
@@ -103,34 +144,37 @@ pub async fn get_projects(
     })
 }
 
-/// 단일 프로젝트 조회
+/// 단일 프로젝트 조회 (wbs.yaml의 project 섹션)
 #[tauri::command]
 pub async fn get_project(base_path: String, project_id: String) -> Result<ProjectConfig, String> {
-    let project_json_path = PathBuf::from(&base_path)
+    let wbs_yaml_path = PathBuf::from(&base_path)
         .join(".orchay")
         .join("projects")
         .join(&project_id)
-        .join("project.json");
+        .join("wbs.yaml");
 
-    let content = fs::read_to_string(&project_json_path)
+    let content = fs::read_to_string(&wbs_yaml_path)
         .map_err(|_| format!("Project not found: {}", project_id))?;
 
-    serde_json::from_str(&content).map_err(|e| format!("Failed to parse project.json: {}", e))
+    let wbs_yaml: WbsYaml = serde_yaml::from_str(&content)
+        .map_err(|e| format!("Failed to parse wbs.yaml: {}", e))?;
+
+    Ok(wbs_yaml.project)
 }
 
-/// WBS 파일 조회
+/// WBS 파일 조회 (wbs.yaml 전체)
 #[tauri::command]
 pub async fn get_wbs(base_path: String, project_id: String) -> Result<String, String> {
     let wbs_path = PathBuf::from(&base_path)
         .join(".orchay")
         .join("projects")
         .join(&project_id)
-        .join("wbs.md");
+        .join("wbs.yaml");
 
     fs::read_to_string(&wbs_path).map_err(|_| format!("WBS not found for project: {}", project_id))
 }
 
-/// WBS 파일 저장
+/// WBS 파일 저장 (wbs.yaml)
 #[tauri::command]
 pub async fn put_wbs(
     base_path: String,
@@ -141,7 +185,7 @@ pub async fn put_wbs(
         .join(".orchay")
         .join("projects")
         .join(&project_id)
-        .join("wbs.md");
+        .join("wbs.yaml");
 
     // 부모 디렉토리 확인
     if let Some(parent) = wbs_path.parent() {

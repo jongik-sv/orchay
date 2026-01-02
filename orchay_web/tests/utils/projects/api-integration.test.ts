@@ -105,13 +105,14 @@ describe('Project Metadata Service - API Integration Tests', () => {
       const projectDir = join(TEST_BASE, '.orchay', 'projects', 'e2e-create-test');
       expect(existsSync(projectDir)).toBe(true);
 
-      // And: Verify project.json created
-      const projectJsonPath = join(projectDir, 'project.json');
-      expect(existsSync(projectJsonPath)).toBe(true);
+      // And: Verify wbs.yaml created
+      const wbsYamlPath = join(projectDir, 'wbs.yaml');
+      expect(existsSync(wbsYamlPath)).toBe(true);
 
-      const projectJson = JSON.parse(await readFile(projectJsonPath, 'utf-8'));
-      expect(projectJson.id).toBe('e2e-create-test');
-      expect(projectJson.name).toBe('E2E Create Test Project');
+      const { parse: parseYaml } = await import('yaml');
+      const wbsYaml = parseYaml(await readFile(wbsYamlPath, 'utf-8'));
+      expect(wbsYaml.project.id).toBe('e2e-create-test');
+      expect(wbsYaml.project.name).toBe('E2E Create Test Project');
 
       // And: Verify team.json created
       const teamJsonPath = join(projectDir, 'team.json');

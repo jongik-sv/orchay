@@ -93,15 +93,17 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 | 초과 | Task 설명에 없는 기능 포함? | 초과 제거 |
 | 정합성 | PRD 내용과 일치? | PRD 기준 |
 
-### Phase 4: 문서 생성
+### Phase 4: 문서 생성 ⭐ (필수)
 
 **생성 위치**: `.orchay/projects/{project}/tasks/{TSK-ID}/`
 
-| 문서 | 용도 |
-|------|------|
-| `010-design.md` | 통합 설계 (기본+상세) |
-| `025-traceability-matrix.md` | 요구사항 추적성 |
-| `026-test-specification.md` | 테스트 명세 |
+| 문서 | 용도 | 필수 |
+|------|------|------|
+| `010-design.md` | 통합 설계 (기본+상세) | ✅ |
+| `025-traceability-matrix.md` | 요구사항 추적성 | ✅ |
+| `026-test-specification.md` | 테스트 명세 | ✅ |
+
+> ⚠️ **모든 3개 문서를 반드시 생성해야 합니다. 하나라도 누락되면 Phase 5로 진행하지 마세요.**
 
 **010-design.md 주요 섹션** (템플릿 참조: `.orchay/templates/010-design.md`):
 
@@ -120,7 +122,35 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 | 11. 구현 범위 | 영향 영역, 의존성, 제약 |
 | 12. 체크리스트 | 설계 완료 확인 |
 
-### Phase 5: 상태 전환
+**025-traceability-matrix.md 주요 섹션** (템플릿 참조: `.orchay/templates/025-traceability-matrix.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 0. 문서 메타데이터 | Task ID, 참조 문서, 작성 정보 |
+| 1. 기능 요구사항 추적 | PRD → 설계 → 테스트 매핑 |
+| 2. 비즈니스 규칙 추적 | BR → 구현 → 검증 매핑 |
+| 3. 테스트 역추적 매트릭스 | 테스트 → 요구사항 역추적 |
+| 4. 데이터 모델 추적 | 엔티티 → Prisma → DTO 매핑 |
+| 5. 인터페이스 추적 | 인터페이스 → API 엔드포인트 매핑 |
+| 6. 화면 추적 | 화면 → 컴포넌트 매핑 |
+| 7. 추적성 검증 요약 | 커버리지 통계, 미매핑 항목 |
+
+**026-test-specification.md 주요 섹션** (템플릿 참조: `.orchay/templates/026-test-specification.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 0. 문서 메타데이터 | Task ID, 참조 문서, 작성 정보 |
+| 1. 테스트 전략 개요 | 범위, 환경, 커버리지 목표 |
+| 2. 단위 테스트 시나리오 | UT-XXX 케이스 목록 및 상세 |
+| 3. E2E 테스트 시나리오 | E2E-XXX 케이스 목록 및 상세 |
+| 4. UI 테스트케이스 (매뉴얼) | TC-XXX 매뉴얼 테스트 |
+| 5. 테스트 데이터 (Fixture) | Mock, 시드, 테스트 계정 |
+| 6. data-testid 목록 | 페이지별 셀렉터 정의 |
+| 7. 테스트 커버리지 목표 | 단위/E2E 커버리지 기준 |
+
+### Phase 5: 상태 전환 ⭐ (필수)
+
+> ⚠️ **이 단계는 반드시 수행해야 합니다. 생략하면 execution 필드가 남습니다.**
 
 ```bash
 # {project}: 입력에서 파싱 (예: deployment/TSK-01-01 → deployment)
@@ -129,6 +159,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 ```
 
 - 성공: `{ "success": true, "oldStatus": "[ ]", "newStatus": "[dd]" }`
+- execution 필드 자동 삭제됨
 
 ---
 
@@ -191,23 +222,15 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 | 잘못된 상태 | `[ERROR] Todo 상태가 아닙니다 (현재: {status})` |
 | 잘못된 카테고리 | `[ERROR] development 카테고리가 아닙니다` |
 | PRD 참조 없음 | `[WARN] PRD 참조를 찾을 수 없습니다` |
-| 템플릿 없음 | `[ERROR] 010-design.md 템플릿을 찾을 수 없습니다` |
-
----
-
-## 다음 명령어
-
-| 명령어 | 필수 | 설명 |
-|--------|------|------|
-| `/wf:ui` | 선택 | UI 상세 설계 (SVG 생성) |
-| `/wf:review` | 선택 | 설계 리뷰 |
-| `/wf:apply` | 선택 | 리뷰 반영 |
-| `/wf:approve` | **필수** | 설계 승인 (`[dd]` → `[ap]`) |
-| `/wf:build` | **필수** | 구현 시작 (`[ap]` → `[im]`) |
+| 010 템플릿 없음 | `[ERROR] 010-design.md 템플릿을 찾을 수 없습니다` |
+| 025 템플릿 없음 | `[ERROR] 025-traceability-matrix.md 템플릿을 찾을 수 없습니다` |
+| 026 템플릿 없음 | `[ERROR] 026-test-specification.md 템플릿을 찾을 수 없습니다` |
 
 ---
 
 ## 완료 신호
+
+> ⚠️ **완료 신호 전 필수 확인**: 010, 025, 026 문서 모두 생성 + transition.ts 실행 완료
 
 작업 완료 후 **반드시** 다음 형식으로 출력:
 

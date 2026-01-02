@@ -21,6 +21,10 @@ def create_config(clear_before_dispatch: bool = True) -> MagicMock:
     config = MagicMock()
     config.dispatch = MagicMock()
     config.dispatch.clear_before_dispatch = clear_before_dispatch
+    config.worker_command = MagicMock()
+    config.worker_command.template = "/wf:{action} {project}/{task_id}"
+    config.worker_command.clear = "/clear"
+    config.worker_command.resume = "/resume"
     return config
 
 

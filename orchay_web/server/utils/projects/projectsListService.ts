@@ -3,12 +3,12 @@
  * Task: TSK-02-03-03
  *
  * projects/ 폴더를 스캔하여 프로젝트 목록 생성
- * - 각 project.json에서 정보 읽기
- * - projects.json, settings.json 미사용
+ * - 각 wbs.yaml의 project 섹션에서 정보 읽기
  */
 
 import { readFile, readdir } from 'fs/promises';
-import type { ProjectsConfig, ProjectListItem, ProjectConfig } from './types';
+import { parse as parseYaml } from 'yaml';
+import type { ProjectsConfig, ProjectListItem, WbsYaml } from './types';
 import { getProjectsBasePath, getProjectFilePath } from './paths';
 import { createConflictError, createNotFoundError } from '../errors/standardError';
 
@@ -18,7 +18,7 @@ import { createConflictError, createNotFoundError } from '../errors/standardErro
 
 /**
  * 프로젝트 폴더 스캔하여 목록 생성
- * projects/ 폴더의 하위 폴더를 스캔하고 각 project.json 읽기
+ * projects/ 폴더의 하위 폴더를 스캔하고 각 wbs.yaml 읽기
  */
 async function scanProjects(): Promise<ProjectListItem[]> {
   const projectsBasePath = getProjectsBasePath();
@@ -31,11 +31,12 @@ async function scanProjects(): Promise<ProjectListItem[]> {
       if (!entry.isDirectory()) continue;
 
       const projectId = entry.name;
-      const projectJsonPath = getProjectFilePath(projectId, 'project.json');
+      const wbsYamlPath = getProjectFilePath(projectId, 'wbs.yaml');
 
       try {
-        const content = await readFile(projectJsonPath, 'utf-8');
-        const projectConfig = JSON.parse(content) as ProjectConfig;
+        const content = await readFile(wbsYamlPath, 'utf-8');
+        const wbsYaml = parseYaml(content) as WbsYaml;
+        const projectConfig = wbsYaml.project;
 
         // ProjectConfig → ProjectListItem 변환
         projects.push({
@@ -43,12 +44,12 @@ async function scanProjects(): Promise<ProjectListItem[]> {
           name: projectConfig.name,
           path: projectId,  // 폴더명 = ID
           status: projectConfig.status || 'active',
-          wbsDepth: projectConfig.wbsDepth || 4,
+          wbsDepth: projectConfig.wbsDepth || wbsYaml.wbs?.depth || 3,
           createdAt: projectConfig.createdAt,
         });
       } catch (error) {
-        // project.json이 없거나 읽기 실패 → 해당 폴더 무시
-        console.warn(`[ProjectsList] Skipping ${projectId}: project.json not found or invalid`);
+        // wbs.yaml이 없거나 읽기 실패 → 해당 폴더 무시
+        console.warn(`[ProjectsList] Skipping ${projectId}: wbs.yaml not found or invalid`);
       }
     }
   } catch (error: unknown) {
@@ -97,7 +98,7 @@ export async function isProjectIdDuplicate(id: string): Promise<boolean> {
 
 /**
  * 프로젝트 목록에 추가
- * 참고: 폴더 스캔 방식에서는 실제로 폴더와 project.json을 생성하면 자동으로 목록에 포함됨
+ * 참고: 폴더 스캔 방식에서는 실제로 폴더와 wbs.yaml을 생성하면 자동으로 목록에 포함됨
  * 이 함수는 호환성을 위해 유지하되, 중복 확인만 수행
  *
  * @param project 프로젝트 항목
@@ -118,7 +119,7 @@ export async function addProjectToList(project: ProjectListItem): Promise<void> 
 
 /**
  * 프로젝트 목록 항목 수정
- * 참고: 폴더 스캔 방식에서는 project.json을 직접 수정하면 됨
+ * 참고: 폴더 스캔 방식에서는 wbs.yaml을 직접 수정하면 됨
  * 이 함수는 호환성을 위해 유지
  *
  * @param id 프로젝트 ID
@@ -136,6 +137,6 @@ export async function updateProjectInList(
     throw createNotFoundError('프로젝트를 찾을 수 없습니다');
   }
 
-  // 실제 업데이트는 project.json에 직접 수행됨
+  // 실제 업데이트는 wbs.yaml에 직접 수행됨
   // 이 함수는 존재 확인 역할만 함
 }

@@ -337,6 +337,11 @@ def launch_wezterm_windows(
     wezterm_config_dir.mkdir(parents=True, exist_ok=True)
     startup_file = wezterm_config_dir / "orchay-startup.json"
 
+    # Config 로드 (worker_command.startup을 위해)
+    from orchay.config import load_config
+
+    config = load_config(cwd)
+
     # 스케줄러 pane 비율 계산 (scheduler_cols / (scheduler_cols + worker_cols))
     scheduler_cols = launcher_args.scheduler_cols
     worker_cols = launcher_args.worker_cols
@@ -352,6 +357,8 @@ def launch_wezterm_windows(
         "max_rows": launcher_args.max_rows,
         "scheduler_ratio": round(scheduler_ratio, 2),  # 스케줄러 pane 비율
         "font_size": launcher_args.font_size,
+        # worker startup 명령어
+        "worker_startup_cmd": config.worker_command.startup,
     }
 
     with open(startup_file, "w", encoding="utf-8") as f:
@@ -532,12 +539,31 @@ def launch_wezterm_linux(
                     current_pane_id = int(result.stdout.strip())
                     column_panes[col].append(current_pane_id)
 
-    # 4. Worker 번호 로그
+    # 4. Worker 번호 로그 및 startup 명령 전송
+    # Config 로드 (worker_command.startup을 위해)
+    from orchay.config import load_config
+
+    config = load_config(cwd)
+    startup_cmd = config.worker_command.startup
+
     worker_num = 1
     for col_panes in column_panes:
         for pane_id in col_panes:
             log.info(f"Worker {worker_num}: pane {pane_id}")
             worker_num += 1
+
+            # 워커 pane에 startup 명령 전송
+            if startup_cmd:
+                log.debug(f"Sending startup command to worker pane {pane_id}: {startup_cmd}")
+                send_text_cmd = [
+                    wezterm_cmd, "cli", "send-text", "--pane-id", str(pane_id),
+                    "--no-paste", f"{startup_cmd}\n"
+                ]
+                result = subprocess.run(send_text_cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    log.warning(f"Failed to send startup command to pane {pane_id}: {result.stderr}")
+                else:
+                    log.debug(f"Startup command sent to pane {pane_id}")
 
     log.debug("Waiting 1s before sending scheduler command...")
     time.sleep(1)

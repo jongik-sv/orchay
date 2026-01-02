@@ -1,4 +1,4 @@
-export * from './serializer';
-export * from './parser';
+export * from './yamlParser';
+export * from './yamlSerializer';
 export * from './validation';
 export * from './taskSelector';

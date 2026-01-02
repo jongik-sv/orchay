@@ -277,19 +277,6 @@ Task: TSK-01-01-01 | Full-stack
 
 ---
 
-## 다음 명령어
-
-| category | 다음 | 설명 |
-|----------|------|------|
-| development | `/wf:audit` | 코드 리뷰 (선택) |
-| development | `/wf:verify` | 통합테스트 |
-| infrastructure | `/wf:audit` | 코드 리뷰 (선택) |
-| infrastructure | `/wf:verify` | 통합테스트 |
-
-> ℹ️ `/wf:test`는 build 완료 후 테스트 재실행이 필요할 때만 사용
-
----
-
 ## 완료 신호
 
 작업 완료 후 **반드시** 다음 형식으로 출력:

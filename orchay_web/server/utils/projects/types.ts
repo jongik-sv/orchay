@@ -93,3 +93,51 @@ export interface TeamResponse {
   members: TeamMember[];
   total: number;
 }
+
+// ============================================================
+// WBS YAML Types (wbs.yaml 통합 구조)
+// ============================================================
+
+/**
+ * WBS 설정 (wbs.yaml의 wbs 섹션)
+ */
+export interface WbsConfig {
+  version: string;
+  depth: 3 | 4;
+  projectRoot?: string;
+  strategy?: string;
+}
+
+/**
+ * WBS YAML 전체 구조
+ * project.json + wbs.md → wbs.yaml 통합
+ */
+export interface WbsYaml {
+  project: ProjectConfig;
+  wbs: WbsConfig;
+  workPackages: unknown[]; // WP 상세 구조는 별도 타입으로 정의 필요
+}
+
+/**
+ * 프로젝트 생성 DTO
+ */
+export interface CreateProjectDto {
+  id: string;
+  name: string;
+  description?: string;
+  wbsDepth?: 3 | 4;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+}
+
+/**
+ * 프로젝트 수정 DTO
+ */
+export interface UpdateProjectDto {
+  name?: string;
+  description?: string;
+  status?: 'active' | 'archived';
+  wbsDepth?: 3 | 4;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+}

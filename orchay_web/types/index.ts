@@ -39,7 +39,7 @@ export interface WbsNode {
   assignee?: string;
   schedule?: ScheduleRange;
   tags?: string[];
-  depends?: string;
+  depends?: string[];
   requirements?: string[];
   ref?: string;
   progress?: number;

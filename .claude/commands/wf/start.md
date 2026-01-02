@@ -157,14 +157,6 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 
 ---
 
-## 다음 명령어
-
-| category | 다음 | 설명 |
-|----------|------|------|
-| 모든 카테고리 | `/wf:approve` | 설계 승인 (`[dd]` → `[ap]`) |
-
----
-
 ## 완료 신호
 
 작업 완료 후 **반드시** 다음 형식으로 출력:

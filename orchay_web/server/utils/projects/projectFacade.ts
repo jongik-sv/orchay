@@ -57,7 +57,7 @@ export async function createProjectWithRegistration(
       );
     }
 
-    // 2. 프로젝트 생성 (폴더 + project.json + team.json)
+    // 2. 프로젝트 생성 (폴더 + wbs.yaml + team.json)
     const project = await createProject(dto);
     projectCreated = true;
 

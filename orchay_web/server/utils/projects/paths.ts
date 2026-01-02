@@ -106,12 +106,12 @@ export function getProjectDir(projectId: string): string {
 /**
  * 프로젝트 파일 경로
  * @param projectId 프로젝트 ID
- * @param fileName 파일명 (project.json | team.json)
+ * @param fileName 파일명 (wbs.yaml | team.json)
  * @returns .orchay/projects/{id}/{fileName}
  */
 export function getProjectFilePath(
   projectId: string,
-  fileName: 'project.json' | 'team.json'
+  fileName: 'wbs.yaml' | 'team.json'
 ): string {
   return join(getProjectDir(projectId), fileName);
 }

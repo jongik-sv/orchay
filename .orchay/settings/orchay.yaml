@@ -2,7 +2,7 @@
 # CLI 인자로 override 가능 (예: --workers 5)
 
 # Worker 설정
-workers: 3 # 동시 실행 Worker pane 수 (1-6)
+workers: 6 # 동시 실행 Worker pane 수 (1-6)
 interval: 10 # 상태 모니터링 간격 (초)
 
 # 출력 설정
@@ -32,3 +32,10 @@ launcher:
   scheduler_cols: 100 # 스케줄러 pane 너비 columns
   worker_cols: 120 # Worker pane 너비 columns
   font_size: 9 # 폰트 크기
+
+# Worker 명령어 설정
+worker_command:
+  startup: "claude --dangerously-skip-permissions" # 워커 pane 시작 시 실행할 명령어
+  template: "/wf:{action} {project}/{task_id}" # 워커 실행 명령어 템플릿
+  clear: "/clear" # clear 명령어
+  resume: "/resume" # resume 명령어

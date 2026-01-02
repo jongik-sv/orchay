@@ -280,6 +280,20 @@ flowchart LR
 
 ### 5.3 GET /api/kitchen/orders - 주방 주문 목록
 
+**Query Parameters:**
+| 파라미터 | 필수 | 설명 |
+|----------|------|------|
+| token | ✅ | 주방 인증 토큰 (KITCHEN_TOKEN 환경변수와 일치해야 함) |
+
+**인증 방식:**
+```typescript
+// 환경변수 기반 토큰 인증
+const token = searchParams.get('token');
+if (token !== process.env.KITCHEN_TOKEN) {
+  return Response.json({ error: 'UNAUTHORIZED', message: '인증되지 않은 요청입니다' }, { status: 401 });
+}
+```
+
 **Response (200 OK):**
 ```typescript
 {
@@ -300,7 +314,20 @@ flowchart LR
 }
 ```
 
+**Error Response (401 Unauthorized):**
+```typescript
+{
+  error: 'UNAUTHORIZED';
+  message: '인증되지 않은 요청입니다';
+}
+```
+
 ### 5.4 PATCH /api/orders/{id}/status - 주문 상태 변경
+
+**Query Parameters:**
+| 파라미터 | 필수 | 설명 |
+|----------|------|------|
+| token | ✅ | 주방 인증 토큰 (KITCHEN_TOKEN 환경변수와 일치해야 함) |
 
 **Request:**
 ```typescript
@@ -312,7 +339,19 @@ flowchart LR
 **Response (200 OK):**
 ```typescript
 {
-  success: true;
+  order: {
+    id: number;
+    tableId: number;
+    status: 'pending' | 'cooking' | 'completed';
+    createdAt: string;
+    items: Array<{
+      id: number;
+      menuId: number;
+      menuName: string;
+      quantity: number;
+      status: 'pending' | 'cooking' | 'completed';
+    }>;
+  };
 }
 ```
 
@@ -321,6 +360,22 @@ flowchart LR
 {
   error: 'INVALID_TRANSITION';
   message: string;
+}
+```
+
+**Error Response (401 Unauthorized):**
+```typescript
+{
+  error: 'UNAUTHORIZED';
+  message: '인증되지 않은 요청입니다';
+}
+```
+
+**Error Response (409 Conflict):**
+```typescript
+{
+  error: 'CONCURRENT_MODIFICATION';
+  message: '다른 사용자가 이미 상태를 변경했습니다. 새로고침 후 다시 시도하세요';
 }
 ```
 
@@ -353,7 +408,7 @@ erDiagram
 | tableId | 필수, tables에 존재 | "유효하지 않은 테이블입니다" |
 | items | 필수, 1개 이상 | "주문 항목이 없습니다" |
 | items[].menuId | menus에 존재 | "존재하지 않는 메뉴입니다" |
-| items[].quantity | 1 이상 | "수량은 1 이상이어야 합니다" |
+| items[].quantity | 1 이상 99 이하 | "수량은 1~99 사이여야 합니다" |
 | status | pending→cooking→completed | "유효하지 않은 상태 변경입니다" |
 
 ---

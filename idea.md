@@ -12,8 +12,7 @@ wezterm cli send-text --no-paste --pane-id 1 프롬프트 # 예 : /wf:design TSK
 wezterm cli send-text --no-paste --pane-id 1 `r # 명령어를 submit 하기 위한 enter 키
 
 python C:\project\orchay_flutter\orchay\launcher.py
-PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
-
+PS C:\project\table-order> python C:\project\orchay\orchay\src\orchay\launcher.py mvp
 
 # orchay
 
@@ -31,43 +30,59 @@ PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.
   - script, settings, templates
 
 ## ochary_web 수정할 기능
+
 - wbs 편집 기능
-  - wbs 내용 
+  - wbs 내용
   - 수동 승인 : **force모드가 아닐 때** queue에서 아무 작업이 걸려있지 않은 [dd] 상태의 Task를 승인 상태로 바꾸는 기능이 있으면 좋겠어. 명령어 호출이 아닌 단순 값을 [dd]에서 [ap]으로 변경하는 것
 - Task 상태
   - 보류 상태 : 진행을 풀기 전까지 진행이 되지 않는 상태
-  - 
+  -
 
 ## 공통 수정
+
 - 코드 리펙토링
-- 
-
-
-
+-
 
 릴리즈 리스트
 gh release list --repo jongik-sv/orchay
 
-build-20251230-232844  Pre-release  build-20251230-232844  about 13 hours ago
-v0.1.0                 Latest       v0.1.0                 about 1 day ago
-
+build-20251230-232844 Pre-release build-20251230-232844 about 13 hours ago
+v0.1.0 Latest v0.1.0 about 1 day ago
 
 릴리즈 삭제
 gh release delete build-20251230-232844 --repo jongik-sv/orchay --yes
 gh release delete v0.1.0 --repo jongik-sv/orchay --yes
 
+# orchay (Python CLI)
 
+gh workflow run "Build & Release" -f version=v0.1.2
 
+# orchay_web (Electron)
 
-  # orchay (Python CLI)
-  gh workflow run "Build & Release" -f version=v0.1.2
+gh workflow run "Build & Release Electron App" -f version=v0.1.2
 
-  # orchay_web (Electron)
-  gh workflow run "Build & Release Electron App" -f version=v0.1.2
+PS C:\project\table-order> python C:\project\orchay\orchay\src\orchay\launcher.py mvp
 
+## 토큰 limit 문구
 
+⎿ You've hit your limit · resets 6pm (Asia/Seoul)
+/extra-usage to finish what you're working on.
 
+## Todos 하다 멈춤
 
-PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
+☐ 이전 변경사항 되돌리기 (template, clear, resume 삭제)
+☐ orchay.yaml에 startup만 남기기
+☐ Config에 startup만 추가
+☐ launcher.py에서 워커 pane에 startup 명령 전송
+☐ 테스트 실행
 
+"rate._limit._\d+(am|pm)"
+"hit._limit._\d+(am|pm)"
 
+      re.compile(r"rate.*limit.*exceeded", re.IGNORECASE),
+      re.compile(r"rate.*limit.*reached", re.IGNORECASE),
+      re.compile(r"hit.*rate.*limit", re.IGNORECASE),  # "rate" 필요
+      re.compile(r"please.*wait", re.IGNORECASE),
+      re.compile(r"try.*again.*later", re.IGNORECASE),
+      re.compile(r"weekly.*limit.*reached", re.IGNORECASE),
+      re.compile(r"resets.*at", re.IGNORECASE),  # "at" 필요

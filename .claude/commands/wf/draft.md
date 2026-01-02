@@ -191,13 +191,6 @@ npx tsx .orchay/script/transition.ts {Task-ID} draft -p {project}
 
 ---
 
-## 다음 명령어
-
-- `/wf:review` - LLM 설계 리뷰 (상태 변경 없음)
-- `/wf:build` - 구현 시작
-
----
-
 ## 완료 신호
 
 작업 완료 후 **반드시** 다음 형식으로 출력:

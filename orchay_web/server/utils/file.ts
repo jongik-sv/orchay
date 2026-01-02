@@ -186,10 +186,10 @@ export function getProjectPath(projectId: string): string {
 }
 
 /**
- * 프로젝트 WBS 파일 경로
+ * 프로젝트 WBS 파일 경로 (wbs.yaml)
  */
 export function getWbsPath(projectId: string): string {
-  return join(getProjectPath(projectId), 'wbs.md');
+  return join(getProjectPath(projectId), 'wbs.yaml');
 }
 
 /**

@@ -1,13 +1,20 @@
 """Worker 상태 감지 테스트."""
 
 import time
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
+import zoneinfo
 
 import orchay.worker
-from orchay.models.worker import Worker, WorkerState
-from orchay.worker import detect_worker_state, parse_done_signal
+from orchay.models.worker import PausedInfo, Worker, WorkerState
+from orchay.worker import (
+    detect_worker_state,
+    get_fallback_resume_time,
+    parse_done_signal,
+    parse_resume_time,
+)
 
 
 class TestWorkerModel:
@@ -268,10 +275,12 @@ class TestDetectWorkerState:
             mock_pane_exists.return_value = True
             mock_get_text.return_value = "rate limit exceeded, please wait..."
 
-            state, done_info = await detect_worker_state(pane_id=1)
+            state, paused_info = await detect_worker_state(pane_id=1)
 
             assert state == "paused"
-            assert done_info is None
+            # fallback: 30분 뒤 (시간 파싱 실패)
+            assert isinstance(paused_info, PausedInfo)
+            assert paused_info.reason == "rate limit"
 
     @pytest.mark.asyncio
     async def test_detect_paused_weekly_limit(self) -> None:
@@ -283,9 +292,13 @@ class TestDetectWorkerState:
             mock_pane_exists.return_value = True
             mock_get_text.return_value = "weekly limit reached, resets at Oct 9 10:30am"
 
-            state, done_info = await detect_worker_state(pane_id=1)
+            state, paused_info = await detect_worker_state(pane_id=1)
 
             assert state == "paused"
+            # 시간 파싱 성공: 10:30am → 11am + 10분 = 11:10am
+            assert isinstance(paused_info, PausedInfo)
+            assert paused_info.resume_at.hour == 11
+            assert paused_info.resume_at.minute == 10
 
     @pytest.mark.asyncio
     async def test_detect_paused_context_limit(self) -> None:
@@ -297,9 +310,11 @@ class TestDetectWorkerState:
             mock_pane_exists.return_value = True
             mock_get_text.return_value = "context limit exceeded, conversation too long"
 
-            state, done_info = await detect_worker_state(pane_id=1)
+            state, paused_info = await detect_worker_state(pane_id=1)
 
             assert state == "paused"
+            # fallback: 30분 뒤
+            assert isinstance(paused_info, PausedInfo)
 
     @pytest.mark.asyncio
     async def test_detect_error(self) -> None:
@@ -398,9 +413,10 @@ class TestDetectWorkerState:
         ):
             mock_get_text.return_value = "rate limit exceeded, please wait\n> "
 
-            state, _done_info = await detect_worker_state(pane_id=1)
+            state, paused_info = await detect_worker_state(pane_id=1)
 
             assert state == "paused"
+            assert isinstance(paused_info, PausedInfo)
 
     @pytest.mark.asyncio
     async def test_50_lines_limit(self) -> None:
@@ -415,3 +431,136 @@ class TestDetectWorkerState:
 
             # wezterm_get_text가 lines=50으로 호출되었는지 확인
             mock_get_text.assert_called_once_with(1, lines=50)
+
+
+class TestParseResumeTime:
+    """시간 파싱 테스트 (토큰 limit 재개 시간)."""
+
+    def test_parse_6pm_when_before(self) -> None:
+        """6pm 파싱: 현재 시간이 6:10pm 전이면 오늘 6:10pm."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 6pm", detected_at)
+
+        assert result.hour == 18
+        assert result.minute == 10  # 6pm + 10분
+        assert result.day == 2  # 오늘
+
+    def test_parse_6pm_when_after(self) -> None:
+        """6pm 파싱: 현재 시간이 6:10pm 후면 내일 6:10pm."""
+        detected_at = datetime(2025, 1, 2, 19, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 6pm", detected_at)
+
+        assert result.hour == 18
+        assert result.minute == 10  # 6pm + 10분
+        assert result.day == 3  # 다음날
+
+    def test_parse_5_59pm(self) -> None:
+        """5:59pm 파싱: 6:10pm으로 동일."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 5:59pm", detected_at)
+
+        # 분 무시하고 6pm + 10분 = 6:10pm
+        assert result.hour == 18
+        assert result.minute == 10
+
+    def test_parse_9am(self) -> None:
+        """9am 파싱: 9:10am."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 9am", detected_at)
+
+        assert result.hour == 9
+        assert result.minute == 10  # 9am + 10분
+
+    def test_parse_9_30pm(self) -> None:
+        """9:30pm 파싱: 10:10pm (올림)."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("rate limit resets at 9:30pm", detected_at)
+
+        # 분 있으면 한 시간 올림: 9:30pm → 10pm + 10분 = 10:10pm
+        assert result.hour == 22
+        assert result.minute == 10
+
+    def test_parse_12pm(self) -> None:
+        """12pm 파싱 (정오): 12:10pm."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 12pm", detected_at)
+
+        assert result.hour == 12
+        assert result.minute == 10  # 12pm + 10분
+
+    def test_parse_12am(self) -> None:
+        """12am 파싱 (자정): 12:10am."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time("resets 12am", detected_at)
+
+        assert result.hour == 0
+        assert result.minute == 10  # 12am + 10분
+
+    def test_parse_with_timezone(self) -> None:
+        """타임존 정보 포함 파싱."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = parse_resume_time(
+            "resets 6pm (Asia/Seoul) /extra-usage to finish", detected_at
+        )
+
+        assert result.hour == 18
+        assert result.minute == 10
+        assert result.tzinfo.key == "Asia/Seoul"
+
+    def test_parse_no_match_raises_value_error(self) -> None:
+        """시간 패턴 없으면 ValueError 발생."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+
+        with pytest.raises(ValueError, match="Cannot parse resume time"):
+            parse_resume_time("no time here", detected_at)
+
+    def test_fallback_resume_time(self) -> None:
+        """Fallback: 30분 뒤."""
+        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result = get_fallback_resume_time(detected_at)
+
+        expected = datetime(2025, 1, 2, 14, 30, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        assert result == expected
+
+
+class TestDetectPausedWithTime:
+    """토큰 limit 시간 파싱 통합 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_detect_paused_with_resume_time(self) -> None:
+        """토큰 limit 감지 후 시간 파싱."""
+        with (
+            patch("orchay.worker.pane_exists") as mock_pane_exists,
+            patch("orchay.worker.wezterm_get_text") as mock_get_text,
+        ):
+            mock_pane_exists.return_value = True
+            mock_get_text.return_value = (
+                "⎿ You've hit your limit · resets 6pm (Asia/Seoul)\n"
+                "/extra-usage to finish what you're working on."
+            )
+
+            state, info = await detect_worker_state(pane_id=1)
+
+            assert state == "paused"
+            assert isinstance(info, PausedInfo)
+            assert info.reason == "rate limit"
+            assert info.resume_at.hour == 18  # 6pm
+            assert info.resume_at.tzinfo.key == "Asia/Seoul"
+
+    @pytest.mark.asyncio
+    async def test_detect_paused_fallback_when_no_time(self) -> None:
+        """시간 없으면 fallback 30분 뒤 사용."""
+        with (
+            patch("orchay.worker.pane_exists") as mock_pane_exists,
+            patch("orchay.worker.wezterm_get_text") as mock_get_text,
+        ):
+            mock_pane_exists.return_value = True
+            mock_get_text.return_value = "rate limit exceeded, please wait"
+
+            state, info = await detect_worker_state(pane_id=1)
+
+            assert state == "paused"
+            assert isinstance(info, PausedInfo)
+            assert info.reason == "rate limit"
+            # fallback: 30분 뒤
+            assert info.message == "fallback: 30 minutes"
