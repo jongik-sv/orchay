@@ -45,9 +45,6 @@ workPackages:
             - React 19.x
             - TypeScript 5.x
             - Tailwind CSS 3.x
-        execution:
-          command: apply
-          startedAt: "2026-01-02T06:40:25.153Z"
       - id: TSK-00-02
         title: 핵심 의존성 설치 및 설정
         category: infrastructure
@@ -219,6 +216,9 @@ workPackages:
           techSpec:
             - "@blocknote/react useCreateBlockNote"
             - "@blocknote/mantine BlockNoteView"
+        execution:
+          command: review
+          startedAt: "2026-01-02T06:40:59.537Z"
       - id: TSK-01-02
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
@@ -392,7 +392,7 @@ workPackages:
         title: 사이드바 컴포넌트
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-09 ~ 2026-01-10
@@ -415,9 +415,6 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
-        execution:
-          command: start
-          startedAt: "2026-01-02T06:37:39.941Z"
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
