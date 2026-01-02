@@ -351,7 +351,7 @@ workPackages:
         title: WP-01 통합 검증
         category: development
         domain: test
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: "2026-01-08"
@@ -374,9 +374,6 @@ workPackages:
             - 슬래시 명령어로 블록 생성 → 드래그 앤 드롭 → 저장
             - 기본 블록 유형 (텍스트, 제목, 리스트, 인용, 코드) 모두 동작
           note: WP-01의 모든 에디터 기능이 연동되어 정상 동작하는지 검증
-        execution:
-          command: build
-          startedAt: "2026-01-02T14:44:12.665Z"
   - id: WP-02
     title: 페이지 구조 (사이드바 + 네비게이션)
     status: planned

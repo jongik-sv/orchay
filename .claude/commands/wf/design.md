@@ -190,6 +190,9 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 - /wf:review (선택): 설계 리뷰
 - /wf:approve: 설계 승인 ([dd] → [ap])
 - /wf:build: 구현 시작 ([ap] → [im])
+
+---
+ORCHAY_DONE:TSK-01-01:design:success
 ```
 
 ---
@@ -210,6 +213,9 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 └── [5/5] TSK-02-02 ✅ → [dd]
 
 📊 결과: 성공 5, 실패 0, 스킵 3 (다른 카테고리)
+
+---
+ORCHAY_DONE:WP-01:design:success
 ```
 
 ---

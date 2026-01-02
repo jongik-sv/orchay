@@ -212,6 +212,9 @@ Task: TSK-03-01-01 | Category: infrastructure
 📄 생성: 070-infra-test.md
 
 다음: /wf:done TSK-03-01-01
+
+---
+ORCHAY_DONE:TSK-03-01-01:verify:success
 ```
 
 ---

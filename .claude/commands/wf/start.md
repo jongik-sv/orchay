@@ -142,6 +142,9 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 ...
 
 📊 결과: 성공 8, 실패 0, 스킵 7
+
+---
+ORCHAY_DONE:WP-01:start:success
 ```
 
 ---

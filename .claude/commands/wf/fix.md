@@ -166,6 +166,9 @@ Task: TSK-02-01-01 | Category: defect
 📄 생성: 030-implementation.md
 
 다음: /wf:audit 또는 /wf:verify
+
+---
+ORCHAY_DONE:TSK-02-01-01:fix:success
 ```
 
 ### Full-stack 수정
@@ -191,6 +194,9 @@ Task: TSK-02-02-01 | Category: defect
 📄 생성: 030-implementation.md
 
 다음: /wf:audit 또는 /wf:verify
+
+---
+ORCHAY_DONE:TSK-02-02-01:fix:success
 ```
 
 ---

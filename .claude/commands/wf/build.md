@@ -260,6 +260,9 @@ Task: TSK-01-01-01 | Full-stack
 📊 품질: TDD 85% | E2E 100% | FR/BR 100%
 
 다음: /wf:audit 또는 /wf:verify
+
+---
+ORCHAY_DONE:TSK-01-01-01:build:success
 ```
 
 ---
