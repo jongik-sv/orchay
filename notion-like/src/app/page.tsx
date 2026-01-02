@@ -3,14 +3,16 @@
 import { useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { useAppStore } from '@/lib/store';
+import { useAppStore, type Page } from '@/lib/store';
 
 // 목 데이터 (개발용)
-const mockPages = [
+const mockPages: Page[] = [
   {
     id: 'page-1',
     title: 'Dashboard',
     icon: '📄',
+    is_favorite: false,
+    sort_order: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     children: [
@@ -19,6 +21,8 @@ const mockPages = [
         title: 'Q1 Analytics',
         icon: '📊',
         parentId: 'page-1',
+        is_favorite: false,
+        sort_order: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         children: [
@@ -27,6 +31,8 @@ const mockPages = [
             title: 'Q1 Revenue Report',
             icon: '💰',
             parentId: 'page-1-1',
+            is_favorite: false,
+            sort_order: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
@@ -37,6 +43,8 @@ const mockPages = [
         title: 'Monthly Report',
         icon: '📈',
         parentId: 'page-1',
+        is_favorite: false,
+        sort_order: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -46,6 +54,8 @@ const mockPages = [
     id: 'page-2',
     title: 'Projects',
     icon: '📁',
+    is_favorite: false,
+    sort_order: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     children: [
@@ -54,6 +64,8 @@ const mockPages = [
         title: 'Orchay Notes',
         icon: '🚀',
         parentId: 'page-2',
+        is_favorite: false,
+        sort_order: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -62,6 +74,8 @@ const mockPages = [
         title: 'Website Redesign',
         icon: '🎨',
         parentId: 'page-2',
+        is_favorite: false,
+        sort_order: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -71,18 +85,20 @@ const mockPages = [
     id: 'page-3',
     title: 'Archive',
     icon: '📦',
+    is_favorite: false,
+    sort_order: 2,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
 export default function Home() {
-  const { setPages } = useAppStore();
+  const { setPageCache } = useAppStore();
 
   useEffect(() => {
     // 초기 페이지 데이터 로드
-    setPages(mockPages);
-  }, [setPages]);
+    setPageCache(mockPages);
+  }, [setPageCache]);
 
   return (
     <MainLayout sidebar={<Sidebar />}>

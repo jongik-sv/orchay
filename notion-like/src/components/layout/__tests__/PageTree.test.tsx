@@ -17,6 +17,8 @@ const mockPages = [
     id: 'page-1',
     title: 'Dashboard',
     icon: '📄',
+    is_favorite: false,
+    sort_order: 0,
     createdAt: '2026-01-02',
     updatedAt: '2026-01-02',
     children: [
@@ -25,6 +27,8 @@ const mockPages = [
         title: 'Q1 Analytics',
         icon: '📊',
         parentId: 'page-1',
+        is_favorite: false,
+        sort_order: 0,
         createdAt: '2026-01-02',
         updatedAt: '2026-01-02',
       },
@@ -33,6 +37,8 @@ const mockPages = [
         title: 'Monthly Report',
         icon: '📈',
         parentId: 'page-1',
+        is_favorite: false,
+        sort_order: 1,
         createdAt: '2026-01-02',
         updatedAt: '2026-01-02',
       },
@@ -42,6 +48,8 @@ const mockPages = [
     id: 'page-2',
     title: 'Projects',
     icon: '📁',
+    is_favorite: false,
+    sort_order: 1,
     createdAt: '2026-01-02',
     updatedAt: '2026-01-02',
   },
@@ -51,12 +59,15 @@ describe('PageTree Component', () => {
   beforeEach(() => {
     const mockStore = {
       expandedFolders: new Set<string>(),
-      toggleFolder: vi.fn(),
+      toggleFolderExpanded: vi.fn(),
       setCurrentPageId: vi.fn(),
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 
@@ -83,12 +94,15 @@ describe('PageTree Component', () => {
   it('하위 페이지가 있을 때 토글 버튼을 표시해야 함', () => {
     const mockStore = {
       expandedFolders: new Set<string>(),
-      toggleFolder: vi.fn(),
+      toggleFolderExpanded: vi.fn(),
       setCurrentPageId: vi.fn(),
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 
@@ -103,16 +117,19 @@ describe('PageTree Component', () => {
     expect(toggleBtn).toBeInTheDocument();
   });
 
-  it('폴더 토글 시 toggleFolder 함수를 호출해야 함', () => {
-    const mockToggleFolder = vi.fn();
+  it('폴더 토글 시 toggleFolderExpanded 함수를 호출해야 함', () => {
+    const mockToggleFolderExpanded = vi.fn();
     const mockStore = {
       expandedFolders: new Set<string>(),
-      toggleFolder: mockToggleFolder,
+      toggleFolderExpanded: mockToggleFolderExpanded,
       setCurrentPageId: vi.fn(),
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 
@@ -123,19 +140,22 @@ describe('PageTree Component', () => {
     const toggleBtn = screen.getByTestId('toggle-btn-page-1');
     fireEvent.click(toggleBtn);
 
-    expect(mockToggleFolder).toHaveBeenCalledWith('page-1');
+    expect(mockToggleFolderExpanded).toHaveBeenCalledWith('page-1');
   });
 
   it('페이지 아이템 클릭 시 setCurrentPageId 함수를 호출해야 함', () => {
     const mockSetCurrentPageId = vi.fn();
     const mockStore = {
       expandedFolders: new Set<string>(),
-      toggleFolder: vi.fn(),
+      toggleFolderExpanded: vi.fn(),
       setCurrentPageId: mockSetCurrentPageId,
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 
@@ -157,12 +177,15 @@ describe('PageTree Component', () => {
   it('재귀적으로 하위 페이지를 렌더링해야 함', () => {
     const mockStore = {
       expandedFolders: new Set(['page-1']),
-      toggleFolder: vi.fn(),
+      toggleFolderExpanded: vi.fn(),
       setCurrentPageId: vi.fn(),
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 
@@ -178,12 +201,15 @@ describe('PageTree Component', () => {
   it('들여쓰기가 depth에 따라 올바르게 계산되어야 함', () => {
     const mockStore = {
       expandedFolders: new Set(['page-1']),
-      toggleFolder: vi.fn(),
+      toggleFolderExpanded: vi.fn(),
       setCurrentPageId: vi.fn(),
       sidebarOpen: true,
       toggleSidebar: vi.fn(),
-      pages: mockPages,
-      setPages: vi.fn(),
+      pageCache: mockPages,
+      setPageCache: vi.fn(),
+      addPageCache: vi.fn(),
+      removePageCache: vi.fn(),
+      setExpandedFolders: vi.fn(),
       currentPageId: null,
     };
 

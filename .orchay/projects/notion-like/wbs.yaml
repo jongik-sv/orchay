@@ -4,693 +4,696 @@ project:
   description: Notion과 유사한 블록 기반 올인원 워크스페이스 애플리케이션 (MVP)
   version: 0.1.0
   status: active
-  createdAt: '2026-01-02'
-  updatedAt: '2026-01-02'
+  createdAt: "2026-01-02"
+  updatedAt: "2026-01-02"
 wbs:
-  version: '1.0'
+  version: "1.0"
   depth: 3
   projectRoot: ../notion-like
   strategy: TIER 1 MVP - 핵심 에디터 + 페이지 구조 집중, BlockNote 활용
 workPackages:
-- id: WP-00
-  title: 프로젝트 초기화
-  status: planned
-  priority: critical
-  schedule: 2026-01-02 ~ 2026-01-03
-  tasks:
-  - id: TSK-00-01
-    title: Next.js 프로젝트 생성 및 기본 설정
-    category: infrastructure
-    domain: infra
-    status: '[xx]'
+  - id: WP-00
+    title: 프로젝트 초기화
+    status: planned
     priority: critical
-    assignee: '-'
-    schedule: '2026-01-02'
-    test_result: pass
-    tags:
-    - setup
-    - nextjs
-    depends: []
-    requirements:
-      prdRef: TRD 4. 기술 스택
-      items:
-      - Next.js 15 App Router 프로젝트 생성
-      - TypeScript 설정
-      - Tailwind CSS 설정
-      - ESLint/Prettier 설정
-      acceptance:
-      - npm run dev 정상 실행
-      - localhost:3000 접속 확인
-      techSpec:
-      - Next.js 15.x
-      - React 19.x
-      - TypeScript 5.x
-      - Tailwind CSS 3.x
-  - id: TSK-00-02
-    title: 핵심 의존성 설치 및 설정
-    category: infrastructure
-    domain: infra
-    status: '[vf]'
-    priority: critical
-    assignee: '-'
-    schedule: '2026-01-02'
-    test_result: pass
-    tags:
-    - setup
-    - dependencies
-    depends:
-    - TSK-00-01
-    requirements:
-      prdRef: TRD 9. 의존성 목록
-      items:
-      - BlockNote 설치 (@blocknote/core, @blocknote/react, @blocknote/mantine)
-      - better-sqlite3 설치
-      - Zustand 설치
-      - Lucide React 설치
-      acceptance:
-      - 모든 패키지 설치 성공
-      - 타입 에러 없음
-      techSpec:
-      - '@blocknote/core ^0.18.0'
-      - '@blocknote/react ^0.18.0'
-      - better-sqlite3 ^11.0.0
-      - zustand ^5.0.0
-  - id: TSK-00-03
-    title: 프로젝트 구조 및 기본 레이아웃 생성
-    category: infrastructure
-    domain: fullstack
-    status: '[vf]'
-    priority: high
-    assignee: '-'
     schedule: 2026-01-02 ~ 2026-01-03
-    test_result: pass
-    tags:
-    - setup
-    - structure
-    depends:
-    - TSK-00-02
-    requirements:
-      prdRef: TRD 4. 프로젝트 구조
-      items:
-      - src/app/ 라우팅 구조 생성
-      - src/components/ 디렉토리 구조 생성
-      - src/lib/ 유틸리티 구조 생성
-      - globals.css Notion 스타일 기본 설정
-      acceptance:
-      - 디렉토리 구조 TRD 명세와 일치
-      - 빌드 에러 없음
-      techSpec:
-      - App Router 파일 구조
-      - Notion 컬러 CSS 변수
-  - id: TSK-00-04
-    title: SQLite 데이터베이스 초기화
-    category: infrastructure
-    domain: database
-    status: '[ap]'
-    priority: high
-    assignee: '-'
-    schedule: '2026-01-03'
-    tags:
-    - database
-    - sqlite
-    depends:
-    - TSK-00-03
-    requirements:
-      prdRef: TRD 5. 데이터베이스 (SQLite)
-      items:
-      - data/database.db 파일 생성
-      - pages 테이블 스키마 생성
-      - src/lib/db.ts 유틸리티 구현
-      acceptance:
-      - DB 파일 생성 확인
-      - CRUD 함수 동작 확인
-      techSpec:
-      - better-sqlite3 동기 API
-      - pages 테이블 (id, title, icon, cover_url, parent_id, content)
-      dataModel:
-      - 'pages: id(TEXT PK), title, icon, cover_url, parent_id, content(JSON), is_favorite, sort_order, created_at, updated_at'
-  - id: TSK-00-05
-    title: Zustand 스토어 설정
-    category: development
-    domain: frontend
-    status: '[ap]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-03'
-    tags:
-    - state
-    - zustand
-    depends:
-    - TSK-00-04
-    requirements:
-      prdRef: TRD 6. 상태 관리 (Zustand)
-      items:
-      - src/lib/store.ts 생성
-      - 사이드바 상태 (열림/닫힘)
-      - 현재 페이지 ID 상태
-      - 페이지 목록 캐시
-      - 확장된 폴더 상태
-      acceptance:
-      - 스토어 훅 정상 동작
-      - 상태 업데이트 반영
-      techSpec:
-      - Zustand 5.x create 함수
-      - TypeScript 타입 정의
-  - id: TSK-00-99
-    title: WP-00 통합 검증
-    category: simple-dev
-    domain: test
-    status: '[ ]'
-    priority: high
-    assignee: '-'
-    schedule: '2026-01-03'
-    tags:
-    - integration
-    - verify
-    depends:
-    - TSK-00-01
-    - TSK-00-02
-    - TSK-00-03
-    - TSK-00-04
-    - TSK-00-05
-    requirements:
-      prdRef: WP-00 통합
-      items:
-      - 모든 기본 설정이 연결되어 동작하는지 확인
-      - DB 연결 + 스토어 + API 통합 테스트
-      acceptance:
-      - npm run dev 실행 후 페이지 로드 성공
-      - DB에서 페이지 목록 조회 가능
-      - 스토어 상태 변경 시 UI 반영
-      note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
-- id: WP-01
-  title: 핵심 에디터 (BlockNote)
-  status: planned
-  priority: critical
-  schedule: 2026-01-04 ~ 2026-01-08
-  tasks:
-  - id: TSK-01-01
-    title: BlockNote 에디터 기본 통합
-    category: development
-    domain: frontend
-    status: '[vf]'
+    tasks:
+      - id: TSK-00-01
+        title: Next.js 프로젝트 생성 및 기본 설정
+        category: infrastructure
+        domain: infra
+        status: "[xx]"
+        priority: critical
+        assignee: "-"
+        schedule: "2026-01-02"
+        test_result: pass
+        tags:
+          - setup
+          - nextjs
+        depends: []
+        requirements:
+          prdRef: TRD 4. 기술 스택
+          items:
+            - Next.js 15 App Router 프로젝트 생성
+            - TypeScript 설정
+            - Tailwind CSS 설정
+            - ESLint/Prettier 설정
+          acceptance:
+            - npm run dev 정상 실행
+            - localhost:3000 접속 확인
+          techSpec:
+            - Next.js 15.x
+            - React 19.x
+            - TypeScript 5.x
+            - Tailwind CSS 3.x
+      - id: TSK-00-02
+        title: 핵심 의존성 설치 및 설정
+        category: infrastructure
+        domain: infra
+        status: "[vf]"
+        priority: critical
+        assignee: "-"
+        schedule: "2026-01-02"
+        test_result: pass
+        tags:
+          - setup
+          - dependencies
+        depends:
+          - TSK-00-01
+        requirements:
+          prdRef: TRD 9. 의존성 목록
+          items:
+            - BlockNote 설치 (@blocknote/core, @blocknote/react, @blocknote/mantine)
+            - better-sqlite3 설치
+            - Zustand 설치
+            - Lucide React 설치
+          acceptance:
+            - 모든 패키지 설치 성공
+            - 타입 에러 없음
+          techSpec:
+            - "@blocknote/core ^0.18.0"
+            - "@blocknote/react ^0.18.0"
+            - better-sqlite3 ^11.0.0
+            - zustand ^5.0.0
+      - id: TSK-00-03
+        title: 프로젝트 구조 및 기본 레이아웃 생성
+        category: infrastructure
+        domain: fullstack
+        status: "[vf]"
+        priority: high
+        assignee: "-"
+        schedule: 2026-01-02 ~ 2026-01-03
+        test_result: pass
+        tags:
+          - setup
+          - structure
+        depends:
+          - TSK-00-02
+        requirements:
+          prdRef: TRD 4. 프로젝트 구조
+          items:
+            - src/app/ 라우팅 구조 생성
+            - src/components/ 디렉토리 구조 생성
+            - src/lib/ 유틸리티 구조 생성
+            - globals.css Notion 스타일 기본 설정
+          acceptance:
+            - 디렉토리 구조 TRD 명세와 일치
+            - 빌드 에러 없음
+          techSpec:
+            - App Router 파일 구조
+            - Notion 컬러 CSS 변수
+      - id: TSK-00-04
+        title: SQLite 데이터베이스 초기화
+        category: infrastructure
+        domain: database
+        status: "[im]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-03"
+        tags:
+          - database
+          - sqlite
+        depends:
+          - TSK-00-03
+        requirements:
+          prdRef: TRD 5. 데이터베이스 (SQLite)
+          items:
+            - data/database.db 파일 생성
+            - pages 테이블 스키마 생성
+            - src/lib/db.ts 유틸리티 구현
+          acceptance:
+            - DB 파일 생성 확인
+            - CRUD 함수 동작 확인
+          techSpec:
+            - better-sqlite3 동기 API
+            - pages 테이블 (id, title, icon, cover_url, parent_id, content)
+          dataModel:
+            - "pages: id(TEXT PK), title, icon, cover_url, parent_id, content(JSON), is_favorite, sort_order, created_at, updated_at"
+      - id: TSK-00-05
+        title: Zustand 스토어 설정
+        category: development
+        domain: frontend
+        status: "[im]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-03"
+        tags:
+          - state
+          - zustand
+        depends:
+          - TSK-00-04
+        requirements:
+          prdRef: TRD 6. 상태 관리 (Zustand)
+          items:
+            - src/lib/store.ts 생성
+            - 사이드바 상태 (열림/닫힘)
+            - 현재 페이지 ID 상태
+            - 페이지 목록 캐시
+            - 확장된 폴더 상태
+          acceptance:
+            - 스토어 훅 정상 동작
+            - 상태 업데이트 반영
+          techSpec:
+            - Zustand 5.x create 함수
+            - TypeScript 타입 정의
+      - id: TSK-00-99
+        title: WP-00 통합 검증
+        category: simple-dev
+        domain: test
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-03"
+        tags:
+          - integration
+          - verify
+        depends:
+          - TSK-00-01
+          - TSK-00-02
+          - TSK-00-03
+          - TSK-00-04
+          - TSK-00-05
+        requirements:
+          prdRef: WP-00 통합
+          items:
+            - 모든 기본 설정이 연결되어 동작하는지 확인
+            - DB 연결 + 스토어 + API 통합 테스트
+          acceptance:
+            - npm run dev 실행 후 페이지 로드 성공
+            - DB에서 페이지 목록 조회 가능
+            - 스토어 상태 변경 시 UI 반영
+          note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
+  - id: WP-01
+    title: 핵심 에디터 (BlockNote)
+    status: planned
     priority: critical
-    assignee: '-'
-    schedule: '2026-01-04'
-    tags:
-    - editor
-    - blocknote
-    depends:
-    - TSK-00-99
-    test_result: pass
-    requirements:
-      prdRef: PRD 2.1 블록 기반 에디터
-      items:
-      - src/components/editor/Editor.tsx 생성
-      - useCreateBlockNote 훅으로 에디터 인스턴스 생성
-      - BlockNoteView 컴포넌트 렌더링
-      - 기본 테마 (light) 적용
-      acceptance:
-      - 에디터 렌더링 성공
-      - 텍스트 입력 가능
-      - 기본 블록 유형 동작
-      techSpec:
-      - '@blocknote/react useCreateBlockNote'
-      - '@blocknote/mantine BlockNoteView'
-    execution:
-      command: verify
-      startedAt: '2026-01-02T23:30:00.000Z'
-      completedAt: '2026-01-02T23:45:00.000Z'
-  - id: TSK-01-02
-    title: 에디터 콘텐츠 저장/로드 구현
-    category: development
-    domain: fullstack
-    status: '[vf]'
+    schedule: 2026-01-04 ~ 2026-01-08
+    tasks:
+      - id: TSK-01-01
+        title: BlockNote 에디터 기본 통합
+        category: development
+        domain: frontend
+        status: "[vf]"
+        priority: critical
+        assignee: "-"
+        schedule: "2026-01-04"
+        tags:
+          - editor
+          - blocknote
+        depends:
+          - TSK-00-99
+        test_result: pass
+        requirements:
+          prdRef: PRD 2.1 블록 기반 에디터
+          items:
+            - src/components/editor/Editor.tsx 생성
+            - useCreateBlockNote 훅으로 에디터 인스턴스 생성
+            - BlockNoteView 컴포넌트 렌더링
+            - 기본 테마 (light) 적용
+          acceptance:
+            - 에디터 렌더링 성공
+            - 텍스트 입력 가능
+            - 기본 블록 유형 동작
+          techSpec:
+            - "@blocknote/react useCreateBlockNote"
+            - "@blocknote/mantine BlockNoteView"
+        execution:
+          command: verify
+          startedAt: "2026-01-02T23:30:00.000Z"
+          completedAt: "2026-01-02T23:45:00.000Z"
+      - id: TSK-01-02
+        title: 에디터 콘텐츠 저장/로드 구현
+        category: development
+        domain: fullstack
+        status: "[vf]"
+        priority: critical
+        assignee: "-"
+        schedule: 2026-01-04 ~ 2026-01-05
+        tags:
+          - editor
+          - persistence
+        depends:
+          - TSK-01-01
+        test_result: pass
+        requirements:
+          prdRef: PRD 2.1 블록 기반 에디터
+          items:
+            - 에디터 onChange 콜백으로 콘텐츠 JSON 추출
+            - API를 통해 DB에 저장
+            - 페이지 로드 시 initialContent 전달
+            - 자동 저장 (debounce 적용)
+          acceptance:
+            - 에디터 내용 수정 후 새로고침해도 유지
+            - 저장 중 표시 (선택)
+          techSpec:
+            - editor.document → JSON.stringify
+            - PUT /api/pages/:id
+            - debounce 1초
+      - id: TSK-01-03
+        title: Notion 스타일 에디터 CSS 적용
+        category: development
+        domain: frontend
+        status: "[ap]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-05"
+        tags:
+          - editor
+          - styling
+        depends:
+          - TSK-01-01
+        requirements:
+          prdRef: TRD 2. UI/UX 디자인 시스템
+          items:
+            - BlockNote CSS 오버라이드 (globals.css)
+            - 블록 핸들 스타일 (호버 시 표시)
+            - 슬래시 메뉴 스타일
+            - 제목 블록 스타일 (H1, H2, H3)
+            - Placeholder 스타일
+          acceptance:
+            - Notion과 유사한 룩앤필
+            - 블록 호버 시 핸들 표시
+          uiSpec:
+            - .bn-block 마진 1px
+            - .bn-side-menu 호버 시 opacity 1
+            - "H1 font-size: 1.875rem"
+        execution:
+          command: build
+          startedAt: "2026-01-02T14:20:43.317Z"
+      - id: TSK-01-04
+        title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
+        category: development
+        domain: frontend
+        status: "[bd]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-06"
+        tags:
+          - editor
+          - header
+        depends:
+          - TSK-01-03
+        requirements:
+          prdRef: PRD 2.3.1 페이지 구조
+          items:
+            - src/components/editor/PageHeader.tsx 생성
+            - 커버 이미지 영역 (200px 높이)
+            - 페이지 아이콘 (78px, 이모지)
+            - 페이지 제목 입력 (40px 폰트)
+            - 아이콘/커버 변경 버튼 (호버 시 표시)
+          acceptance:
+            - 커버 이미지 표시
+            - 아이콘 클릭 시 변경 가능
+            - 제목 편집 가능
+          uiSpec:
+            - "커버: h-[200px] object-cover"
+            - "아이콘: w-[78px] h-[78px] text-[78px]"
+            - "제목: text-[40px] font-bold"
+      - id: TSK-01-05
+        title: 아이콘 선택기 컴포넌트
+        category: development
+        domain: frontend
+        status: "[ap]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-07"
+        tags:
+          - ui
+          - emoji
+        depends:
+          - TSK-01-04
+        requirements:
+          prdRef: PRD 2.3.1 페이지 아이콘
+          items:
+            - src/components/ui/IconPicker.tsx 생성
+            - 이모지 카테고리별 그리드 표시
+            - 최근 사용 이모지
+            - 검색 기능 (선택)
+          acceptance:
+            - 이모지 선택 시 페이지 아이콘 변경
+            - 드롭다운 외부 클릭 시 닫힘
+          uiSpec:
+            - Notion 스타일 드롭다운 그림자
+            - 그리드 8열
+        execution:
+          command: build
+          startedAt: "2026-01-02T14:22:21.137Z"
+      - id: TSK-01-99
+        title: WP-01 통합 검증
+        category: simple-dev
+        domain: test
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-08"
+        tags:
+          - integration
+          - verify
+        depends:
+          - TSK-01-01
+          - TSK-01-02
+          - TSK-01-03
+          - TSK-01-04
+          - TSK-01-05
+        requirements:
+          prdRef: WP-01 통합
+          items:
+            - 에디터 전체 기능 통합 테스트
+            - 페이지 헤더 + 에디터 + 저장 연동 확인
+          acceptance:
+            - 페이지 로드 → 제목/아이콘/커버 표시 → 에디터 편집 → 저장 → 새로고침 후 유지
+            - 슬래시 명령어로 블록 생성 → 드래그 앤 드롭 → 저장
+            - 기본 블록 유형 (텍스트, 제목, 리스트, 인용, 코드) 모두 동작
+          note: WP-01의 모든 에디터 기능이 연동되어 정상 동작하는지 검증
+  - id: WP-02
+    title: 페이지 구조 (사이드바 + 네비게이션)
+    status: planned
     priority: critical
-    assignee: '-'
-    schedule: 2026-01-04 ~ 2026-01-05
-    tags:
-    - editor
-    - persistence
-    depends:
-    - TSK-01-01
-    test_result: pass
-    requirements:
-      prdRef: PRD 2.1 블록 기반 에디터
-      items:
-      - 에디터 onChange 콜백으로 콘텐츠 JSON 추출
-      - API를 통해 DB에 저장
-      - 페이지 로드 시 initialContent 전달
-      - 자동 저장 (debounce 적용)
-      acceptance:
-      - 에디터 내용 수정 후 새로고침해도 유지
-      - 저장 중 표시 (선택)
-      techSpec:
-      - editor.document → JSON.stringify
-      - PUT /api/pages/:id
-      - debounce 1초
-  - id: TSK-01-03
-    title: Notion 스타일 에디터 CSS 적용
-    category: development
-    domain: frontend
-    status: '[dd]'
+    schedule: 2026-01-09 ~ 2026-01-14
+    tasks:
+      - id: TSK-02-01
+        title: 메인 레이아웃 (사이드바 + 에디터 영역)
+        category: development
+        domain: frontend
+        status: "[im]"
+        priority: critical
+        assignee: "-"
+        schedule: "2026-01-09"
+        tags:
+          - layout
+          - sidebar
+        depends:
+          - TSK-01-99
+        test_result: pass
+        requirements:
+          prdRef: TRD 3.1 메인 레이아웃
+          items:
+            - src/components/layout/MainLayout.tsx 생성
+            - 사이드바 영역 (240px 고정)
+            - 에디터 영역 (flex-1)
+            - 사이드바 접기/펼치기
+          acceptance:
+            - 사이드바 + 에디터 2컬럼 레이아웃
+            - 사이드바 토글 동작
+          uiSpec:
+            - "사이드바: w-[240px] bg-[#F7F6F3]"
+            - "에디터: flex-1 overflow-auto"
+        execution:
+          command: build
+          startedAt: "2026-01-02T13:55:00.296Z"
+          completedAt: "2026-01-02T23:59:00.000Z"
+      - id: TSK-02-02
+        title: 사이드바 컴포넌트
+        category: development
+        domain: frontend
+        status: "[im]"
+        priority: critical
+        assignee: "-"
+        schedule: 2026-01-09 ~ 2026-01-10
+        tags:
+          - sidebar
+          - navigation
+        depends:
+          - TSK-02-01
+        requirements:
+          prdRef: TRD 3.2 사이드바 컴포넌트
+          items:
+            - src/components/layout/Sidebar.tsx 생성
+            - 워크스페이스 헤더
+            - 퀵 액션 (검색, 설정)
+            - 페이지 트리 영역
+            - 새 페이지 버튼
+          acceptance:
+            - 사이드바 UI 렌더링
+            - 각 영역 구분 표시
+          uiSpec:
+            - "퀵 액션: 호버 시 bg-[#EFEFEF]"
+            - "섹션 구분선: border-[#E9E9E7]"
+      - id: TSK-02-03
+        title: 페이지 트리 컴포넌트 (중첩 구조)
+        category: development
+        domain: frontend
+        status: "[im]"
+        priority: critical
+        assignee: "-"
+        schedule: 2026-01-10 ~ 2026-01-11
+        tags:
+          - sidebar
+          - tree
+        depends:
+          - TSK-02-02
+        requirements:
+          prdRef: PRD 2.3.1 무한 중첩
+          items:
+            - src/components/layout/PageTree.tsx 생성
+            - src/components/layout/PageTreeItem.tsx 생성
+            - 재귀적 트리 렌더링
+            - 폴더 열기/닫기 상태
+            - depth에 따른 들여쓰기
+          acceptance:
+            - 중첩 페이지 트리 표시
+            - 토글 버튼으로 하위 페이지 숨김/표시
+          uiSpec:
+            - "들여쓰기: paddingLeft = depth * 12 + 8"
+            - "토글 아이콘: ChevronRight"
+      - id: TSK-02-04
+        title: 페이지 생성/삭제/이동 기능
+        category: development
+        domain: fullstack
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        schedule: 2026-01-11 ~ 2026-01-12
+        tags:
+          - pages
+          - crud
+        depends:
+          - TSK-02-03
+        requirements:
+          prdRef: PRD 2.3.1 페이지 구조
+          items:
+            - 새 페이지 생성 (루트 또는 하위)
+            - 페이지 삭제 (확인 모달)
+            - 페이지 이동 (드래그 앤 드롭 - 선택적)
+            - API 연동 (POST, DELETE)
+          acceptance:
+            - + 버튼 클릭 시 새 페이지 생성
+            - 컨텍스트 메뉴에서 삭제
+            - 삭제 시 하위 페이지도 함께 삭제
+          apiSpec:
+            - POST /api/pages { parentId? }
+            - DELETE /api/pages/:id
+      - id: TSK-02-05
+        title: 페이지 라우팅 및 URL 연동
+        category: development
+        domain: fullstack
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        schedule: 2026-01-12 ~ 2026-01-13
+        tags:
+          - routing
+          - navigation
+        depends:
+          - TSK-02-04
+        requirements:
+          prdRef: PRD 2.3.1 페이지 구조
+          items:
+            - src/app/[pageId]/page.tsx 동적 라우트
+            - 사이드바 페이지 클릭 시 URL 변경
+            - URL로 직접 페이지 접근
+            - 존재하지 않는 페이지 처리 (404)
+          acceptance:
+            - 페이지 클릭 시 /[pageId] 이동
+            - 새로고침해도 같은 페이지 표시
+            - 잘못된 ID 접근 시 에러 페이지
+          techSpec:
+            - Next.js App Router 동적 라우트
+            - useParams, useRouter
+      - id: TSK-02-06
+        title: 즐겨찾기 기능
+        category: development
+        domain: fullstack
+        status: "[ ]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-13"
+        tags:
+          - favorites
+        depends:
+          - TSK-02-05
+        requirements:
+          prdRef: PRD 2.3.1 즐겨찾기
+          items:
+            - 즐겨찾기 토글 버튼
+            - 사이드바 Favorites 섹션
+            - 즐겨찾기 상태 DB 저장
+          acceptance:
+            - 별 아이콘 클릭 시 즐겨찾기 추가/제거
+            - Favorites 섹션에 즐겨찾기 페이지 표시
+          apiSpec:
+            - "PUT /api/pages/:id { is_favorite: true/false }"
+      - id: TSK-02-07
+        title: 검색 기능 (Cmd+K)
+        category: development
+        domain: fullstack
+        status: "[ ]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-14"
+        tags:
+          - search
+        depends:
+          - TSK-02-06
+        requirements:
+          prdRef: PRD 2.5.1 통합 검색
+          items:
+            - Cmd+K 단축키로 검색 모달 열기
+            - 페이지 제목 검색
+            - 검색 결과 클릭 시 해당 페이지 이동
+          acceptance:
+            - Cmd+K 시 검색 모달 표시
+            - 타이핑 시 실시간 필터링
+            - 결과 클릭 시 페이지 이동
+          uiSpec:
+            - "모달: 중앙 정렬, 그림자"
+            - 입력창 + 결과 리스트
+      - id: TSK-02-99
+        title: WP-02 통합 검증
+        category: simple-dev
+        domain: test
+        status: "[ ]"
+        priority: high
+        assignee: "-"
+        schedule: "2026-01-14"
+        tags:
+          - integration
+          - verify
+        depends:
+          - TSK-02-01
+          - TSK-02-02
+          - TSK-02-03
+          - TSK-02-04
+          - TSK-02-05
+          - TSK-02-06
+          - TSK-02-07
+        requirements:
+          prdRef: WP-02 통합
+          items:
+            - 전체 페이지 구조 및 네비게이션 통합 테스트
+            - 사이드바 + 라우팅 + 에디터 연동 확인
+          acceptance:
+            - 새 페이지 생성 → 사이드바에 표시 → 클릭 시 에디터 로드 → 편집 → 저장
+            - 하위 페이지 생성 → 트리 구조 표시 → 토글로 펼치기/접기
+            - 즐겨찾기 추가 → Favorites 섹션에 표시
+            - Cmd+K 검색 → 결과 클릭 → 페이지 이동
+            - URL 직접 입력 → 해당 페이지 로드
+          note: WP-02의 모든 페이지 구조 기능이 연동되어 정상 동작하는지 검증
+  - id: WP-03
+    title: MVP 완성 및 마무리
+    status: planned
     priority: high
-    assignee: '-'
-    schedule: '2026-01-05'
-    tags:
-    - editor
-    - styling
-    depends:
-    - TSK-01-01
-    requirements:
-      prdRef: TRD 2. UI/UX 디자인 시스템
-      items:
-      - BlockNote CSS 오버라이드 (globals.css)
-      - 블록 핸들 스타일 (호버 시 표시)
-      - 슬래시 메뉴 스타일
-      - 제목 블록 스타일 (H1, H2, H3)
-      - Placeholder 스타일
-      acceptance:
-      - Notion과 유사한 룩앤필
-      - 블록 호버 시 핸들 표시
-      uiSpec:
-      - .bn-block 마진 1px
-      - .bn-side-menu 호버 시 opacity 1
-      - 'H1 font-size: 1.875rem'
-  - id: TSK-01-04
-    title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
-    category: development
-    domain: frontend
-    status: '[bd]'
-    priority: high
-    assignee: '-'
-    schedule: '2026-01-06'
-    tags:
-    - editor
-    - header
-    depends:
-    - TSK-01-03
-    requirements:
-      prdRef: PRD 2.3.1 페이지 구조
-      items:
-      - src/components/editor/PageHeader.tsx 생성
-      - 커버 이미지 영역 (200px 높이)
-      - 페이지 아이콘 (78px, 이모지)
-      - 페이지 제목 입력 (40px 폰트)
-      - 아이콘/커버 변경 버튼 (호버 시 표시)
-      acceptance:
-      - 커버 이미지 표시
-      - 아이콘 클릭 시 변경 가능
-      - 제목 편집 가능
-      uiSpec:
-      - '커버: h-[200px] object-cover'
-      - '아이콘: w-[78px] h-[78px] text-[78px]'
-      - '제목: text-[40px] font-bold'
-  - id: TSK-01-05
-    title: 아이콘 선택기 컴포넌트
-    category: development
-    domain: frontend
-    status: '[ ]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-07'
-    tags:
-    - ui
-    - emoji
-    depends:
-    - TSK-01-04
-    requirements:
-      prdRef: PRD 2.3.1 페이지 아이콘
-      items:
-      - src/components/ui/IconPicker.tsx 생성
-      - 이모지 카테고리별 그리드 표시
-      - 최근 사용 이모지
-      - 검색 기능 (선택)
-      acceptance:
-      - 이모지 선택 시 페이지 아이콘 변경
-      - 드롭다운 외부 클릭 시 닫힘
-      uiSpec:
-      - Notion 스타일 드롭다운 그림자
-      - 그리드 8열
-    execution:
-      command: start
-      startedAt: '2026-01-02T14:19:45.877Z'
-  - id: TSK-01-99
-    title: WP-01 통합 검증
-    category: simple-dev
-    domain: test
-    status: '[ ]'
-    priority: high
-    assignee: '-'
-    schedule: '2026-01-08'
-    tags:
-    - integration
-    - verify
-    depends:
-    - TSK-01-01
-    - TSK-01-02
-    - TSK-01-03
-    - TSK-01-04
-    - TSK-01-05
-    requirements:
-      prdRef: WP-01 통합
-      items:
-      - 에디터 전체 기능 통합 테스트
-      - 페이지 헤더 + 에디터 + 저장 연동 확인
-      acceptance:
-      - 페이지 로드 → 제목/아이콘/커버 표시 → 에디터 편집 → 저장 → 새로고침 후 유지
-      - 슬래시 명령어로 블록 생성 → 드래그 앤 드롭 → 저장
-      - 기본 블록 유형 (텍스트, 제목, 리스트, 인용, 코드) 모두 동작
-      note: WP-01의 모든 에디터 기능이 연동되어 정상 동작하는지 검증
-- id: WP-02
-  title: 페이지 구조 (사이드바 + 네비게이션)
-  status: planned
-  priority: critical
-  schedule: 2026-01-09 ~ 2026-01-14
-  tasks:
-  - id: TSK-02-01
-    title: 메인 레이아웃 (사이드바 + 에디터 영역)
-    category: development
-    domain: frontend
-    status: '[im]'
-    priority: critical
-    assignee: '-'
-    schedule: '2026-01-09'
-    tags:
-    - layout
-    - sidebar
-    depends:
-    - TSK-01-99
-    test_result: pass
-    requirements:
-      prdRef: TRD 3.1 메인 레이아웃
-      items:
-      - src/components/layout/MainLayout.tsx 생성
-      - 사이드바 영역 (240px 고정)
-      - 에디터 영역 (flex-1)
-      - 사이드바 접기/펼치기
-      acceptance:
-      - 사이드바 + 에디터 2컬럼 레이아웃
-      - 사이드바 토글 동작
-      uiSpec:
-      - '사이드바: w-[240px] bg-[#F7F6F3]'
-      - '에디터: flex-1 overflow-auto'
-    execution:
-      command: build
-      startedAt: '2026-01-02T13:55:00.296Z'
-      completedAt: '2026-01-02T23:59:00.000Z'
-  - id: TSK-02-02
-    title: 사이드바 컴포넌트
-    category: development
-    domain: frontend
-    status: '[im]'
-    priority: critical
-    assignee: '-'
-    schedule: 2026-01-09 ~ 2026-01-10
-    tags:
-    - sidebar
-    - navigation
-    depends:
-    - TSK-02-01
-    requirements:
-      prdRef: TRD 3.2 사이드바 컴포넌트
-      items:
-      - src/components/layout/Sidebar.tsx 생성
-      - 워크스페이스 헤더
-      - 퀵 액션 (검색, 설정)
-      - 페이지 트리 영역
-      - 새 페이지 버튼
-      acceptance:
-      - 사이드바 UI 렌더링
-      - 각 영역 구분 표시
-      uiSpec:
-      - '퀵 액션: 호버 시 bg-[#EFEFEF]'
-      - '섹션 구분선: border-[#E9E9E7]'
-  - id: TSK-02-03
-    title: 페이지 트리 컴포넌트 (중첩 구조)
-    category: development
-    domain: frontend
-    status: '[im]'
-    priority: critical
-    assignee: '-'
-    schedule: 2026-01-10 ~ 2026-01-11
-    tags:
-    - sidebar
-    - tree
-    depends:
-    - TSK-02-02
-    requirements:
-      prdRef: PRD 2.3.1 무한 중첩
-      items:
-      - src/components/layout/PageTree.tsx 생성
-      - src/components/layout/PageTreeItem.tsx 생성
-      - 재귀적 트리 렌더링
-      - 폴더 열기/닫기 상태
-      - depth에 따른 들여쓰기
-      acceptance:
-      - 중첩 페이지 트리 표시
-      - 토글 버튼으로 하위 페이지 숨김/표시
-      uiSpec:
-      - '들여쓰기: paddingLeft = depth * 12 + 8'
-      - '토글 아이콘: ChevronRight'
-  - id: TSK-02-04
-    title: 페이지 생성/삭제/이동 기능
-    category: development
-    domain: fullstack
-    status: '[ ]'
-    priority: high
-    assignee: '-'
-    schedule: 2026-01-11 ~ 2026-01-12
-    tags:
-    - pages
-    - crud
-    depends:
-    - TSK-02-03
-    requirements:
-      prdRef: PRD 2.3.1 페이지 구조
-      items:
-      - 새 페이지 생성 (루트 또는 하위)
-      - 페이지 삭제 (확인 모달)
-      - 페이지 이동 (드래그 앤 드롭 - 선택적)
-      - API 연동 (POST, DELETE)
-      acceptance:
-      - + 버튼 클릭 시 새 페이지 생성
-      - 컨텍스트 메뉴에서 삭제
-      - 삭제 시 하위 페이지도 함께 삭제
-      apiSpec:
-      - POST /api/pages { parentId? }
-      - DELETE /api/pages/:id
-  - id: TSK-02-05
-    title: 페이지 라우팅 및 URL 연동
-    category: development
-    domain: fullstack
-    status: '[ ]'
-    priority: high
-    assignee: '-'
-    schedule: 2026-01-12 ~ 2026-01-13
-    tags:
-    - routing
-    - navigation
-    depends:
-    - TSK-02-04
-    requirements:
-      prdRef: PRD 2.3.1 페이지 구조
-      items:
-      - src/app/[pageId]/page.tsx 동적 라우트
-      - 사이드바 페이지 클릭 시 URL 변경
-      - URL로 직접 페이지 접근
-      - 존재하지 않는 페이지 처리 (404)
-      acceptance:
-      - 페이지 클릭 시 /[pageId] 이동
-      - 새로고침해도 같은 페이지 표시
-      - 잘못된 ID 접근 시 에러 페이지
-      techSpec:
-      - Next.js App Router 동적 라우트
-      - useParams, useRouter
-  - id: TSK-02-06
-    title: 즐겨찾기 기능
-    category: development
-    domain: fullstack
-    status: '[ ]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-13'
-    tags:
-    - favorites
-    depends:
-    - TSK-02-05
-    requirements:
-      prdRef: PRD 2.3.1 즐겨찾기
-      items:
-      - 즐겨찾기 토글 버튼
-      - 사이드바 Favorites 섹션
-      - 즐겨찾기 상태 DB 저장
-      acceptance:
-      - 별 아이콘 클릭 시 즐겨찾기 추가/제거
-      - Favorites 섹션에 즐겨찾기 페이지 표시
-      apiSpec:
-      - 'PUT /api/pages/:id { is_favorite: true/false }'
-  - id: TSK-02-07
-    title: 검색 기능 (Cmd+K)
-    category: development
-    domain: fullstack
-    status: '[ ]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-14'
-    tags:
-    - search
-    depends:
-    - TSK-02-06
-    requirements:
-      prdRef: PRD 2.5.1 통합 검색
-      items:
-      - Cmd+K 단축키로 검색 모달 열기
-      - 페이지 제목 검색
-      - 검색 결과 클릭 시 해당 페이지 이동
-      acceptance:
-      - Cmd+K 시 검색 모달 표시
-      - 타이핑 시 실시간 필터링
-      - 결과 클릭 시 페이지 이동
-      uiSpec:
-      - '모달: 중앙 정렬, 그림자'
-      - 입력창 + 결과 리스트
-  - id: TSK-02-99
-    title: WP-02 통합 검증
-    category: simple-dev
-    domain: test
-    status: '[ ]'
-    priority: high
-    assignee: '-'
-    schedule: '2026-01-14'
-    tags:
-    - integration
-    - verify
-    depends:
-    - TSK-02-01
-    - TSK-02-02
-    - TSK-02-03
-    - TSK-02-04
-    - TSK-02-05
-    - TSK-02-06
-    - TSK-02-07
-    requirements:
-      prdRef: WP-02 통합
-      items:
-      - 전체 페이지 구조 및 네비게이션 통합 테스트
-      - 사이드바 + 라우팅 + 에디터 연동 확인
-      acceptance:
-      - 새 페이지 생성 → 사이드바에 표시 → 클릭 시 에디터 로드 → 편집 → 저장
-      - 하위 페이지 생성 → 트리 구조 표시 → 토글로 펼치기/접기
-      - 즐겨찾기 추가 → Favorites 섹션에 표시
-      - Cmd+K 검색 → 결과 클릭 → 페이지 이동
-      - URL 직접 입력 → 해당 페이지 로드
-      note: WP-02의 모든 페이지 구조 기능이 연동되어 정상 동작하는지 검증
-- id: WP-03
-  title: MVP 완성 및 마무리
-  status: planned
-  priority: high
-  schedule: 2026-01-15 ~ 2026-01-16
-  tasks:
-  - id: TSK-03-01
-    title: 반응형 레이아웃 적용
-    category: development
-    domain: frontend
-    status: '[ ]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-15'
-    tags:
-    - responsive
-    - mobile
-    depends:
-    - TSK-02-99
-    requirements:
-      prdRef: TRD 2.3 레이아웃 치수
-      items:
-      - 모바일 뷰에서 사이드바 오버레이
-      - 좁은 화면에서 에디터 패딩 축소
-      - 햄버거 메뉴로 사이드바 토글
-      acceptance:
-      - 768px 이하에서 사이드바 오버레이
-      - '에디터 패딩: 넓은 화면 96px, 좁은 화면 24px'
-      uiSpec:
-      - md:px-[96px] px-6
-      - '사이드바: absolute z-50 (모바일)'
-  - id: TSK-03-02
-    title: 다크모드 지원
-    category: development
-    domain: frontend
-    status: '[ ]'
-    priority: low
-    assignee: '-'
-    schedule: '2026-01-15'
-    tags:
-    - theme
-    - darkmode
-    depends:
-    - TSK-03-01
-    requirements:
-      prdRef: TRD 2.1 컬러 시스템 (Dark Mode)
-      items:
-      - 다크모드 CSS 변수 정의
-      - 시스템 설정 감지 (prefers-color-scheme)
-      - 수동 토글 버튼 (선택)
-      acceptance:
-      - 시스템 다크모드 시 자동 적용
-      - 색상 전환 부드럽게
-      uiSpec:
-      - 'Background: #191919'
-      - 'Text: #E6E6E4'
-  - id: TSK-03-03
-    title: 에러 처리 및 로딩 상태
-    category: development
-    domain: frontend
-    status: '[ ]'
-    priority: medium
-    assignee: '-'
-    schedule: '2026-01-16'
-    tags:
-    - error
-    - loading
-    depends:
-    - TSK-03-02
-    requirements:
-      prdRef: 비기능 요구사항
-      items:
-      - API 에러 시 토스트 알림
-      - 페이지 로딩 스켈레톤
-      - 에디터 저장 중 표시
-      acceptance:
-      - 네트워크 에러 시 사용자 알림
-      - 로딩 중 스켈레톤 표시
-  - id: TSK-03-99
-    title: WP-03 및 전체 MVP 통합 검증
-    category: simple-dev
-    domain: test
-    status: '[ap]'
-    priority: critical
-    assignee: '-'
-    schedule: '2026-01-16'
-    tags:
-    - integration
-    - verify
-    - mvp
-    depends:
-    - TSK-03-01
-    - TSK-03-02
-    - TSK-03-03
-    requirements:
-      prdRef: MVP 완성
-      items:
-      - 전체 MVP 기능 통합 테스트
-      - 모든 WP 기능 연동 확인
-      - 사용자 시나리오 기반 E2E 테스트
-      acceptance:
-      - 프로젝트 시작 → 첫 페이지 생성 → 제목/아이콘 설정 → 콘텐츠 작성 → 저장
-      - 하위 페이지 생성 → 계층 구조 확인 → 즐겨찾기 추가
-      - 검색으로 페이지 찾기 → 이동 → 편집
-      - 다크모드 전환 → UI 정상 표시
-      - 모바일 뷰 → 사이드바 토글 → 에디터 사용
-      - 새로고침 → 모든 데이터 유지
-      note: MVP 전체 기능이 정상적으로 연동되어 Notion과 유사한 사용자 경험 제공 여부 최종 검증
+    schedule: 2026-01-15 ~ 2026-01-16
+    tasks:
+      - id: TSK-03-01
+        title: 반응형 레이아웃 적용
+        category: development
+        domain: frontend
+        status: "[ ]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-15"
+        tags:
+          - responsive
+          - mobile
+        depends:
+          - TSK-02-99
+        requirements:
+          prdRef: TRD 2.3 레이아웃 치수
+          items:
+            - 모바일 뷰에서 사이드바 오버레이
+            - 좁은 화면에서 에디터 패딩 축소
+            - 햄버거 메뉴로 사이드바 토글
+          acceptance:
+            - 768px 이하에서 사이드바 오버레이
+            - "에디터 패딩: 넓은 화면 96px, 좁은 화면 24px"
+          uiSpec:
+            - md:px-[96px] px-6
+            - "사이드바: absolute z-50 (모바일)"
+      - id: TSK-03-02
+        title: 다크모드 지원
+        category: development
+        domain: frontend
+        status: "[ ]"
+        priority: low
+        assignee: "-"
+        schedule: "2026-01-15"
+        tags:
+          - theme
+          - darkmode
+        depends:
+          - TSK-03-01
+        requirements:
+          prdRef: TRD 2.1 컬러 시스템 (Dark Mode)
+          items:
+            - 다크모드 CSS 변수 정의
+            - 시스템 설정 감지 (prefers-color-scheme)
+            - 수동 토글 버튼 (선택)
+          acceptance:
+            - 시스템 다크모드 시 자동 적용
+            - 색상 전환 부드럽게
+          uiSpec:
+            - "Background: #191919"
+            - "Text: #E6E6E4"
+      - id: TSK-03-03
+        title: 에러 처리 및 로딩 상태
+        category: development
+        domain: frontend
+        status: "[ ]"
+        priority: medium
+        assignee: "-"
+        schedule: "2026-01-16"
+        tags:
+          - error
+          - loading
+        depends:
+          - TSK-03-02
+        requirements:
+          prdRef: 비기능 요구사항
+          items:
+            - API 에러 시 토스트 알림
+            - 페이지 로딩 스켈레톤
+            - 에디터 저장 중 표시
+          acceptance:
+            - 네트워크 에러 시 사용자 알림
+            - 로딩 중 스켈레톤 표시
+      - id: TSK-03-99
+        title: WP-03 및 전체 MVP 통합 검증
+        category: simple-dev
+        domain: test
+        status: "[ap]"
+        priority: critical
+        assignee: "-"
+        schedule: "2026-01-16"
+        tags:
+          - integration
+          - verify
+          - mvp
+        depends:
+          - TSK-03-01
+          - TSK-03-02
+          - TSK-03-03
+        requirements:
+          prdRef: MVP 완성
+          items:
+            - 전체 MVP 기능 통합 테스트
+            - 모든 WP 기능 연동 확인
+            - 사용자 시나리오 기반 E2E 테스트
+          acceptance:
+            - 프로젝트 시작 → 첫 페이지 생성 → 제목/아이콘 설정 → 콘텐츠 작성 → 저장
+            - 하위 페이지 생성 → 계층 구조 확인 → 즐겨찾기 추가
+            - 검색으로 페이지 찾기 → 이동 → 편집
+            - 다크모드 전환 → UI 정상 표시
+            - 모바일 뷰 → 사이드바 토글 → 에디터 사용
+            - 새로고침 → 모든 데이터 유지
+          note: MVP 전체 기능이 정상적으로 연동되어 Notion과 유사한 사용자 경험 제공 여부 최종 검증

@@ -9,7 +9,7 @@ interface PageTreeProps {
 }
 
 export function PageTree({ pages, depth = 0 }: PageTreeProps) {
-  const { expandedFolders, toggleFolder, setCurrentPageId } = useAppStore();
+  const { expandedFolders, toggleFolderExpanded, setCurrentPageId } = useAppStore();
 
   const handleSelect = (pageId: string) => {
     setCurrentPageId(pageId);
@@ -28,7 +28,7 @@ export function PageTree({ pages, depth = 0 }: PageTreeProps) {
           page={page}
           depth={depth}
           isExpanded={expandedFolders.has(page.id)}
-          onToggleExpand={() => toggleFolder(page.id)}
+          onToggleExpand={() => toggleFolderExpanded(page.id)}
           onSelect={handleSelect}
         />
       ))}
