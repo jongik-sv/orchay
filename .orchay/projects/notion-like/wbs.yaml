@@ -45,6 +45,9 @@ workPackages:
             - React 19.x
             - TypeScript 5.x
             - Tailwind CSS 3.x
+        execution:
+          command: apply
+          startedAt: "2026-01-02T06:40:25.153Z"
       - id: TSK-00-02
         title: 핵심 의존성 설치 및 설정
         category: infrastructure
@@ -73,6 +76,9 @@ workPackages:
             - "@blocknote/react ^0.18.0"
             - better-sqlite3 ^11.0.0
             - zustand ^5.0.0
+        execution:
+          command: review
+          startedAt: "2026-01-02T06:40:08.072Z"
       - id: TSK-00-03
         title: 프로젝트 구조 및 기본 레이아웃 생성
         category: infrastructure
@@ -190,7 +196,7 @@ workPackages:
         title: BlockNote 에디터 기본 통합
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-04"
@@ -213,9 +219,6 @@ workPackages:
           techSpec:
             - "@blocknote/react useCreateBlockNote"
             - "@blocknote/mantine BlockNoteView"
-        execution:
-          command: start
-          startedAt: "2026-01-02T06:37:16.515Z"
       - id: TSK-01-02
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
@@ -366,7 +369,7 @@ workPackages:
         title: 메인 레이아웃 (사이드바 + 에디터 영역)
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-09"
@@ -388,9 +391,6 @@ workPackages:
           uiSpec:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
-        execution:
-          command: start
-          startedAt: "2026-01-02T06:37:33.025Z"
       - id: TSK-02-02
         title: 사이드바 컴포넌트
         category: development
