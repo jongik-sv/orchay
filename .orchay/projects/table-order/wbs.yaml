@@ -388,7 +388,7 @@ workPackages:
         title: 장바구니 및 주문 기능 구현
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-04
@@ -419,9 +419,6 @@ workPackages:
             - CartItem 컴포넌트
             - 하단 고정 장바구니 바
             - Primary 버튼 - bg-gradient-to-r from-primary-500 to-primary-600
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:16:43.952Z"
       - id: TSK-03-03
         title: 주문 상태 추적 페이지 구현
         category: development
@@ -491,6 +488,9 @@ workPackages:
             - 주문하기 버튼으로 주문 전송 성공
             - /status 페이지에서 주문 상태 실시간 확인
             - 글래스모피즘 UI 적용 확인
+        execution:
+          command: review
+          startedAt: "2026-01-02T05:20:04.498Z"
   - id: WP-04
     title: 주방 화면 (KDS)
     status: planned
@@ -501,7 +501,7 @@ workPackages:
         title: 주방 주문 현황 페이지 구현
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-04
@@ -532,14 +532,11 @@ workPackages:
             - PRD 섹션 6 주방 화면 와이어프레임 참조
             - OrderCard 컴포넌트 - 글래스모피즘
             - 3-4열 그리드 반응형
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:16:57.408Z"
       - id: TSK-04-02
         title: 주문 상태 관리 기능 구현
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-05
@@ -566,9 +563,6 @@ workPackages:
             - 상태별 버튼 색상
             - "pending: [조리시작] 버튼"
             - "cooking: [조리완료] 버튼 + 배경색 변경"
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:17:01.575Z"
       - id: TSK-04-03
         title: "WP-04 통합 확인: 주방 화면 검증"
         category: development
