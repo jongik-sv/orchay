@@ -224,7 +224,7 @@ workPackages:
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-05
@@ -247,9 +247,6 @@ workPackages:
             - editor.document → JSON.stringify
             - PUT /api/pages/:id
             - debounce 1초
-        execution:
-          command: build
-          startedAt: "2026-01-02T13:54:53.338Z"
       - id: TSK-01-03
         title: Notion 스타일 에디터 CSS 적용
         category: development
@@ -429,7 +426,7 @@ workPackages:
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-10 ~ 2026-01-11
@@ -452,6 +449,9 @@ workPackages:
           uiSpec:
             - "들여쓰기: paddingLeft = depth * 12 + 8"
             - "토글 아이콘: ChevronRight"
+        execution:
+          command: build
+          startedAt: "2026-01-02T13:58:53.845Z"
       - id: TSK-02-04
         title: 페이지 생성/삭제/이동 기능
         category: development
@@ -667,7 +667,7 @@ workPackages:
         title: WP-03 및 전체 MVP 통합 검증
         category: simple-dev
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-16"
