@@ -477,7 +477,7 @@ workPackages:
         title: 페이지 생성/삭제/이동 기능
         category: development
         domain: fullstack
-        status: "[vf]"
+        status: "[xx]"
         priority: high
         assignee: "-"
         schedule: 2026-01-11 ~ 2026-01-12
@@ -501,9 +501,6 @@ workPackages:
           apiSpec:
             - POST /api/pages { parentId? }
             - DELETE /api/pages/:id
-        execution:
-          command: test
-          startedAt: "2026-01-02T16:18:56.501Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
@@ -675,6 +672,9 @@ workPackages:
           uiSpec:
             - "Background: #191919"
             - "Text: #E6E6E4"
+        execution:
+          command: apply
+          startedAt: "2026-01-02T16:46:14.089Z"
       - id: TSK-03-03
         title: 에러 처리 및 로딩 상태
         category: development
