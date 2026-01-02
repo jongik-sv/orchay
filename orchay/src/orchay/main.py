@@ -75,6 +75,8 @@ class Orchestrator:
         """실행 모드 설정. DispatchService도 함께 업데이트."""
         self._mode = value
         self._dispatch_service.mode = value
+        # 모드 전환 시 범위 외 Task 정리
+        self._task_service.cleanup_for_mode_change(value)
 
     @property
     def running_tasks(self) -> set[str]:

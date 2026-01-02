@@ -133,6 +133,11 @@ npx tsx .orchay/script/transition.ts {Task-ID} build -p {project} --start
    - data-testid 셀렉터 목록 활용
    - Fixture 데이터 생성
 
+> ⚠️ **서버 재사용 규칙**: E2E 테스트 실행 전 기존 개발 서버가 실행 중인지 확인하세요.
+> - 실행 중이면 새로 실행하지 말고 기존 서버 사용
+> - 서버가 없을 때만 새로 시작 (`npm run dev` 등)
+> - 테스트 완료 후 서버 종료하지 않음
+
 ### 4단계: 테스트-수정 루프 ⭐
 
 **최대 5회 재시도** (초과 시 수동 개입 요청)

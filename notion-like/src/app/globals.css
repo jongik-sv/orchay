@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary Colors */
+  --notion-bg-primary: #ffffff;
+  --notion-bg-secondary: #f7f6f3;
+  --notion-bg-tertiary: #efefef;
+
+  /* Text Colors */
+  --notion-text-primary: #37352f;
+  --notion-text-secondary: #626060;
+  --notion-text-tertiary: #9a9a97;
+
+  /* Border Colors */
+  --notion-border-light: #e9e9e7;
+  --notion-border-medium: #d3d3ce;
+
+  /* Accent Colors (Notion 팔레트) */
+  --notion-red: #f81b13;
+  --notion-orange: #fa8500;
+  --notion-yellow: #ebdb34;
+  --notion-green: #0b8861;
+  --notion-blue: #0b6e99;
+  --notion-purple: #6940ef;
+  --notion-pink: #d946ef;
+  --notion-gray: #626060;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --notion-bg-primary: #191919;
+    --notion-bg-secondary: #2a2a2a;
+    --notion-bg-tertiary: #3a3a37;
+    --notion-text-primary: #e6e6e4;
+    --notion-text-secondary: #b3b3b1;
+    --notion-text-tertiary: #808080;
+    --notion-border-light: #3d3d3a;
+    --notion-border-medium: #4d4d4a;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--notion-bg-primary);
+  color: var(--notion-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  line-height: 1.5;
+}
+
+/* 레이아웃 */
+.sidebar {
+  width: 240px;
+  background-color: var(--notion-bg-secondary);
+  border-right: 1px solid var(--notion-border-light);
+}
+
+.editor-area {
+  flex: 1;
+  overflow: auto;
+  padding: 0 96px;
+}
+
+/* 타이포그래피 */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+h1 {
+  font-size: 1.875rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+/* ============================================
+   BlockNote Editor Notion Style Overrides
+   TSK-01-03: Notion 스타일 에디터 CSS 적용
+   ============================================ */
+
+/* 1. BlockNote 기본 오버라이드 */
+.bn-block {
+  margin: 1px 0; /* 블록 간 간격 1px */
+}
+
+/* 에디터 컨테이너 */
+.bn-editor {
+  padding: 96px; /* 데스크톱 패딩 */
+}
+
+/* 반응형: 모바일에서는 패딩 축소 */
+@media (max-width: 768px) {
+  .bn-editor {
+    padding: 24px;
+  }
+}
+
+/* 2. 블록 핸들 스타일 */
+.bn-block-content {
+  position: relative;
+}
+
+.bn-side-menu {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.bn-block:hover .bn-side-menu {
+  opacity: 1;
+}
+
+/* 3. 슬래시 메뉴 스타일 */
+.bn-popover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid #E9E9E7;
+  border-radius: 4px;
+}
+
+/* 메뉴 아이템 */
+.bn-menu-item {
+  padding: 6px 12px;
+  transition: background-color 0.1s ease;
+}
+
+.bn-menu-item:hover {
+  background-color: #F7F6F3;
+}
+
+/* 4. 제목 블록 스타일 */
+.bn-heading {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bn-heading[level="1"] {
+  font-size: 1.875rem; /* 30px */
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.bn-heading[level="2"] {
+  font-size: 1.5rem; /* 24px */
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bn-heading[level="3"] {
+  font-size: 1.25rem; /* 20px */
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* 5. Placeholder 스타일 */
+.bn-editor [data-placeholder] {
+  color: #9B9A97;
+  pointer-events: none;
+}
+
+.bn-editor [data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+}
+
+/* 6. 추가 Notion 스타일 튜닝 */
+/* 본문 텍스트 스타일 */
+.bn-block-content {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--notion-text-primary);
+}
+
+/* 코드 블록 스타일 */
+.bn-code-block {
+  background-color: #F7F6F3;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 14px;
+}
+
+/* 인용 블록 스타일 */
+.bn-quote-block {
+  border-left: 3px solid var(--notion-text-primary);
+  padding-left: 14px;
+  color: var(--notion-text-secondary);
+}
+
+/* 리스트 스타일 */
+.bn-list-item {
+  padding-left: 4px;
+}
+
+/* 드래그 핸들 스타일 (6점 점) */
+.bn-drag-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.bn-block:hover .bn-drag-handle {
+  opacity: 0.4;
+}
+
+.bn-drag-handle:hover {
+  opacity: 1 !important;
+}

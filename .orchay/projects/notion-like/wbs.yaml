@@ -315,9 +315,6 @@ workPackages:
             - "커버: h-[200px] object-cover"
             - "아이콘: w-[78px] h-[78px] text-[78px]"
             - "제목: text-[40px] font-bold"
-        execution:
-          command: test
-          startedAt: "2026-01-02T16:51:46.142Z"
       - id: TSK-01-05
         title: 아이콘 선택기 컴포넌트
         category: development
@@ -562,7 +559,7 @@ workPackages:
         title: 검색 기능 (Cmd+K)
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-14"
@@ -587,7 +584,7 @@ workPackages:
         title: WP-02 통합 검증
         category: infrastructure
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: "2026-01-14"
@@ -624,7 +621,7 @@ workPackages:
         title: 반응형 레이아웃 적용
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-15"
@@ -652,7 +649,7 @@ workPackages:
         title: 다크모드 지원
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: low
         assignee: "-"
         schedule: "2026-01-15"
@@ -677,7 +674,7 @@ workPackages:
         title: 에러 처리 및 로딩 상태
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-16"

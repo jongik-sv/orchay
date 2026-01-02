@@ -178,6 +178,9 @@ Category: infrastructure
 └── 문서화
 
 다음: /wf:build TSK-03-01-01
+
+---
+ORCHAY_DONE:TSK-03-01-01:skip:success
 ```
 
 ---

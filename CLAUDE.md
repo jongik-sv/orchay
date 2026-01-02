@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**orchay** (orchestration + okay) is a WezTerm-based Task scheduler that monitors `wbs.md` files and automatically distributes executable tasks to multiple Claude Code Worker panes.
+**orchay** (orchestration + okay) is a WezTerm-based Task scheduler that monitors `wbs.yaml` files and automatically distributes executable tasks to multiple Claude Code Worker panes.
 
 ## Development Commands
 
@@ -42,11 +42,6 @@ python -m orchay orchay -m quick     # quick mode (default)
 python -m orchay orchay -m develop   # full workflow
 python -m orchay orchay -m force     # ignore dependencies
 
-# Task execution state management (for workflow hooks)
-orchay exec start <task_id> <step>   # register task
-orchay exec stop <task_id>           # unregister task
-orchay exec list                     # show active tasks
-orchay exec clear                    # reset all
 ```
 
 ## Architecture
@@ -57,7 +52,7 @@ orchay/src/orchay/
 ├── scheduler.py     # ExecutionMode, filter_executable_tasks, dispatch_task
 ├── wbs_parser.py    # WbsParser, WbsWatcher, parse_wbs(), watch_wbs()
 ├── worker.py        # detect_worker_state(), DONE_PATTERN, state patterns
-├── cli.py           # Subcommand CLI (run, exec)
+├── cli.py           # Subcommand CLI (run, history)
 ├── models/
 │   ├── task.py      # Task, TaskStatus, TaskPriority, TaskCategory
 │   ├── worker.py    # Worker, WorkerState
@@ -69,10 +64,10 @@ orchay/src/orchay/
 
 ### Core Flow
 
-1. **Orchestrator** (`main.py:34`) initializes Workers from WezTerm panes
-2. **WbsParser** (`wbs_parser.py:106`) parses `.orchay/projects/{project}/wbs.md`
-3. **Scheduler** (`scheduler.py:88`) filters executable Tasks by mode and dependencies
-4. **Worker detection** (`worker.py:89`) monitors pane output for state patterns
+1. **Orchestrator** (`main.py`) initializes Workers from WezTerm panes
+2. **WbsParser** (`wbs_parser.py`) parses `.orchay/projects/{project}/wbs.yaml`
+3. **Scheduler** (`scheduler.py`) filters executable Tasks by mode and dependencies
+4. **Worker detection** (`worker.py`) monitors pane output for state patterns
 5. **Dispatch** sends `/wf:run {task-id}` to idle Worker panes
 
 ### Execution Modes
@@ -83,6 +78,7 @@ orchay/src/orchay/
 | quick | start → approve → build → done | [dd]+ only |
 | develop | start → review → apply → approve → build → audit → patch → test → done | [dd]+ only |
 | force | start → approve → build → done | Ignored |
+| test | test | None |
 
 ### Task States (WBS status codes)
 
@@ -104,15 +100,19 @@ orchay/src/orchay/
 
 ```json
 {
-  "activeTasks": {
-    "TSK-01-01": {
-      "worker": 1,
-      "paneId": 2,
-      "startedAt": "2025-12-28T10:00:00",
-      "currentStep": "start"
-    }
-  }
+  "pausedWorkers": [],
+  "schedulerState": "running"
 }
+```
+
+### Task Execution Tracking (wbs.yaml `execution` field)
+
+```yaml
+- id: TSK-01-01
+  execution:              # transition.ts --start로 설정
+    startedAt: "2025-12-28T10:00:00"
+    action: "build"
+    worker: 1
 ```
 
 ## Code Patterns
@@ -146,10 +146,10 @@ await wezterm_send_text(pane_id=1, text="/wf:build TSK-01-01\n")
 ```python
 from orchay.wbs_parser import parse_wbs, watch_wbs
 
-tasks = await parse_wbs(".orchay/projects/orchay/wbs.md")
+tasks = await parse_wbs(".orchay/projects/orchay/wbs.yaml")
 
 async def on_change(tasks): ...
-watcher = watch_wbs("wbs.md", on_change, debounce=0.5)
+watcher = watch_wbs("wbs.yaml", on_change, debounce=0.5)
 watcher.start()
 await watcher.stop()
 ```
@@ -158,7 +158,7 @@ await watcher.stop()
 
 - pytest-asyncio with `asyncio_mode = "auto"`
 - Tests in `orchay/tests/`
-- Key test files: `test_scheduler.py`, `test_wbs_parser.py`, `test_worker.py`, `test_wezterm.py`
+- Key test files: `test_scheduler.py`, `test_main.py`, `test_cli.py`, `test_launcher.py`
 
 ## Key Constraints
 

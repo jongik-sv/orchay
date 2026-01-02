@@ -32,6 +32,36 @@ STOP_STATE_MAP: dict[ExecutionMode, set[TaskStatus]] = {
     ExecutionMode.TEST: {TaskStatus.DONE},
 }
 
+# 모드별 처리 가능 상태 범위
+MODE_VALID_STATES: dict[ExecutionMode, set[TaskStatus]] = {
+    ExecutionMode.DESIGN: {TaskStatus.TODO, TaskStatus.DETAIL_DESIGN, TaskStatus.DONE},
+    ExecutionMode.QUICK: {
+        TaskStatus.TODO,
+        TaskStatus.DETAIL_DESIGN,
+        TaskStatus.APPROVED,
+        TaskStatus.IMPLEMENT,
+        TaskStatus.VERIFY,
+        TaskStatus.DONE,
+    },
+    ExecutionMode.DEVELOP: {
+        TaskStatus.TODO,
+        TaskStatus.DETAIL_DESIGN,
+        TaskStatus.APPROVED,
+        TaskStatus.IMPLEMENT,
+        TaskStatus.VERIFY,
+        TaskStatus.DONE,
+    },
+    ExecutionMode.FORCE: {
+        TaskStatus.TODO,
+        TaskStatus.DETAIL_DESIGN,
+        TaskStatus.APPROVED,
+        TaskStatus.IMPLEMENT,
+        TaskStatus.VERIFY,
+        TaskStatus.DONE,
+    },
+    ExecutionMode.TEST: {TaskStatus.IMPLEMENT, TaskStatus.VERIFY, TaskStatus.DONE},
+}
+
 
 class TaskService:
     """Task 생명주기 관리 서비스.
@@ -166,6 +196,26 @@ class TaskService:
         for task in self._tasks:
             if task.status in stop_statuses and task.assigned_worker is not None:
                 logger.debug(f"Task {task.id} 할당 해제 (stopAtState 도달)")
+                task.assigned_worker = None
+
+    def cleanup_for_mode_change(self, new_mode: ExecutionMode) -> None:
+        """모드 전환 시 새 모드의 처리 범위 외 Task의 할당을 해제합니다.
+
+        Force 모드에서 [vf] 상태까지 진행 후 Design 모드로 전환하면
+        [vf]는 Design 모드의 처리 범위 밖이므로 할당이 해제됩니다.
+
+        Args:
+            new_mode: 새로 적용할 실행 모드
+        """
+        valid_statuses = MODE_VALID_STATES.get(new_mode)
+        if valid_statuses is None:
+            return
+
+        for task in self._tasks:
+            if task.assigned_worker is not None and task.status not in valid_statuses:
+                logger.debug(
+                    f"Task {task.id} 할당 해제 (모드 범위 외: {task.status.value})"
+                )
                 task.assigned_worker = None
 
     async def refresh_task_status(self, task: Task) -> bool:

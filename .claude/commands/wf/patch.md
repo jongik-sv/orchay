@@ -166,6 +166,9 @@ Task: TSK-01-01-01
 └── 031-...(적용완료).md
 
 다음: /wf:audit (재리뷰) 또는 /wf:verify
+
+---
+ORCHAY_DONE:TSK-01-01-01:patch:success
 ```
 
 ---

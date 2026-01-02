@@ -1,0 +1,49 @@
+{
+  "name": "orchay-notes",
+  "version": "0.1.0",
+  "description": "Notion-like block-based all-in-one workspace",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@blocknote/core": "^0.18.0",
+    "@blocknote/mantine": "^0.18.0",
+    "@blocknote/react": "^0.18.0",
+    "@types/uuid": "^10.0.0",
+    "better-sqlite3": "^11.0.0",
+    "lucide-react": "^0.562.0",
+    "next": "^15.0.0",
+    "prosemirror-view": "1.33.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^13.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^15.0.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^15.0.0",
+    "jsdom": "^23.0.0",
+    "postcss": "^8.0.0",
+    "tailwindcss": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

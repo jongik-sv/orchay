@@ -111,10 +111,16 @@ class WorkerCommandConfig(BaseModel):
             raise ValueError(f"worker_id는 1-6 사이여야 함: {worker_id}")
         return self.pane_startup.get(worker_id, self.startup)
 
-    @field_validator("pane_startup")
+    @field_validator("pane_startup", mode="before")
     @classmethod
-    def validate_pane_startup(cls, v: dict[int, str]) -> dict[int, str]:
-        """pane_startup 유효성 검증."""
+    def validate_pane_startup(cls, v: dict[int, str] | None) -> dict[int, str]:
+        """pane_startup 유효성 검증.
+
+        YAML에서 키만 있고 값이 모두 주석일 경우 None이 될 수 있으므로
+        None을 빈 dict로 변환합니다.
+        """
+        if v is None:
+            return {}
         for worker_id in v.keys():
             if not 1 <= worker_id <= 6:
                 raise ValueError(f"pane_startup 키는 1-6 사이여야 함: {worker_id}")

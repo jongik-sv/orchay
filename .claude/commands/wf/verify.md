@@ -67,6 +67,11 @@ npx tsx .orchay/script/transition.ts {Task-ID} verify -p {project} --start
 
 ### 2단계: 통합 테스트 실행
 
+> ⚠️ **서버 재사용 규칙**: UI 통합 테스트 실행 전 기존 개발 서버가 실행 중인지 확인하세요.
+> - 실행 중이면 새로 실행하지 말고 기존 서버 사용
+> - 서버가 없을 때만 새로 시작 (`npm run dev` 등)
+> - 테스트 완료 후 서버 종료하지 않음
+
 **development / defect 공통:**
 
 | 영역 | 검증 항목 |

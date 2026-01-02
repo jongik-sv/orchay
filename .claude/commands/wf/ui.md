@@ -170,6 +170,9 @@ Task: TSK-01-01-01
 └── ui-assets/ (SVG 7개)
 
 다음: /wf:review 또는 /wf:approve
+
+---
+ORCHAY_DONE:TSK-01-01-01:ui:success
 ```
 
 ---

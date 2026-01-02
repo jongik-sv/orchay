@@ -113,7 +113,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 
 | category | 문서 | 주요 섹션 |
 |----------|------|----------|
-| development | `010-basic-design.md` | 개요, 시나리오, 기능요구, 비즈니스규칙, 화면요구, 수용기준 |
+| development | `010-design.md` | 개요, 시나리오, 기능요구, 비즈니스규칙, 화면요구, 수용기준 |
 | defect | `010-defect-analysis.md` | 현상, 재현방법, 원인분석, 수정방안 |
 | infrastructure | `010-tech-design.md` | 목적, 현재상태, 목표상태, 구현계획 |
 

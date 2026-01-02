@@ -351,8 +351,15 @@ class WorkerService:
 
         # Worker가 현재 Task를 실행 중인지 여부 전달
         has_active_task = worker.current_task is not None
+        logger.debug(
+            f"Worker {worker.id}: 상태 감지 시작 (현재={worker.state.value}, "
+            f"task={worker.current_task}, has_active_task={has_active_task})"
+        )
         state, done_or_paused_info = await detect_worker_state(
             worker.pane_id, has_active_task
+        )
+        logger.debug(
+            f"Worker {worker.id}: 감지 결과 state={state}, info={done_or_paused_info}"
         )
 
         # 상태 매핑
@@ -464,17 +471,24 @@ class WorkerService:
             paused: 스케줄러 일시정지 여부
         """
         # 이전 Task DONE 신호 무시
+        # done_info.task_id는 "project/TSK-XX-XX" 형식일 수 있으므로 접두사 제거 후 비교
         if (
             done_info
             and worker.current_task
             and hasattr(done_info, "task_id")
-            and done_info.task_id != worker.current_task
         ):
-            logger.debug(
-                f"Worker {worker.id}: 이전 Task DONE 신호 무시 "
-                f"(신호={done_info.task_id}, 현재={worker.current_task})"
+            # 프로젝트 접두사 제거: "notion-like/TSK-02-06" → "TSK-02-06"
+            done_task_id = (
+                done_info.task_id.split("/")[-1]
+                if "/" in done_info.task_id
+                else done_info.task_id
             )
-            return
+            if done_task_id != worker.current_task:
+                logger.debug(
+                    f"Worker {worker.id}: 이전 Task DONE 신호 무시 "
+                    f"(신호={done_info.task_id}, 현재={worker.current_task})"
+                )
+                return
 
         # 이전 step DONE 신호 무시
         if (
@@ -494,10 +508,16 @@ class WorkerService:
             worker.reset()
         else:
             # 처음 DONE 감지: 연속 실행 체크
-            task_id = (
+            # done_info.task_id는 "project/TSK-XX-XX" 형식일 수 있으므로 접두사 제거
+            raw_task_id = (
                 done_info.task_id
                 if done_info and hasattr(done_info, "task_id")
                 else worker.current_task
+            )
+            task_id = (
+                raw_task_id.split("/")[-1]
+                if raw_task_id and "/" in raw_task_id
+                else raw_task_id
             )
             if task_id:
                 task = task_map.get(task_id)

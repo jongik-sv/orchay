@@ -19,6 +19,7 @@ from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import DataTable, Footer, Header, RichLog, Static
 
 from orchay.command import CommandHandler
+from orchay.domain.constants import DISPATCH_TIMINGS
 from orchay.scheduler import ExecutionMode
 from orchay.models import Config, Task, TaskStatus, Worker, WorkerState
 from orchay.ui.widgets import HelpModal, TaskDetailModal, TestSelectionPanel
@@ -361,6 +362,7 @@ class OrchayApp(App[None]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("f12", "show_help", "Help"),
         Binding("f3", "show_queue", "Queue"),
+        Binding("f4", "toggle_show_all", "All"),
         Binding("f5", "reload", "Reload"),
         Binding("f6", "show_history", "History"),
         Binding("f7", "toggle_mode", "Mode"),
@@ -410,6 +412,7 @@ class OrchayApp(App[None]):
         self._paused = self.config.execution.start_paused
         self._scheduler_state = "paused" if self._paused else "running"
         self._ever_started = not self._paused  # start_paused면 아직 시작 안함
+        self._show_all = False  # 전체보기 (완료 태스크 포함)
         self._queue_fullscreen = False
         self._logs_fullscreen = False
         self._help_visible = False
@@ -429,6 +432,9 @@ class OrchayApp(App[None]):
         # 토스트 메시지 설정
         self._max_notifications = 4
         self._notification_timeout = 2.0  # 초
+
+        # 테이블에 표시된 정렬된 태스크 목록 (인덱스 동기화용)
+        self._displayed_tasks: list[Task] = []
 
         # F9 바인딩 초기 레이블 설정 (compose 전에 설정해야 Footer에 반영됨)
         self._update_f9_binding()
@@ -621,14 +627,20 @@ class OrchayApp(App[None]):
         selected_task = self._get_selected_task()
         selected_task_id = selected_task.id if selected_task else None
 
+        logger = logging.getLogger(__name__)
+
         # 스케줄링 사이클 실행 (pause 상태에서도 상태 업데이트는 필요)
         # Orchestrator._tick() 내부에서 pause일 때 Task 분배만 건너뜀
         if self._real_orchestrator is not None and not self._tick_running:
             self._tick_running = True
+            logger.debug(f"_on_auto_refresh: _tick 시작 (paused={self._paused})")
             self.run_worker(self._run_orchestrator_tick(selected_task_id))
             # UI 업데이트는 _run_orchestrator_tick() 완료 후 수행됨
-        elif not self._tick_running:
-            # Orchestrator 없거나 tick 미실행 시에만 직접 UI 업데이트
+        elif self._tick_running:
+            logger.debug("_on_auto_refresh: 이전 tick 실행 중, 건너뜀")
+        elif self._real_orchestrator is None:
+            # Orchestrator 없을 때만 직접 UI 업데이트
+            logger.debug("_on_auto_refresh: Orchestrator 없음, 직접 UI 업데이트")
             self._sync_from_orchestrator()
             self._update_queue_table(preserve_cursor_task_id=selected_task_id)
             self._update_worker_panel()
@@ -664,13 +676,20 @@ class OrchayApp(App[None]):
             preserve_cursor_task_id: 커서 위치 유지할 Task ID
         """
         try:
+            # _tick() 실행 (예외 발생해도 UI 업데이트는 수행)
             if self._real_orchestrator is not None and hasattr(self._real_orchestrator, "_tick"):
-                await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
-            # tick 완료 후 UI 업데이트 (동일 asyncio 루프에서 실행)
+                try:
+                    await self._real_orchestrator._tick()  # pyright: ignore[reportPrivateUsage]
+                except Exception as e:
+                    logging.getLogger(__name__).exception(f"_tick 실행 중 오류: {e}")
+
+            # tick 성공/실패와 무관하게 UI는 항상 업데이트
             self._sync_from_orchestrator()
             self._update_queue_table(preserve_cursor_task_id=preserve_cursor_task_id)
             self._update_worker_panel()
             self._update_header_info()
+        except Exception as e:
+            logging.getLogger(__name__).exception(f"UI 업데이트 중 오류: {e}")
         finally:
             self._tick_running = False
 
@@ -764,11 +783,15 @@ class OrchayApp(App[None]):
 
         table.clear()
 
-        # Task ID 순서로 정렬
-        sorted_tasks = sorted(
-            [t for t in self._tasks if t.status != TaskStatus.DONE],
-            key=lambda t: t.id,
-        )
+        # Task ID 순서로 정렬 (전체보기 모드면 완료 태스크도 포함)
+        if self._show_all:
+            filtered = self._tasks
+        else:
+            filtered = [t for t in self._tasks if t.status != TaskStatus.DONE]
+        sorted_tasks = sorted(filtered, key=lambda t: t.id)
+
+        # 인덱스 동기화를 위해 표시된 태스크 목록 저장
+        self._displayed_tasks = sorted_tasks
 
         # 현재 작업 중인 Task 찾기 (첫 번째)
         active_row: int | None = None
@@ -875,21 +898,27 @@ class OrchayApp(App[None]):
 
     def _get_sorted_tasks(self) -> list[Task]:
         """정렬된 Task 목록 반환 (Queue 테이블과 동일한 순서)."""
-        return sorted(
-            [t for t in self._tasks if t.status != TaskStatus.DONE],
-            key=lambda t: t.id,
-        )
+        if self._show_all:
+            filtered = self._tasks
+        else:
+            filtered = [t for t in self._tasks if t.status != TaskStatus.DONE]
+        return sorted(filtered, key=lambda t: t.id)
 
     def _get_selected_task(self) -> Task | None:
-        """DataTable에서 현재 선택된 Task 반환."""
+        """DataTable에서 현재 선택된 Task 반환.
+
+        Note:
+            _update_queue_table()에서 저장한 _displayed_tasks를 사용하여
+            테이블에 표시된 순서와 정확히 일치하는 Task를 반환합니다.
+        """
         try:
             table: DataTable[str] = self.query_one("#queue-table", DataTable)  # type: ignore[assignment]
             cursor_row = table.cursor_row
             if cursor_row is None:
                 return None
-            sorted_tasks = self._get_sorted_tasks()
-            if 0 <= cursor_row < len(sorted_tasks):
-                return sorted_tasks[cursor_row]
+            # 테이블에 표시된 순서와 동기화된 목록 사용
+            if 0 <= cursor_row < len(self._displayed_tasks):
+                return self._displayed_tasks[cursor_row]
         except Exception:
             pass
         return None
@@ -1012,6 +1041,25 @@ class OrchayApp(App[None]):
         self._update_worker_panel()
         self._update_header_info()
         self.notify("Reloaded")
+
+    def action_toggle_show_all(self) -> None:
+        """완료된 Task 표시/숨김 토글."""
+        # 현재 선택된 Task ID 저장 (커서 위치 보존용)
+        selected_task = self._get_selected_task()
+        selected_task_id = selected_task.id if selected_task else None
+
+        self._show_all = not self._show_all
+        label = "Active" if self._show_all else "All"
+
+        # F4 바인딩 라벨 업데이트
+        for i, binding in enumerate(type(self).BINDINGS):
+            if isinstance(binding, Binding) and binding.action == "toggle_show_all":
+                type(self).BINDINGS[i] = Binding("f4", "toggle_show_all", label)
+                break
+
+        self.refresh_bindings()
+        self._update_queue_table(preserve_cursor_task_id=selected_task_id)
+        self.notify(f"전체보기: {'ON' if self._show_all else 'OFF'}")
 
     def action_toggle_mode(self) -> None:
         """모드 전환."""
@@ -1420,10 +1468,21 @@ class OrchayApp(App[None]):
 
             # dispatch 실행
             from orchay.utils.wezterm import wezterm_send_text
+
+            # /clear 전송 (config 설정 확인)
+            dispatch_config = self._orchestrator._dispatch_service._config.dispatch
+            if dispatch_config.clear_before_dispatch:
+                await wezterm_send_text(worker.pane_id, "/clear")
+                await asyncio.sleep(DISPATCH_TIMINGS.CLEAR_WAIT_SECONDS)
+                await wezterm_send_text(worker.pane_id, "\r")
+                await asyncio.sleep(DISPATCH_TIMINGS.ENTER_WAIT_SECONDS)
+
+            # 명령어 전송
             command = f"/wf:test {self._project}/{task_id}"
             await wezterm_send_text(worker.pane_id, command)
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(DISPATCH_TIMINGS.COMMAND_WAIT_SECONDS)
             await wezterm_send_text(worker.pane_id, "\r")
+            await asyncio.sleep(DISPATCH_TIMINGS.ENTER_WAIT_SECONDS)
 
             # 상태 업데이트
             worker.state = WorkerState.BUSY
