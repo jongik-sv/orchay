@@ -22,7 +22,7 @@ workPackages:
         title: Next.js 프로젝트 초기화 및 의존성 설치
         category: infrastructure
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -52,9 +52,6 @@ workPackages:
             - TailwindCSS 3.4
             - better-sqlite3 11.x
             - socket.io 4.8
-        execution:
-          command: build
-          startedAt: "2026-01-02T04:52:12.261Z"
       - id: TSK-00-02
         title: 프로젝트 구조 및 타입 정의
         category: infrastructure
@@ -115,9 +112,6 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
-        execution:
-          command: apply
-          startedAt: "2026-01-02T04:54:54.498Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -192,9 +186,6 @@ workPackages:
             - "GET /api/categories → { categories: Category[] }"
             - "GET /api/menus → { menus: Menu[] }"
             - GET /api/menus?includeSoldOut=true
-        execution:
-          command: apply
-          startedAt: "2026-01-02T04:55:55.846Z"
       - id: TSK-01-03
         title: 주문 생성/조회 API 구현
         category: development
@@ -231,6 +222,9 @@ workPackages:
             - "GET /api/kitchen/orders → { orders: Order[] }"
             - "PATCH /api/orders/1/status → { success: true }"
             - "  body: { status: 'cooking' | 'completed' }"
+        execution:
+          command: review
+          startedAt: "2026-01-02T04:57:14.155Z"
       - id: TSK-01-04
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
@@ -264,6 +258,9 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
+        execution:
+          command: start
+          startedAt: "2026-01-02T04:58:18.017Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -301,6 +298,9 @@ workPackages:
           techSpec:
             - TRD 섹션 5 서버 설정 참조
             - join:table, join:kitchen 이벤트 핸들러
+        execution:
+          command: apply
+          startedAt: "2026-01-02T04:57:08.389Z"
       - id: TSK-02-02
         title: 실시간 이벤트 송수신 구현
         category: development
