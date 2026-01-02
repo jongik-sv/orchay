@@ -222,6 +222,7 @@ flowchart LR
 
 > 이 Task는 클라이언트 유틸/훅 구현이 주요 범위입니다.
 > 화면 UI는 TSK-03-03 (고객 상태 페이지), TSK-04-01 (주방 KDS)에서 구현합니다.
+> 연결 상태 표시는 이 Task에서 `isConnected` 상태를 제공하며, UI 구현 Task에서 인디케이터로 활용합니다.
 
 ### 5.1 클라이언트 연결 상태 표시 (선택)
 
@@ -294,6 +295,18 @@ interface OrderStatusEvent {
 |------|------|----------|
 | 주방 재연결 | kitchen 룸 재조인 | GET /api/kitchen/orders |
 | 고객 재연결 | table:{id} 룸 재조인 | GET /api/orders?table={id} |
+
+#### 재연결 순서 (경쟁 조건 방지)
+
+```
+1. 연결 복원 감지 (connect 이벤트)
+2. 룸 재조인 요청 (join:table 또는 join:kitchen)
+3. 룸 조인 완료 대기 (서버 응답)
+4. API 호출하여 최신 데이터 조회
+5. UI 상태 업데이트
+```
+
+> **주의**: 룸 조인이 완료되기 전에 API를 호출하면, API 응답 후 ~ 룸 조인 사이에 발생한 이벤트가 누락될 수 있습니다.
 
 ---
 
@@ -384,6 +397,8 @@ interface CustomerStatusState {
 | 영역 | 변경 내용 | 영향도 |
 |------|----------|--------|
 | lib/socket.ts | Socket.io 클라이언트 유틸 생성 | 높음 |
+| lib/validators.ts | 이벤트 페이로드 검증 함수 | 중간 |
+| types/index.ts | OrderNewEvent, OrderStatusEvent 타입 export | 중간 |
 | api/orders/route.ts | order:new 이벤트 발송 추가 | 중간 |
 | api/orders/[id]/status/route.ts | order:status 이벤트 발송 추가 | 중간 |
 | server.ts | io 인스턴스 export 추가 | 낮음 |
@@ -465,6 +480,48 @@ export function onDisconnect(callback: () => void): () => void {
 
 ### 12.2 서버 이벤트 발송
 
+#### 페이로드 검증 함수
+
+```typescript
+// lib/validators.ts
+import type { OrderNewEvent, OrderStatusEvent } from '@/types';
+
+export function validateOrderNewPayload(payload: unknown): payload is OrderNewEvent {
+  if (!payload || typeof payload !== 'object') return false;
+  const p = payload as Record<string, unknown>;
+
+  return (
+    typeof p.orderId === 'number' &&
+    typeof p.tableNumber === 'number' &&
+    Array.isArray(p.items) &&
+    p.items.length > 0 &&
+    p.items.every((item: unknown) => {
+      if (!item || typeof item !== 'object') return false;
+      const i = item as Record<string, unknown>;
+      return (
+        typeof i.menuId === 'number' &&
+        typeof i.menuName === 'string' &&
+        typeof i.quantity === 'number' && i.quantity > 0
+      );
+    }) &&
+    typeof p.createdAt === 'string'
+  );
+}
+
+export function validateOrderStatusPayload(payload: unknown): payload is OrderStatusEvent {
+  if (!payload || typeof payload !== 'object') return false;
+  const p = payload as Record<string, unknown>;
+
+  return (
+    typeof p.orderId === 'number' &&
+    ['pending', 'cooking', 'completed'].includes(p.status as string) &&
+    typeof p.updatedAt === 'string'
+  );
+}
+```
+
+#### 이벤트 발송 코드
+
 ```typescript
 // server.ts 수정 - io 인스턴스 export
 import { Server as SocketIOServer } from 'socket.io';
@@ -476,25 +533,40 @@ io = new Server(server);
 
 // api/orders/route.ts에서 사용
 import { io } from '@/server';
+import { validateOrderNewPayload } from '@/lib/validators';
 
 // POST /api/orders 핸들러 내부
 if (io) {
-  io.to('kitchen').emit('order:new', {
+  const payload = {
     orderId: result.lastInsertRowid,
     tableNumber,
     items,
     createdAt: new Date().toISOString(),
-  });
+  };
+
+  if (validateOrderNewPayload(payload)) {
+    io.to('kitchen').emit('order:new', payload);
+  } else {
+    console.error('Invalid order:new payload', payload);
+  }
 }
 
 // api/orders/[id]/status/route.ts에서 사용
+import { validateOrderStatusPayload } from '@/lib/validators';
+
 // PATCH 핸들러 내부
 if (io) {
-  io.to(`table:${tableId}`).emit('order:status', {
+  const payload = {
     orderId: id,
     status,
     updatedAt: new Date().toISOString(),
-  });
+  };
+
+  if (validateOrderStatusPayload(payload)) {
+    io.to(`table:${tableId}`).emit('order:status', payload);
+  } else {
+    console.error('Invalid order:status payload', payload);
+  }
 }
 ```
 
@@ -565,8 +637,8 @@ export function useCustomerSocket(tableId: number, onStatusChange: (data: OrderS
 
 ### 13.2 연관 문서 작성
 
-- [ ] 요구사항 추적 매트릭스 작성 (→ `025-traceability-matrix.md`)
-- [ ] 테스트 명세서 작성 (→ `026-test-specification.md`)
+- [x] 요구사항 추적 매트릭스 작성 (→ `025-traceability-matrix.md`)
+- [x] 테스트 명세서 작성 (→ `026-test-specification.md`)
 
 ### 13.3 구현 준비
 
@@ -581,3 +653,4 @@ export function useCustomerSocket(tableId: number, onStatusChange: (data: OrderS
 | 버전 | 일자 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0 | 2026-01-02 | Claude | 최초 작성 |
+| 1.1 | 2026-01-02 | Claude | 설계 리뷰 반영 (페이로드 검증, 재연결 순서, 타입 export) |
