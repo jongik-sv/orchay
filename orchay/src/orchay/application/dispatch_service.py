@@ -270,12 +270,8 @@ class DispatchService:
         if self._config.dispatch.clear_before_dispatch:
             await self._send_clear(worker)
 
-        # 명령어 생성 (템플릿 사용)
-        command = self._config.worker_command.template.format(
-            action=next_workflow,
-            project=self._project_name,
-            task_id=task.id,
-        )
+        # 명령어 생성
+        command = f"/wf:{next_workflow} {self._project_name}/{task.id}"
 
         try:
             # 명령어 전송
@@ -310,13 +306,12 @@ class DispatchService:
             worker: 대상 Worker
         """
         try:
-            clear_cmd = self._config.worker_command.clear
-            await wezterm_send_text(worker.pane_id, clear_cmd)
+            await wezterm_send_text(worker.pane_id, "/clear")
             await asyncio.sleep(DISPATCH_TIMINGS.CLEAR_WAIT_SECONDS)
             await wezterm_send_text(worker.pane_id, "\r")
             await asyncio.sleep(DISPATCH_TIMINGS.ENTER_WAIT_SECONDS)
         except Exception as e:
-            logger.warning(f"Worker {worker.id} {clear_cmd} 실패: {e}")
+            logger.warning(f"Worker {worker.id} /clear 실패: {e}")
 
     def _reset_assignment(self, worker: Worker, task: Task) -> None:
         """할당을 리셋합니다.

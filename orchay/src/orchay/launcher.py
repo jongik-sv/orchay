@@ -338,14 +338,19 @@ def launch_wezterm_windows(
     startup_file = wezterm_config_dir / "orchay-startup.json"
 
     # Config 로드 (worker_command.startup을 위해)
-    from orchay.config import load_config
+    from orchay.utils.config import load_config
 
-    config = load_config(cwd)
+    config = load_config()
 
     # 스케줄러 pane 비율 계산 (scheduler_cols / (scheduler_cols + worker_cols))
     scheduler_cols = launcher_args.scheduler_cols
     worker_cols = launcher_args.worker_cols
     scheduler_ratio = scheduler_cols / (scheduler_cols + worker_cols)
+
+    # pane_startup 포맷: {"1": "cmd1", "3": "cmd3"}
+    pane_startup_json = {
+        str(k): v for k, v in config.worker_command.pane_startup.items()
+    }
 
     startup_config = {
         "cwd": cwd,
@@ -358,7 +363,8 @@ def launch_wezterm_windows(
         "scheduler_ratio": round(scheduler_ratio, 2),  # 스케줄러 pane 비율
         "font_size": launcher_args.font_size,
         # worker startup 명령어
-        "worker_startup_cmd": config.worker_command.startup,
+        "worker_startup_cmd": config.worker_command.startup,  # 기본값 (호환성 유지)
+        "pane_startup": pane_startup_json,  # pane별 오버라이드
     }
 
     with open(startup_file, "w", encoding="utf-8") as f:
@@ -372,7 +378,7 @@ def launch_wezterm_windows(
     # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
     # --config-file로 orchay 전용 설정 파일 사용 (사용자 ~/.wezterm.lua 불필요)
     # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
-    config_file = _get_bundled_file("wezterm-orchay.lua")
+    config_file = _get_bundled_file("wezterm-orchay-windows.lua")
     wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
 
     # 시작 전 wezterm-gui PID 목록 기록
@@ -482,18 +488,26 @@ def launch_wezterm_linux(
 
     log.info(f"Creating layout: {'/'.join(map(str, layout))}")
 
+    # Worker별 startup 명령어 선택을 위한 카운터
+    worker_num = 1
+
     # 3-1. 각 열의 첫 번째 Worker 생성 (수평 분할)
     for col in range(len(layout)):
+        # Worker별 startup 명령어 조회
+        startup_cmd = config.worker_command.get_startup_for_worker(worker_num)
+        startup_cmd_parts = shlex.split(startup_cmd)
+        log.info(f"Worker {worker_num}: startup={startup_cmd}")
+
         if col == 0:
             split_cmd = [
                 wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", "0",
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+                "--cwd", cwd, "--", *startup_cmd_parts
             ]
         else:
             target_pane = column_first_panes[col - 1]
             split_cmd = [
                 wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", str(target_pane),
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+                "--cwd", cwd, "--", *startup_cmd_parts
             ]
 
         log.debug(f"Split command (col {col}): {split_cmd}")
@@ -513,6 +527,8 @@ def launch_wezterm_linux(
             log.error(f"pane ID 파싱 실패: {result.stdout}")
             break
 
+        worker_num += 1
+
     # 3-2. 각 열 내에서 수직 분할 (균등 분할)
     log.debug("Starting vertical splits...")
     for col, workers_in_col in enumerate(layout):
@@ -521,12 +537,17 @@ def launch_wezterm_linux(
         current_pane_id = column_first_panes[col]
 
         for row in range(1, workers_in_col):
+            # Worker별 startup 명령어 조회
+            startup_cmd = config.worker_command.get_startup_for_worker(worker_num)
+            startup_cmd_parts = shlex.split(startup_cmd)
+            log.info(f"Worker {worker_num}: startup={startup_cmd}")
+
             remaining = workers_in_col - row
             percent = int(remaining / (remaining + 1) * 100)
             split_cmd = [
                 wezterm_cmd, "cli", "split-pane", "--bottom", "--percent", str(percent),
                 "--pane-id", str(current_pane_id),
-                "--cwd", cwd, "--", "claude", "--dangerously-skip-permissions"
+                "--cwd", cwd, "--", *startup_cmd_parts
             ]
             log.debug(f"Vertical split command (col {col}, row {row}): {split_cmd}")
             result = subprocess.run(split_cmd, capture_output=True, text=True)
@@ -539,31 +560,14 @@ def launch_wezterm_linux(
                     current_pane_id = int(result.stdout.strip())
                     column_panes[col].append(current_pane_id)
 
-    # 4. Worker 번호 로그 및 startup 명령 전송
-    # Config 로드 (worker_command.startup을 위해)
-    from orchay.config import load_config
+            worker_num += 1
 
-    config = load_config(cwd)
-    startup_cmd = config.worker_command.startup
-
+    # 4. Worker 번호 로그 (startup 명령은 pane 생성 시 이미 실행됨)
     worker_num = 1
     for col_panes in column_panes:
         for pane_id in col_panes:
             log.info(f"Worker {worker_num}: pane {pane_id}")
             worker_num += 1
-
-            # 워커 pane에 startup 명령 전송
-            if startup_cmd:
-                log.debug(f"Sending startup command to worker pane {pane_id}: {startup_cmd}")
-                send_text_cmd = [
-                    wezterm_cmd, "cli", "send-text", "--pane-id", str(pane_id),
-                    "--no-paste", f"{startup_cmd}\n"
-                ]
-                result = subprocess.run(send_text_cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    log.warning(f"Failed to send startup command to pane {pane_id}: {result.stderr}")
-                else:
-                    log.debug(f"Startup command sent to pane {pane_id}")
 
     log.debug("Waiting 1s before sending scheduler command...")
     time.sleep(1)

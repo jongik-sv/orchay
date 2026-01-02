@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from orchay.models.config import Config, ExecutionConfig
+from orchay.models.config import Config, ExecutionConfig, WorkerCommandConfig
 
 
 class TestConfigDefaultValues:
@@ -26,8 +26,7 @@ class TestConfigDefaultValues:
         config = Config()
         assert config.detection.done_pattern is not None
         assert len(config.detection.prompt_patterns) > 0
-        assert config.worker_command.resume == "/resume"
-        assert config.worker_command.clear == "/clear"
+        assert config.worker_command.startup == "claude --dangerously-skip-permissions"
         assert config.dispatch.clear_before_dispatch is True
         assert config.history.enabled is True
 
@@ -271,3 +270,79 @@ class TestLoadConfigInvalidJson:
 
         with pytest.raises(ConfigLoadError):
             load_config()
+
+
+class TestWorkerCommandPaneStartup:
+    """TC-07: WorkerCommandConfig pane_startup 테스트."""
+
+    def test_default_pane_startup_empty(self) -> None:
+        """pane_startup 기본값은 빈 dict."""
+        config = WorkerCommandConfig()
+        assert config.pane_startup == {}
+
+    def test_get_startup_for_default(self) -> None:
+        """기본 startup 사용."""
+        config = WorkerCommandConfig(startup="claude --model haiku")
+        assert config.get_startup_for_worker(1) == "claude --model haiku"
+        assert config.get_startup_for_worker(6) == "claude --model haiku"
+
+    def test_get_startup_for_override(self) -> None:
+        """pane_startup 오버라이드."""
+        config = WorkerCommandConfig(
+            startup="claude --model haiku",
+            pane_startup={1: "claude --model opus", 3: "claude --model sonnet"},
+        )
+        assert config.get_startup_for_worker(1) == "claude --model opus"
+        assert config.get_startup_for_worker(2) == "claude --model haiku"  # 기본값
+        assert config.get_startup_for_worker(3) == "claude --model sonnet"
+        assert config.get_startup_for_worker(4) == "claude --model haiku"  # 기본값
+
+    def test_get_startup_invalid_worker_id(self) -> None:
+        """잘못된 worker_id 검증."""
+        config = WorkerCommandConfig()
+        with pytest.raises(ValueError, match="worker_id는 1-6 사이여야 함"):
+            config.get_startup_for_worker(0)
+        with pytest.raises(ValueError, match="worker_id는 1-6 사이여야 함"):
+            config.get_startup_for_worker(7)
+
+    def test_pane_startup_validation(self) -> None:
+        """pane_startup 유효성 검증."""
+        from pydantic import ValidationError
+
+        # 유효한 범위
+        WorkerCommandConfig(pane_startup={1: "cmd", 6: "cmd"})
+
+        # 잘못된 범위
+        with pytest.raises(ValidationError):
+            WorkerCommandConfig(pane_startup={0: "cmd"})
+        with pytest.raises(ValidationError):
+            WorkerCommandConfig(pane_startup={7: "cmd"})
+
+    def test_load_config_with_pane_startup(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """YAML에서 pane_startup 로드."""
+        from orchay.utils.config import load_config
+
+        settings_dir = tmp_path / ".orchay" / "settings"
+        settings_dir.mkdir(parents=True)
+        yaml_file = settings_dir / "orchay.yaml"
+        yaml_file.write_text(
+            """
+worker_command:
+  startup: "claude --model haiku"
+  pane_startup:
+    1: "claude --model opus"
+    3: "claude --model sonnet"
+""",
+            encoding="utf-8",
+        )
+
+        monkeypatch.chdir(tmp_path)
+        config = load_config()
+
+        assert config.worker_command.startup == "claude --model haiku"
+        assert config.worker_command.pane_startup == {
+            1: "claude --model opus",
+            3: "claude --model sonnet",
+        }

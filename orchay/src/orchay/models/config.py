@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DetectionConfig(BaseModel):
@@ -88,14 +88,72 @@ class WorkerCommandConfig(BaseModel):
 
     startup: str = Field(
         default="claude --dangerously-skip-permissions",
-        description="워커 pane 시작 시 실행할 명령어",
+        description="워커 pane 시작 시 실행할 기본 명령어",
     )
-    template: str = Field(
-        default="/wf:{action} {project}/{task_id}",
-        description="워커 실행 명령어 템플릿 ({action}, {project}, {task_id} 사용 가능)",
+    pane_startup: dict[int, str] = Field(
+        default_factory=dict,
+        description="특정 pane 번호(1-6)에 적용할 startup 명령어 (기본값 오버라이드)",
     )
-    clear: str = Field(default="/clear", description="clear 명령어")
-    resume: str = Field(default="/resume", description="resume 명령어")
+
+    def get_startup_for_worker(self, worker_id: int) -> str:
+        """Worker ID에 맞는 startup 명령어 반환.
+
+        Args:
+            worker_id: Worker 번호 (1-6)
+
+        Returns:
+            해당 Worker의 startup 명령어 (pane_startup에 없으면 기본값)
+
+        Raises:
+            ValueError: worker_id가 1-6 범위를 벗어날 때
+        """
+        if not 1 <= worker_id <= 6:
+            raise ValueError(f"worker_id는 1-6 사이여야 함: {worker_id}")
+        return self.pane_startup.get(worker_id, self.startup)
+
+    @field_validator("pane_startup")
+    @classmethod
+    def validate_pane_startup(cls, v: dict[int, str]) -> dict[int, str]:
+        """pane_startup 유효성 검증."""
+        for worker_id in v.keys():
+            if not 1 <= worker_id <= 6:
+                raise ValueError(f"pane_startup 키는 1-6 사이여야 함: {worker_id}")
+        return v
+
+
+class LauncherConfig(BaseModel):
+    """Launcher 설정 (WezTerm 레이아웃)."""
+
+    width: int = Field(default=1920, ge=800, le=7680, description="창 너비 픽셀")
+    height: int = Field(default=1080, ge=600, le=4320, description="창 높이 픽셀")
+    max_rows: int = Field(default=3, ge=1, le=6, description="열당 최대 worker 수")
+    scheduler_cols: int = Field(default=100, ge=50, le=300, description="스케줄러 pane 너비 columns")
+    worker_cols: int = Field(default=120, ge=50, le=300, description="Worker pane 너비 columns")
+    font_size: float = Field(default=11.0, ge=6.0, le=24.0, description="폰트 크기")
+
+    # 플랫폼별 타이밍 설정
+    startup_delay_windows: float = Field(
+        default=1.5,
+        ge=0.5,
+        le=10.0,
+        description="Windows WezTerm 시작 대기 시간 (초)",
+    )
+    startup_delay_linux: float = Field(
+        default=2.0,
+        ge=0.5,
+        le=10.0,
+        description="Linux/macOS WezTerm 시작 대기 시간 (초)",
+    )
+
+    # 설정 파일 경로
+    config_filename: str = Field(
+        default="orchay-startup.json",
+        description="WezTerm startup config 파일명",
+    )
+    lua_config_file: str = Field(
+        default="wezterm-orchay.lua",
+        description="WezTerm Lua 설정 파일명",
+    )
 
 
 class Config(BaseModel):
@@ -112,3 +170,4 @@ class Config(BaseModel):
     history: HistoryConfig = Field(default_factory=HistoryConfig)
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
     worker_command: WorkerCommandConfig = Field(default_factory=WorkerCommandConfig)
+    launcher: LauncherConfig = Field(default_factory=LauncherConfig)

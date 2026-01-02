@@ -186,7 +186,7 @@ async def handle_paused_worker(
 
     Args:
         worker: Worker 객체 (상태 및 pane_id 포함)
-        config: 전체 설정 (worker_command.resume 사용)
+        config: 전체 설정 (recovery 설정 사용)
 
     Returns:
         재개 성공 여부
@@ -215,7 +215,7 @@ async def handle_paused_worker(
     await asyncio.sleep(wait_seconds)
 
     # resume 명령어 전송
-    await wezterm_send_text(worker.pane_id, f"{config.worker_command.resume}\n")
+    await wezterm_send_text(worker.pane_id, "/resume\n")
 
     # 잠시 대기 후 상태 재확인
     await asyncio.sleep(3)

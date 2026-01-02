@@ -22,10 +22,11 @@ workPackages:
         title: Next.js 프로젝트 생성 및 기본 설정
         category: infrastructure
         domain: infra
-        status: "[dd]"
+        status: "implement [im]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-02"
+        test_result: pass
         tags:
           - setup
           - nextjs
@@ -52,7 +53,7 @@ workPackages:
         title: 핵심 의존성 설치 및 설정
         category: infrastructure
         domain: infra
-        status: "[dd]"
+        status: "[im]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-02"
@@ -76,9 +77,6 @@ workPackages:
             - "@blocknote/react ^0.18.0"
             - better-sqlite3 ^11.0.0
             - zustand ^5.0.0
-        execution:
-          command: apply
-          startedAt: "2026-01-02T07:16:33.819Z"
       - id: TSK-00-03
         title: 프로젝트 구조 및 기본 레이아웃 생성
         category: infrastructure
@@ -196,7 +194,7 @@ workPackages:
         title: BlockNote 에디터 기본 통합
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-04"
@@ -220,8 +218,8 @@ workPackages:
             - "@blocknote/react useCreateBlockNote"
             - "@blocknote/mantine BlockNoteView"
         execution:
-          command: review
-          startedAt: "2026-01-02T07:16:20.871Z"
+          command: build
+          startedAt: "2026-01-02T12:45:13.667Z"
       - id: TSK-01-02
         title: 에디터 콘텐츠 저장/로드 구현
         category: development

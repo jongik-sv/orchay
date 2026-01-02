@@ -62,6 +62,13 @@ wezterm.on('gui-startup', function(cmd)
   local scheduler_cmd = content:match('"scheduler_cmd"%s*:%s*"([^"]+)"')
   local worker_startup_cmd = content:match('"worker_startup_cmd"%s*:%s*"([^"]+)"') or 'claude --dangerously-skip-permissions'
 
+  -- pane_startup 파싱 (예: {"1":"cmd1","3":"cmd3"})
+  local pane_startup_str = content:match('"pane_startup"%s*:%s*({.-})') or '{}'
+  local pane_startup = {}
+  for k, v in string.gmatch(pane_startup_str, '"(%d+)"%s*:%s*"([^"]*)"') do
+    pane_startup[tonumber(k)] = v
+  end
+
   -- launcher 설정 파싱 (orchay.yaml에서 전달됨)
   local width = tonumber(content:match('"width"%s*:%s*(%d+)')) or 1920
   local height = tonumber(content:match('"height"%s*:%s*(%d+)')) or 1080
@@ -221,9 +228,10 @@ wezterm.on('gui-startup', function(cmd)
   -- 1.5초 후에 명령 전송 (셸 초기화 대기)
   -- Windows PowerShell에서는 \r이 엔터키로 인식됨
   wezterm.time.call_after(1.5, function()
-    -- Worker panes에 startup 명령 전송
-    for _, pane in ipairs(worker_panes) do
-      pane:send_text(worker_startup_cmd .. '\r')
+    -- Worker 번호(1-indexed)별로 startup 명령 전송
+    for worker_num, pane in ipairs(worker_panes) do
+      local cmd = pane_startup[worker_num] or worker_startup_cmd
+      pane:send_text(cmd .. '\r')
     end
 
     -- 스케줄러 명령 실행 (있으면)
