@@ -79,7 +79,7 @@ workPackages:
         title: 프로젝트 구조 및 기본 레이아웃 생성
         category: infrastructure
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-03
@@ -101,14 +101,11 @@ workPackages:
           techSpec:
             - App Router 파일 구조
             - Notion 컬러 CSS 변수
-        execution:
-          command: build
-          startedAt: "2026-01-02T14:16:15.590Z"
       - id: TSK-00-04
         title: SQLite 데이터베이스 초기화
         category: infrastructure
         domain: database
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: "2026-01-03"
@@ -131,9 +128,6 @@ workPackages:
             - pages 테이블 (id, title, icon, cover_url, parent_id, content)
           dataModel:
             - "pages: id(TEXT PK), title, icon, cover_url, parent_id, content(JSON), is_favorite, sort_order, created_at, updated_at"
-        execution:
-          command: start
-          startedAt: "2026-01-02T14:16:40.459Z"
       - id: TSK-00-05
         title: Zustand 스토어 설정
         category: development
@@ -261,7 +255,7 @@ workPackages:
         title: Notion 스타일 에디터 CSS 적용
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: "2026-01-05"
@@ -285,14 +279,11 @@ workPackages:
             - .bn-block 마진 1px
             - .bn-side-menu 호버 시 opacity 1
             - "H1 font-size: 1.875rem"
-        execution:
-          command: start
-          startedAt: "2026-01-02T14:16:19.619Z"
       - id: TSK-01-04
         title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[bd]"
         priority: high
         assignee: "-"
         schedule: "2026-01-06"
