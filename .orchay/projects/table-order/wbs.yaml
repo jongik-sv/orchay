@@ -155,7 +155,7 @@ workPackages:
         title: 카테고리/메뉴 조회 API 구현
         category: development
         domain: backend
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -181,9 +181,6 @@ workPackages:
             - "GET /api/categories → { categories: Category[] }"
             - "GET /api/menus → { menus: Menu[] }"
             - GET /api/menus?includeSoldOut=true
-        execution:
-          command: build
-          startedAt: "2026-01-02T06:12:52.288Z"
       - id: TSK-01-03
         title: 주문 생성/조회 API 구현
         category: development

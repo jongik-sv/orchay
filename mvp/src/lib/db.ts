@@ -178,5 +178,73 @@ export function reseedData(): void {
   doInsertSeedData(db);
 }
 
-// 기본 export - DB 인스턴스
-export default getDb();
+// ===== TSK-01-02: 카테고리/메뉴 조회 함수 =====
+
+/**
+ * 카테고리 타입 정의
+ */
+export interface Category {
+  id: number;
+  name: string;
+  sortOrder: number;
+}
+
+/**
+ * 메뉴 타입 정의
+ */
+export interface Menu {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  isSoldOut: boolean;
+}
+
+/**
+ * 카테고리 목록 조회
+ * sort_order 순으로 정렬된 카테고리 배열 반환
+ */
+export function getCategories(): Category[] {
+  const db = getDb();
+  const stmt = db.prepare(`
+    SELECT id, name, sort_order as sortOrder
+    FROM categories
+    ORDER BY sort_order ASC
+  `);
+  return stmt.all() as Category[];
+}
+
+/**
+ * 메뉴 목록 조회
+ * @param includeSoldOut - true면 품절 메뉴 포함 (기본: false)
+ */
+export function getMenus(includeSoldOut: boolean = false): Menu[] {
+  const db = getDb();
+  const whereClause = includeSoldOut ? '' : 'WHERE m.is_sold_out = 0';
+  const stmt = db.prepare(`
+    SELECT
+      m.id,
+      m.category_id as categoryId,
+      c.name AS categoryName,
+      m.name,
+      m.price,
+      m.image_url as imageUrl,
+      CASE WHEN m.is_sold_out = 1 THEN 1 ELSE 0 END as isSoldOut
+    FROM menus m
+    JOIN categories c ON m.category_id = c.id
+    ${whereClause}
+    ORDER BY c.sort_order, m.id
+  `);
+  // SQLite returns 0/1 for boolean, convert to actual boolean
+  const rows = stmt.all() as Array<Omit<Menu, 'isSoldOut'> & { isSoldOut: number }>;
+  return rows.map(row => ({
+    ...row,
+    isSoldOut: row.isSoldOut === 1,
+  }));
+}
+
+// 기본 export - getDb 함수 자체를 export하여 지연 초기화 지원
+// 모듈 로드 시점에 DB 연결 생성 방지 (사용 시점에 초기화)
+export { getDb as default };
