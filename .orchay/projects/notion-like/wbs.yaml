@@ -254,7 +254,7 @@ workPackages:
         title: Notion 스타일 에디터 CSS 적용
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: "2026-01-05"
@@ -278,9 +278,6 @@ workPackages:
             - .bn-block 마진 1px
             - .bn-side-menu 호버 시 opacity 1
             - "H1 font-size: 1.875rem"
-        execution:
-          command: build
-          startedAt: "2026-01-02T14:20:43.317Z"
       - id: TSK-01-04
         title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
         category: development
@@ -341,9 +338,9 @@ workPackages:
           startedAt: "2026-01-02T14:22:21.137Z"
       - id: TSK-01-99
         title: WP-01 통합 검증
-        category: simple-dev
+        category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: "2026-01-08"
@@ -437,10 +434,11 @@ workPackages:
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
         domain: frontend
-        status: "[im]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-10 ~ 2026-01-11
+        test_result: pass
         tags:
           - sidebar
           - tree
