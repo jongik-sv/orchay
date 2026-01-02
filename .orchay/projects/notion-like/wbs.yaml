@@ -341,7 +341,7 @@ workPackages:
           startedAt: "2026-01-02T14:22:21.137Z"
       - id: TSK-01-99
         title: WP-01 통합 검증
-        category: simple-dev
+        category: infrastructure
         domain: test
         status: "[ ]"
         priority: high
@@ -376,7 +376,7 @@ workPackages:
         title: 메인 레이아웃 (사이드바 + 에디터 영역)
         category: development
         domain: frontend
-        status: "[im]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-09"
@@ -400,7 +400,7 @@ workPackages:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
         execution:
-          command: build
+          command: verify
           startedAt: "2026-01-02T13:55:00.296Z"
           completedAt: "2026-01-02T23:59:00.000Z"
       - id: TSK-02-02
@@ -561,7 +561,7 @@ workPackages:
             - 입력창 + 결과 리스트
       - id: TSK-02-99
         title: WP-02 통합 검증
-        category: simple-dev
+        category: infrastructure
         domain: test
         status: "[ ]"
         priority: high
@@ -670,7 +670,7 @@ workPackages:
             - 로딩 중 스켈레톤 표시
       - id: TSK-03-99
         title: WP-03 및 전체 MVP 통합 검증
-        category: simple-dev
+        category: infrastructure
         domain: test
         status: "[ap]"
         priority: critical
