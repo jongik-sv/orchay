@@ -53,8 +53,8 @@ workPackages:
             - better-sqlite3 11.x
             - socket.io 4.8
         execution:
-          command: audit
-          startedAt: "2026-01-02T04:59:35.749Z"
+          command: patch
+          startedAt: "2026-01-02T05:01:25.585Z"
       - id: TSK-00-02
         title: 프로젝트 구조 및 타입 정의
         category: infrastructure
@@ -83,6 +83,9 @@ workPackages:
           techSpec:
             - app/, components/, lib/, types/ 폴더
             - PRD 섹션 4 데이터 모델 기반 타입
+        execution:
+          command: audit
+          startedAt: "2026-01-02T05:00:48.372Z"
       - id: TSK-00-03
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
@@ -258,6 +261,9 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
+        execution:
+          command: review
+          startedAt: "2026-01-02T05:01:17.586Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -302,7 +308,7 @@ workPackages:
         title: 실시간 이벤트 송수신 구현
         category: development
         domain: fullstack
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -329,9 +335,6 @@ workPackages:
           techSpec:
             - lib/socket.ts - 클라이언트 유틸
             - useSocket 커스텀 훅 (선택)
-        execution:
-          command: start
-          startedAt: "2026-01-02T04:58:25.953Z"
       - id: TSK-02-03
         title: "WP-02 통합 확인: 실시간 통신 검증"
         category: development
