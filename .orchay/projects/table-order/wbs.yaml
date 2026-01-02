@@ -9,7 +9,7 @@ project:
 wbs:
   version: "1.0"
   depth: 3
-  projectRoot: table-order
+  projectRoot: mvp
   strategy: MVP 핵심 플로우 검증 - 최소 기능으로 빠른 검증
 workPackages:
   - id: WP-00
@@ -22,7 +22,7 @@ workPackages:
         title: Next.js 프로젝트 초기화 및 의존성 설치
         category: infrastructure
         domain: fullstack
-        status: "[im]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -32,7 +32,7 @@ workPackages:
           - nextjs
         depends: []
         blockedBy: null
-        testResult: null
+        testResult: pass
         note: null
         requirements:
           prdRef: TRD 섹션 7
@@ -78,11 +78,14 @@ workPackages:
           techSpec:
             - app/, components/, lib/, types/ 폴더
             - PRD 섹션 4 데이터 모델 기반 타입
+        execution:
+          command: patch
+          startedAt: "2026-01-02T06:04:32.540Z"
       - id: TSK-00-03
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -106,6 +109,9 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
+        execution:
+          command: build
+          startedAt: "2026-01-02T05:43:08.195Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -148,6 +154,9 @@ workPackages:
             - "menus: id, category_id, name, price, image_url, is_sold_out"
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
+        execution:
+          command: build
+          startedAt: "2026-01-02T06:02:24.404Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
@@ -220,7 +229,7 @@ workPackages:
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -248,9 +257,6 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
-        execution:
-          command: apply
-          startedAt: "2026-01-02T05:42:32.745Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -291,7 +297,7 @@ workPackages:
         title: 실시간 이벤트 송수신 구현
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -317,14 +323,11 @@ workPackages:
           techSpec:
             - lib/socket.ts - 클라이언트 유틸
             - useSocket 커스텀 훅 (선택)
-        execution:
-          command: apply
-          startedAt: "2026-01-02T05:42:05.159Z"
       - id: TSK-02-03
         title: "WP-02 통합 확인: 실시간 통신 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -576,7 +579,7 @@ workPackages:
         title: "WP-04 통합 확인: 주방 화면 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-05 ~ 2026-01-05
