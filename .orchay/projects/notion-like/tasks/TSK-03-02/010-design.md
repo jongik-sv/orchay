@@ -5,9 +5,9 @@
 | 항목 | 내용 |
 |------|------|
 | Task ID | TSK-03-02 |
-| 문서 버전 | 1.0 |
+| 문서 버전 | 1.1 |
 | 작성일 | 2026-01-03 |
-| 상태 | 작성중 |
+| 상태 | 리뷰 반영 완료 |
 | 카테고리 | development |
 
 ---
@@ -313,7 +313,45 @@ flowchart LR
 | `src/components/layout/Sidebar.tsx` | `bg-[#F7F6F3]` 고정 | CSS 변수 또는 dark: 클래스 |
 | `src/components/editor/PageHeader.tsx` | `bg-white` 고정 | CSS 변수 사용 |
 | `src/app/[pageId]/page.tsx` | `bg-white` 고정 | CSS 변수 사용 |
-| `src/app/globals.css` | 부분 구현 | BlockNote 다크모드 스타일 추가 |
+| `src/app/globals.css` | 부분 구현 | BlockNote 다크모드 스타일 + 트랜지션 + 버튼 변수 추가 |
+
+### 10.1.1 컴포넌트별 상세 수정 가이드
+
+**layout.tsx:**
+```tsx
+// Before
+<body className="bg-white text-gray-900">
+
+// After
+<body className="bg-[var(--notion-bg-primary)] text-[var(--notion-text-primary)]">
+```
+
+**MainLayout.tsx:**
+| 현재값 | CSS 변수 |
+|--------|----------|
+| `bg-[#F7F6F3]` | `bg-[var(--notion-bg-secondary)]` |
+| `border-[#E9E9E7]` | `border-[var(--notion-border-light)]` |
+| `hover:bg-[#EFEFEF]` | `hover:bg-[var(--notion-bg-tertiary)]` |
+| `text-[#787774]` | `text-[var(--notion-text-tertiary)]` |
+
+**Sidebar.tsx:**
+| 현재값 | CSS 변수 |
+|--------|----------|
+| `bg-[#F7F6F3]` | `bg-[var(--notion-bg-secondary)]` |
+| `text-[#37352F]` | `text-[var(--notion-text-primary)]` |
+| `bg-[#EFEFEF]` (hover) | `hover:bg-[var(--notion-bg-tertiary)]` |
+| `border-[#E9E9E7]` | `border-[var(--notion-border-light)]` |
+| `text-[#787774]` | `text-[var(--notion-text-tertiary)]` |
+| `text-[#B4B4B3]` | `text-[var(--notion-text-tertiary)]` |
+
+**PageHeader.tsx:**
+| 현재값 | CSS 변수 |
+|--------|----------|
+| `bg-white` | `bg-[var(--notion-bg-primary)]` |
+| `border-gray-200` | `border-[var(--notion-border-light)]` |
+| `bg-gray-200` (cover fallback) | `bg-[var(--notion-bg-tertiary)]` |
+| `bg-gray-300` (button) | `bg-[var(--notion-button-bg)]` |
+| `hover:bg-gray-400` (button) | `hover:bg-[var(--notion-button-hover)]` |
 
 ### 10.2 구현 순서
 
@@ -360,6 +398,7 @@ export default {
   .bn-popover {
     background-color: var(--notion-bg-secondary);
     border-color: var(--notion-border-light);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
 
   .bn-menu-item:hover {
@@ -369,8 +408,76 @@ export default {
   .bn-code-block {
     background-color: var(--notion-bg-secondary);
   }
+
+  /* BlockNote 에디터 내부 스타일 */
+  .bn-editor {
+    background-color: var(--notion-bg-primary);
+    color: var(--notion-text-primary);
+  }
+
+  .bn-inline-content {
+    color: var(--notion-text-primary);
+  }
+
+  .bn-side-menu {
+    background-color: var(--notion-bg-secondary);
+  }
+
+  /* 슬래시 메뉴 */
+  .bn-slash-menu {
+    background-color: var(--notion-bg-secondary);
+    border-color: var(--notion-border-light);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
 }
 ```
+
+### 10.6 색상 전환 트랜지션 구현
+
+**글로벌 트랜지션 설정 (globals.css):**
+
+```css
+/* 다크모드 전환 시 부드러운 애니메이션 */
+* {
+  transition: background-color 150ms ease,
+              color 150ms ease,
+              border-color 150ms ease;
+}
+
+/* 트랜지션 제외 요소 (성능 최적화) */
+img, video, canvas, svg {
+  transition: none;
+}
+```
+
+**구현 시 주의사항:**
+- 초기 로드 시 트랜지션 방지 필요 (flash 방지)
+- 대안: body에 `preload` 클래스 추가 후 로드 완료 시 제거
+
+### 10.7 버튼 색상 CSS 변수 추가
+
+**globals.css에 추가할 버튼 전용 CSS 변수:**
+
+```css
+:root {
+  /* 기존 변수들... */
+  --notion-button-bg: #e5e5e5;
+  --notion-button-hover: #d4d4d4;
+  --notion-button-active: #c4c4c4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 기존 변수들... */
+    --notion-button-bg: #4d4d4a;
+    --notion-button-hover: #5d5d5a;
+    --notion-button-active: #6d6d6a;
+  }
+}
+```
+
+**적용 대상 컴포넌트:**
+- PageHeader.tsx의 "Add icon", "Add cover", "Change" 버튼
 
 ---
 
@@ -414,3 +521,4 @@ export default {
 | 버전 | 일자 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0 | 2026-01-03 | Claude | 최초 작성 |
+| 1.1 | 2026-01-03 | Claude | 설계 리뷰 반영 - 컴포넌트별 상세 매핑 가이드, BlockNote 다크모드 CSS 확장, 색상 전환 트랜지션, 버튼 CSS 변수 추가 |
