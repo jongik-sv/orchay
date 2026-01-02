@@ -52,6 +52,9 @@ workPackages:
             - TailwindCSS 3.4
             - better-sqlite3 11.x
             - socket.io 4.8
+        execution:
+          command: build
+          startedAt: "2026-01-02T04:52:12.261Z"
       - id: TSK-00-02
         title: 프로젝트 구조 및 타입 정의
         category: infrastructure
@@ -112,6 +115,9 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
+        execution:
+          command: review
+          startedAt: "2026-01-02T04:52:01.806Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -155,6 +161,9 @@ workPackages:
             - "menus: id, category_id, name, price, image_url, is_sold_out"
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
+        execution:
+          command: review
+          startedAt: "2026-01-02T04:52:15.667Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
