@@ -160,6 +160,8 @@ flowchart TD
 | items 빈 배열 | 400 Bad Request |
 | 존재하지 않는 menuId | 400 Bad Request |
 | 품절 메뉴 주문 시도 | 400 Bad Request |
+| 음수 수량 (quantity < 1) | 400 Bad Request |
+| 초과 수량 (quantity > 99) | 400 Bad Request |
 
 #### TC-05: GET /api/orders?table={id} 테스트
 
@@ -313,6 +315,8 @@ curl -X PATCH http://localhost:3000/api/orders/1/status \
 | 빈 items | 주문 항목 없음 | 400 | "주문 항목이 필요합니다" |
 | 잘못된 menuId | 존재하지 않는 메뉴 | 400 | "존재하지 않는 메뉴입니다" |
 | 품절 메뉴 | 품절된 메뉴 주문 | 400 | "품절된 메뉴입니다" |
+| 음수 수량 | quantity < 1 | 400 | "수량은 1 이상이어야 합니다" |
+| 초과 수량 | quantity > 99 | 400 | "수량이 너무 많습니다" |
 | 잘못된 orderId | 존재하지 않는 주문 | 404 | "주문을 찾을 수 없습니다" |
 | 잘못된 status | 유효하지 않은 상태값 | 400 | "유효하지 않은 상태입니다" |
 | 잘못된 상태 전이 | 허용되지 않는 전이 | 400 | "상태 변경이 허용되지 않습니다" |
@@ -376,3 +380,4 @@ curl -X PATCH http://localhost:3000/api/orders/1/status \
 | 버전 | 일자 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0 | 2026-01-02 | Claude | 최초 작성 |
+| 1.1 | 2026-01-02 | Claude | 리뷰 반영: 경계값 테스트 케이스 추가 (P3#3) |
