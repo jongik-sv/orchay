@@ -17,6 +17,11 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'databas
 // 싱글톤 DB 인스턴스
 let dbInstance: DatabaseType | null = null;
 
+// 헬퍼 타입 정의 (타입 단언 제거용)
+interface CountResult {
+  count: number;
+}
+
 // 시드 데이터 정의
 const SEED_TABLES = [1, 2, 3, 4, 5];
 const SEED_CATEGORIES = [
@@ -121,7 +126,8 @@ function doInsertSeedData(db: DatabaseType): void {
  * 시드 데이터 삽입 (테이블이 비어있을 때만)
  */
 function insertSeedData(db: DatabaseType): void {
-  const tableCount = (db.prepare('SELECT COUNT(*) as count FROM tables').get() as { count: number }).count;
+  const result = db.prepare('SELECT COUNT(*) as count FROM tables').get() as CountResult;
+  const tableCount = result.count;
   if (tableCount === 0) {
     doInsertSeedData(db);
   }
@@ -134,7 +140,11 @@ export function getDb(): DatabaseType {
   if (!dbInstance) {
     ensureDataDir();
     dbInstance = new Database(DB_PATH);
-    // MVP에서는 FK 제약 비활성화 (설계 문서 에러 처리 참조)
+    // MVP에서는 FK 제약 비활성화
+    // 이유: MVP 단계에서는 데이터 생성 순서를 제어하기 어렵고,
+    //       테스트 시 시드 데이터 삽입 순서 문제 회피
+    // TODO(post-MVP): FK 활성화 시 마이그레이션 순서 및 시드 스크립트 검토 필요
+    // 참조: 010-design.md 에러 처리 섹션
     dbInstance.pragma('foreign_keys = OFF');
     initSchema(dbInstance);
     insertSeedData(dbInstance);
@@ -148,12 +158,13 @@ export function getDb(): DatabaseType {
 export function ensureInitialized(): boolean {
   try {
     const db = getDb();
-    const tableCount = (db.prepare(`
+    const result = db.prepare(`
       SELECT COUNT(*) as count FROM sqlite_master
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
-    `).get() as { count: number }).count;
-    return tableCount === 5;
-  } catch {
+    `).get() as CountResult;
+    return result.count === 5;
+  } catch (error) {
+    console.error('[DB] 초기화 상태 확인 실패:', error);
     return false;
   }
 }
@@ -180,27 +191,7 @@ export function reseedData(): void {
 
 // ===== TSK-01-02: 카테고리/메뉴 조회 함수 =====
 
-/**
- * 카테고리 타입 정의
- */
-export interface Category {
-  id: number;
-  name: string;
-  sortOrder: number;
-}
-
-/**
- * 메뉴 타입 정의
- */
-export interface Menu {
-  id: number;
-  categoryId: number;
-  categoryName: string;
-  name: string;
-  price: number;
-  imageUrl: string | null;
-  isSoldOut: boolean;
-}
+import type { Category, MenuWithCategory } from '@/types';
 
 /**
  * 카테고리 목록 조회
@@ -220,7 +211,7 @@ export function getCategories(): Category[] {
  * 메뉴 목록 조회
  * @param includeSoldOut - true면 품절 메뉴 포함 (기본: false)
  */
-export function getMenus(includeSoldOut: boolean = false): Menu[] {
+export function getMenus(includeSoldOut: boolean = false): MenuWithCategory[] {
   const db = getDb();
   const whereClause = includeSoldOut ? '' : 'WHERE m.is_sold_out = 0';
   const stmt = db.prepare(`
@@ -238,11 +229,208 @@ export function getMenus(includeSoldOut: boolean = false): Menu[] {
     ORDER BY c.sort_order, m.id
   `);
   // SQLite returns 0/1 for boolean, convert to actual boolean
-  const rows = stmt.all() as Array<Omit<Menu, 'isSoldOut'> & { isSoldOut: number }>;
+  const rows = stmt.all() as Array<Omit<MenuWithCategory, 'isSoldOut'> & { isSoldOut: number }>;
   return rows.map(row => ({
     ...row,
     isSoldOut: row.isSoldOut === 1,
   }));
+}
+
+// ===== TSK-01-03: 주문 생성/조회 함수 =====
+
+/**
+ * 주문 항목 타입 정의
+ */
+export interface OrderItem {
+  id: number;
+  menuId: number;
+  menuName: string;
+  quantity: number;
+  price: number;
+  status: 'pending' | 'cooking' | 'completed';
+}
+
+/**
+ * 주문 타입 정의
+ */
+export interface Order {
+  id: number;
+  tableId: number;
+  status: 'pending' | 'cooking' | 'completed';
+  createdAt: string;
+  items: OrderItem[];
+}
+
+/**
+ * 주방용 주문 타입 정의 (tableNumber 포함)
+ */
+export interface KitchenOrder extends Order {
+  tableNumber: number;
+}
+
+/**
+ * 주문 생성
+ * @param tableId - 테이블 ID
+ * @param items - 주문 항목 배열 [{ menuId, quantity }]
+ * @returns 생성된 주문 ID
+ * @throws EMPTY_ITEMS - 주문 항목이 비어있을 때
+ * @throws INVALID_QUANTITY - 수량이 1~99 범위를 벗어날 때
+ */
+export function createOrder(tableId: number, items: { menuId: number; quantity: number }[]): number {
+  if (!items || items.length === 0) {
+    throw new Error('EMPTY_ITEMS');
+  }
+
+  for (const item of items) {
+    if (item.quantity < 1 || item.quantity > 99) {
+      throw new Error('INVALID_QUANTITY');
+    }
+  }
+
+  const db = getDb();
+
+  // 트랜잭션으로 주문과 주문 항목을 함께 생성
+  const insertOrder = db.prepare('INSERT INTO orders (table_id, status) VALUES (?, ?)');
+  const insertItem = db.prepare('INSERT INTO order_items (order_id, menu_id, quantity, status) VALUES (?, ?, ?, ?)');
+
+  const transaction = db.transaction(() => {
+    const orderResult = insertOrder.run(tableId, 'pending');
+    const orderId = orderResult.lastInsertRowid as number;
+
+    for (const item of items) {
+      insertItem.run(orderId, item.menuId, item.quantity, 'pending');
+    }
+
+    return orderId;
+  });
+
+  return transaction();
+}
+
+/**
+ * 테이블별 주문 조회
+ * @param tableId - 테이블 ID
+ * @returns 주문 목록 (최신순, items 포함)
+ */
+export function getOrdersByTable(tableId: number): Order[] {
+  const db = getDb();
+
+  // 주문 조회 (최신순)
+  const ordersStmt = db.prepare(`
+    SELECT id, table_id as tableId, status, created_at as createdAt
+    FROM orders
+    WHERE table_id = ?
+    ORDER BY created_at DESC
+  `);
+  const orders = ordersStmt.all(tableId) as Array<{
+    id: number;
+    tableId: number;
+    status: 'pending' | 'cooking' | 'completed';
+    createdAt: string;
+  }>;
+
+  // 주문 항목 조회
+  const itemsStmt = db.prepare(`
+    SELECT
+      oi.id,
+      oi.menu_id as menuId,
+      m.name as menuName,
+      oi.quantity,
+      m.price,
+      oi.status
+    FROM order_items oi
+    JOIN menus m ON oi.menu_id = m.id
+    WHERE oi.order_id = ?
+  `);
+
+  return orders.map(order => ({
+    ...order,
+    items: itemsStmt.all(order.id) as OrderItem[],
+  }));
+}
+
+/**
+ * 주방 주문 목록 조회 (pending, cooking 상태만)
+ * @returns 주문 목록 (오래된 것 먼저, tableNumber 포함)
+ */
+export function getKitchenOrders(): KitchenOrder[] {
+  const db = getDb();
+
+  // 주문 조회 (오래된 것 먼저, pending/cooking만)
+  const ordersStmt = db.prepare(`
+    SELECT
+      o.id,
+      o.table_id as tableId,
+      t.table_number as tableNumber,
+      o.status,
+      o.created_at as createdAt
+    FROM orders o
+    JOIN tables t ON o.table_id = t.id
+    WHERE o.status IN ('pending', 'cooking')
+    ORDER BY o.created_at ASC
+  `);
+  const orders = ordersStmt.all() as Array<{
+    id: number;
+    tableId: number;
+    tableNumber: number;
+    status: 'pending' | 'cooking' | 'completed';
+    createdAt: string;
+  }>;
+
+  // 주문 항목 조회
+  const itemsStmt = db.prepare(`
+    SELECT
+      oi.id,
+      oi.menu_id as menuId,
+      m.name as menuName,
+      oi.quantity,
+      m.price,
+      oi.status
+    FROM order_items oi
+    JOIN menus m ON oi.menu_id = m.id
+    WHERE oi.order_id = ?
+  `);
+
+  return orders.map(order => ({
+    ...order,
+    items: itemsStmt.all(order.id) as OrderItem[],
+  }));
+}
+
+/**
+ * 주문 상태 변경
+ * @param orderId - 주문 ID
+ * @param status - 변경할 상태 ('cooking' | 'completed')
+ * @returns 성공 여부
+ * @throws ORDER_NOT_FOUND - 주문이 존재하지 않을 때
+ * @throws INVALID_TRANSITION - 유효하지 않은 상태 전이일 때
+ */
+export function updateOrderStatus(orderId: number, status: 'pending' | 'cooking' | 'completed'): boolean {
+  const db = getDb();
+
+  // 현재 상태 조회
+  const order = db.prepare('SELECT status FROM orders WHERE id = ?').get(orderId) as { status: string } | undefined;
+
+  if (!order) {
+    throw new Error('ORDER_NOT_FOUND');
+  }
+
+  const currentStatus = order.status;
+
+  // 상태 전이 유효성 검사 (BR-01)
+  const validTransitions: Record<string, string[]> = {
+    pending: ['cooking'],
+    cooking: ['completed'],
+    completed: [],
+  };
+
+  if (!validTransitions[currentStatus].includes(status)) {
+    throw new Error('INVALID_TRANSITION');
+  }
+
+  // 상태 업데이트
+  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, orderId);
+  return true;
 }
 
 // 기본 export - getDb 함수 자체를 export하여 지연 초기화 지원
