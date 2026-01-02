@@ -315,8 +315,8 @@ workPackages:
             - "아이콘: w-[78px] h-[78px] text-[78px]"
             - "제목: text-[40px] font-bold"
         execution:
-          command: patch
-          startedAt: "2026-01-02T16:25:09.837Z"
+          command: verify
+          startedAt: "2026-01-02T16:39:49.015Z"
       - id: TSK-01-05
         title: 아이콘 선택기 컴포넌트
         category: development
@@ -540,7 +540,7 @@ workPackages:
         title: 즐겨찾기 기능
         category: development
         domain: fullstack
-        status: "[vf]"
+        status: "[xx]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-13"
@@ -560,9 +560,6 @@ workPackages:
             - Favorites 섹션에 즐겨찾기 페이지 표시
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
-        execution:
-          command: test
-          startedAt: "2026-01-02T16:19:11.554Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
@@ -650,11 +647,14 @@ workPackages:
           uiSpec:
             - md:px-[96px] px-6
             - "사이드바: absolute z-50 (모바일)"
+        execution:
+          command: review
+          startedAt: "2026-01-02T16:33:10.940Z"
       - id: TSK-03-02
         title: 다크모드 지원
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: low
         assignee: "-"
         schedule: "2026-01-15"
