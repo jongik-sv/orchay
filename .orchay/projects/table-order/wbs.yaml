@@ -55,7 +55,7 @@ workPackages:
         title: 프로젝트 구조 및 타입 정의
         category: infrastructure
         domain: fullstack
-        status: "[im]"
+        status: "[vf]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -78,9 +78,6 @@ workPackages:
           techSpec:
             - app/, components/, lib/, types/ 폴더
             - PRD 섹션 4 데이터 모델 기반 타입
-        execution:
-          command: verify
-          startedAt: "2026-01-02T06:09:30.484Z"
       - id: TSK-00-03
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
@@ -154,6 +151,9 @@ workPackages:
             - "menus: id, category_id, name, price, image_url, is_sold_out"
             - "orders: id, table_id, status, created_at"
             - "order_items: id, order_id, menu_id, quantity, status"
+        execution:
+          command: audit
+          startedAt: "2026-01-02T06:11:28.354Z"
       - id: TSK-01-02
         title: 카테고리/메뉴 조회 API 구현
         category: development
