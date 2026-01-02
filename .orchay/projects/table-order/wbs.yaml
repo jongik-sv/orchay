@@ -107,8 +107,8 @@ workPackages:
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
         execution:
-          command: review
-          startedAt: "2026-01-02T05:37:07.035Z"
+          command: apply
+          startedAt: "2026-01-02T05:40:22.495Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -119,7 +119,7 @@ workPackages:
         title: SQLite 데이터베이스 설정 및 스키마 생성
         category: development
         domain: backend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -155,7 +155,7 @@ workPackages:
         title: 카테고리/메뉴 조회 API 구현
         category: development
         domain: backend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-02
@@ -185,7 +185,7 @@ workPackages:
         title: 주문 생성/조회 API 구현
         category: development
         domain: backend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-02 ~ 2026-01-03
@@ -251,6 +251,9 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
+        execution:
+          command: review
+          startedAt: "2026-01-02T05:39:11.377Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -261,7 +264,7 @@ workPackages:
         title: Socket.io 서버 설정 및 Custom Server 구성
         category: development
         domain: backend
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -291,7 +294,7 @@ workPackages:
         title: 실시간 이벤트 송수신 구현
         category: development
         domain: fullstack
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -317,9 +320,6 @@ workPackages:
           techSpec:
             - lib/socket.ts - 클라이언트 유틸
             - useSocket 커스텀 훅 (선택)
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:36:39.013Z"
       - id: TSK-02-03
         title: "WP-02 통합 확인: 실시간 통신 검증"
         category: development
@@ -351,6 +351,9 @@ workPackages:
             - order:new 이벤트 주방에 전달
             - order:status 이벤트 고객에 전달
             - 재연결 시 기존 룸 복원
+        execution:
+          command: review
+          startedAt: "2026-01-02T05:38:53.310Z"
   - id: WP-03
     title: 고객 화면 (Customer)
     status: planned
@@ -361,7 +364,7 @@ workPackages:
         title: 메뉴 목록 페이지 구현
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -397,7 +400,7 @@ workPackages:
         title: 장바구니 및 주문 기능 구현
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-04
@@ -435,7 +438,7 @@ workPackages:
         title: 주문 상태 추적 페이지 구현
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-04
@@ -468,7 +471,7 @@ workPackages:
         title: "WP-03 통합 확인: 고객 화면 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-04
@@ -510,7 +513,7 @@ workPackages:
         title: 주방 주문 현황 페이지 구현
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-04
@@ -545,7 +548,7 @@ workPackages:
         title: 주문 상태 관리 기능 구현
         category: development
         domain: frontend
-        status: "[dd]"
+        status: "[ap]"
         priority: high
         assignee: "-"
         schedule: 2026-01-04 ~ 2026-01-05
@@ -642,3 +645,6 @@ workPackages:
             - 주문이 주방 화면에 실시간으로 표시
             - 주방에서 조리 상태 변경 가능
             - 상태 변경이 고객 화면에 실시간 반영
+        execution:
+          command: apply
+          startedAt: "2026-01-02T05:40:13.828Z"
