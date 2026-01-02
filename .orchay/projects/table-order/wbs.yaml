@@ -220,7 +220,7 @@ workPackages:
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[ ]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -248,6 +248,9 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
+        execution:
+          command: start
+          startedAt: "2026-01-02T05:35:42.904Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -288,7 +291,7 @@ workPackages:
         title: 실시간 이벤트 송수신 구현
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[  ]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -318,7 +321,7 @@ workPackages:
         title: "WP-02 통합 확인: 실시간 통신 검증"
         category: development
         domain: test
-        status: "[dd]"
+        status: "[  ]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -385,8 +388,8 @@ workPackages:
             - backdrop-blur-[16px] bg-white/25
             - 그라데이션 배경 from-[#E8DFFF] via-[#F3E8FF] to-[#FFE4F3]
         execution:
-          command: review
-          startedAt: "2026-01-02T05:20:35.092Z"
+          command: apply
+          startedAt: "2026-01-02T05:24:09.926Z"
       - id: TSK-03-02
         title: 장바구니 및 주문 기능 구현
         category: development
@@ -422,6 +425,9 @@ workPackages:
             - CartItem 컴포넌트
             - 하단 고정 장바구니 바
             - Primary 버튼 - bg-gradient-to-r from-primary-500 to-primary-600
+        execution:
+          command: apply
+          startedAt: "2026-01-02T05:22:02.751Z"
       - id: TSK-03-03
         title: 주문 상태 추적 페이지 구현
         category: development
@@ -489,8 +495,8 @@ workPackages:
             - /status 페이지에서 주문 상태 실시간 확인
             - 글래스모피즘 UI 적용 확인
         execution:
-          command: review
-          startedAt: "2026-01-02T05:20:04.498Z"
+          command: apply
+          startedAt: "2026-01-02T05:23:56.086Z"
   - id: WP-04
     title: 주방 화면 (KDS)
     status: planned
@@ -595,6 +601,9 @@ workPackages:
             - 조리완료 버튼 → completed 상태 변경
             - 완료 주문 숨김/별도 표시 동작
             - 주문 카드 그리드 레이아웃 확인
+        execution:
+          command: start
+          startedAt: "2026-01-02T05:36:09.754Z"
   - id: WP-05
     title: 통합 테스트 및 마무리
     status: planned
@@ -630,3 +639,6 @@ workPackages:
             - 주문이 주방 화면에 실시간으로 표시
             - 주방에서 조리 상태 변경 가능
             - 상태 변경이 고객 화면에 실시간 반영
+        execution:
+          command: start
+          startedAt: "2026-01-02T05:36:20.216Z"
