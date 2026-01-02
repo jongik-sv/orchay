@@ -45,6 +45,9 @@ workPackages:
             - React 19.x
             - TypeScript 5.x
             - Tailwind CSS 3.x
+        execution:
+          command: review
+          startedAt: "2026-01-02T07:13:14.328Z"
       - id: TSK-00-02
         title: 핵심 의존성 설치 및 설정
         category: infrastructure
@@ -74,8 +77,8 @@ workPackages:
             - better-sqlite3 ^11.0.0
             - zustand ^5.0.0
         execution:
-          command: apply
-          startedAt: "2026-01-02T07:11:04.335Z"
+          command: review
+          startedAt: "2026-01-02T07:13:33.366Z"
       - id: TSK-00-03
         title: 프로젝트 구조 및 기본 레이아웃 생성
         category: infrastructure
@@ -363,7 +366,7 @@ workPackages:
         title: 메인 레이아웃 (사이드바 + 에디터 영역)
         category: development
         domain: frontend
-        status: "[ ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-09"
@@ -385,9 +388,6 @@ workPackages:
           uiSpec:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
-        execution:
-          command: start
-          startedAt: "2026-01-02T07:07:25.765Z"
       - id: TSK-02-02
         title: 사이드바 컴포넌트
         category: development
@@ -415,6 +415,9 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
+        execution:
+          command: review
+          startedAt: "2026-01-02T07:12:06.217Z"
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
