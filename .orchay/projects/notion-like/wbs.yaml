@@ -162,7 +162,7 @@ workPackages:
         title: WP-00 통합 검증
         category: infrastructure
         domain: test
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: "2026-01-03"
@@ -185,9 +185,6 @@ workPackages:
             - DB에서 페이지 목록 조회 가능
             - 스토어 상태 변경 시 UI 반영
           note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
-        execution:
-          command: build
-          startedAt: "2026-01-02T15:46:54.130Z"
   - id: WP-01
     title: 핵심 에디터 (BlockNote)
     status: planned
@@ -536,7 +533,7 @@ workPackages:
         title: 즐겨찾기 기능
         category: development
         domain: fullstack
-        status: "[dd]"
+        status: "[ap]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-13"
@@ -555,6 +552,9 @@ workPackages:
             - Favorites 섹션에 즐겨찾기 페이지 표시
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
+        execution:
+          command: build
+          startedAt: "2026-01-02T15:53:12.798Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
