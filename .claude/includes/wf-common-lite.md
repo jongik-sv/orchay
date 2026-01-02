@@ -24,7 +24,7 @@
 4. **프로젝트 여러 개**:
    - **명시된 경우**: 해당 프로젝트 사용
    - **미명시**: 전체 검색 모드
-     1. 모든 프로젝트의 `wbs.md` 검색
+     1. 모든 프로젝트의 `wbs.yaml` 검색
      2. Task ID가 존재하는 프로젝트 목록 수집
      3. **1개 발견**: 자동 선택
      4. **여러 개 발견**: 선택지 제시
@@ -52,7 +52,7 @@
 
 | 용도 | 경로 |
 |------|------|
-| WBS 파일 | `.orchay/projects/{project}/wbs.md` |
+| WBS 파일 | `.orchay/projects/{project}/wbs.yaml` |
 | Task 문서 | `.orchay/projects/{project}/tasks/{TSK-ID}/` |
 | 템플릿 | `.orchay/templates/` |
 | 프로젝트 설정 | `.orchay/projects/{project}/project.json` |
@@ -105,32 +105,44 @@
 
 ---
 
-## wbs.md 구조
+## wbs.yaml 구조
 
-```markdown
-## WP-01: {제목}
-- status: in_progress
-- priority: high
-
-### ACT-01-01: {제목}
-- status: in_progress
-
-#### TSK-01-01-01: {제목}
-- category: development
-- status: implement [im]
-- priority: high
-- assignee: {담당자}
-- depends: TSK-XX-XX-XX
+```yaml
+project:
+  id: {project-id}
+  name: {프로젝트명}
+  status: active
+workPackages:
+  - id: WP-01
+    title: {제목}
+    status: planned
+    priority: high
+    tasks:
+      - id: TSK-01-01
+        title: {제목}
+        category: development
+        domain: frontend
+        status: "[im]"
+        priority: high
+        assignee: "-"
+        depends: [TSK-XX-XX]
+        requirements:
+          prdRef: PRD 섹션
+          items:
+            - 요구사항 1
+            - 요구사항 2
+          acceptance:
+            - 수용 기준 1
 ```
 
 ---
 
 ## 상태 업데이트 형식
 
-wbs.md에서 Task 상태 변경:
-```
-- status: {상태명} [{코드}]
-예: - status: implement [im]
+wbs.yaml에서 Task 상태 변경:
+```yaml
+status: "[코드]"
+예: status: "[im]"
 ```
 
 ---

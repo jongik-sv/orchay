@@ -63,7 +63,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 
 | 검증 | 확인 | 조치 |
 |------|------|------|
-| Task 존재 | wbs.md에서 Task ID 확인 | 없으면 에러 |
+| Task 존재 | wbs.yaml에서 Task ID 확인 | 없으면 에러 |
 | 상태 확인 | `[ ]` Todo 상태여야 함 | 아니면 에러 |
 | 카테고리 확인 | `development` 여야 함 | 아니면 에러 |
 

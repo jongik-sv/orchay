@@ -13,118 +13,179 @@ local config = wezterm.config_builder()
 local mux = wezterm.mux
 
 -- =============================================================================
--- 기본 설정 (필요시 수정)
+-- DEFAULTS: 모든 설정 가능한 값을 한 곳에 모음
 -- =============================================================================
-config.default_prog = { 'powershell.exe', '-NoLogo' }  -- Windows
--- config.default_prog = { '/bin/bash' }  -- Linux/macOS
+local DEFAULTS = {
+  -- Shell
+  default_prog = { 'powershell.exe', '-NoLogo' },
 
-config.font = wezterm.font('JetBrains Mono', { weight = 'Medium' })
-config.font_size = 11.0
-config.color_scheme = 'Tokyo Night'
+  -- Appearance
+  font_family = 'JetBrains Mono',
+  font_weight = 'Medium',
+  font_size = 11.0,
+  color_scheme = 'Tokyo Night',
+  window_opacity = 0.95,
+  window_padding = { left = 5, right = 5, top = 5, bottom = 5 },
+  scrollback_lines = 10000,
 
-config.window_background_opacity = 0.95
-config.window_padding = { left = 5, right = 5, top = 5, bottom = 5 }
+  -- Tab bar
+  use_fancy_tab_bar = false,
+  hide_tab_bar_if_only_one_tab = true,
+  tab_bar_at_bottom = true,
+  audible_bell = 'Disabled',
+  cursor_style = 'BlinkingBar',
 
-config.use_fancy_tab_bar = false
-config.hide_tab_bar_if_only_one_tab = true
-config.tab_bar_at_bottom = true
+  -- Layout
+  window_width = 1920,
+  window_height = 1080,
+  max_rows = 3,
+  scheduler_ratio = 0.45,
 
-config.scrollback_lines = 10000
-config.audible_bell = 'Disabled'
-config.default_cursor_style = 'BlinkingBar'
+  -- Commands
+  worker_startup_cmd = 'claude --dangerously-skip-permissions',
+
+  -- Timing
+  init_delay = 1.5,  -- Windows: 셸 초기화 대기 시간 (초)
+
+  -- Column sizing (magic numbers documented)
+  -- WezTerm의 split()이 size 파라미터를 약간 작게 적용하는 문제 보정
+  column_size_correction = 0.02,
+  max_column_ratio = 0.6,
+}
 
 -- =============================================================================
--- Orchay gui-startup 이벤트
+-- WezTerm 기본 설정 (DEFAULTS 사용)
+-- =============================================================================
+config.default_prog = DEFAULTS.default_prog
+config.font = wezterm.font(DEFAULTS.font_family, { weight = DEFAULTS.font_weight })
+config.font_size = DEFAULTS.font_size
+config.color_scheme = DEFAULTS.color_scheme
+config.window_background_opacity = DEFAULTS.window_opacity
+config.window_padding = DEFAULTS.window_padding
+config.use_fancy_tab_bar = DEFAULTS.use_fancy_tab_bar
+config.hide_tab_bar_if_only_one_tab = DEFAULTS.hide_tab_bar_if_only_one_tab
+config.tab_bar_at_bottom = DEFAULTS.tab_bar_at_bottom
+config.scrollback_lines = DEFAULTS.scrollback_lines
+config.audible_bell = DEFAULTS.audible_bell
+config.default_cursor_style = DEFAULTS.cursor_style
+
+-- =============================================================================
+-- 유틸리티 함수
 -- =============================================================================
 
--- gui-startup 이벤트: wezterm start 실행 시 발생
--- mux-startup과 달리 CLI 소켓 연결 없이 내부 API로 레이아웃 생성
--- 참고: https://wezterm.org/config/lua/gui-events/gui-startup.html
-wezterm.on('gui-startup', function(cmd)
-  -- 설정 파일 경로: ~/.config/wezterm/orchay-startup.json
-  local home = wezterm.home_dir
-  local startup_file = home .. '/.config/wezterm/orchay-startup.json'
-
-  -- 설정 파일 읽기
-  local file = io.open(startup_file, 'r')
+--- 파일을 안전하게 읽기
+-- @param path 파일 경로
+-- @return content, error_message (실패 시 content는 nil)
+local function safe_read_file(path)
+  local file, err = io.open(path, 'r')
   if not file then
-    -- 설정 파일 없으면 일반 시작 (레이아웃 생성 안함)
-    return
+    return nil, 'Cannot open file: ' .. (err or 'unknown')
   end
 
   local content = file:read('*a')
   file:close()
 
-  -- JSON 파싱 (간단한 패턴 매칭)
-  local cwd = content:match('"cwd"%s*:%s*"([^"]+)"')
-  local workers_str = content:match('"workers"%s*:%s*(%d+)')
-  local workers = tonumber(workers_str) or 0
-  local scheduler_cmd = content:match('"scheduler_cmd"%s*:%s*"([^"]+)"')
-  local worker_startup_cmd = content:match('"worker_startup_cmd"%s*:%s*"([^"]+)"') or 'claude --dangerously-skip-permissions'
-
-  -- pane_startup 파싱 (예: {"1":"cmd1","3":"cmd3"})
-  local pane_startup_str = content:match('"pane_startup"%s*:%s*({.-})') or '{}'
-  local pane_startup = {}
-  for k, v in string.gmatch(pane_startup_str, '"(%d+)"%s*:%s*"([^"]*)"') do
-    pane_startup[tonumber(k)] = v
+  if not content or content == '' then
+    return nil, 'Empty file'
   end
 
-  -- launcher 설정 파싱 (orchay.yaml에서 전달됨)
-  local width = tonumber(content:match('"width"%s*:%s*(%d+)')) or 1920
-  local height = tonumber(content:match('"height"%s*:%s*(%d+)')) or 1080
-  local max_rows = tonumber(content:match('"max_rows"%s*:%s*(%d+)')) or 3
-  local scheduler_ratio = tonumber(content:match('"scheduler_ratio"%s*:%s*([%d%.]+)')) or 0.45
+  return content, nil
+end
 
-  -- 설정이 유효하지 않으면 일반 시작
-  if not cwd or workers == 0 then
-    return
+--- JSON 문자열 값 파싱 (escape 처리 포함)
+-- @param json_str 전체 JSON 문자열
+-- @param key 찾을 키
+-- @return 값 또는 nil
+local function parse_json_string(json_str, key)
+  -- 키 위치 찾기
+  local key_pattern = '"' .. key .. '"%s*:%s*"'
+  local start_pos = json_str:find(key_pattern)
+  if not start_pos then
+    return nil
   end
 
-  -- Windows 백슬래시 이스케이프 처리 (cwd와 scheduler_cmd 모두)
-  cwd = cwd:gsub('\\\\', '\\')
-  if scheduler_cmd then
-    scheduler_cmd = scheduler_cmd:gsub('\\\\', '\\')
+  -- 값의 시작 따옴표 위치 찾기
+  local value_start = json_str:find('"', start_pos + #key + 3)
+  if not value_start then
+    return nil
   end
 
-  -- 파일 삭제 (일회용)
-  os.remove(startup_file)
+  -- 문자별로 파싱하여 escape 처리
+  local result = {}
+  local i = value_start + 1
+  local len = #json_str
 
-  -- 레이아웃 생성
-  local tab, scheduler_pane, window = mux.spawn_window { cwd = cwd }
+  while i <= len do
+    local char = json_str:sub(i, i)
 
-  -- 창 크기 설정 (orchay.yaml의 width, height 적용)
-  window:gui_window():set_inner_size(width, height)
+    if char == '\\' and i < len then
+      local next_char = json_str:sub(i + 1, i + 1)
+      if next_char == '"' then
+        table.insert(result, '"')
+        i = i + 2
+      elseif next_char == '\\' then
+        table.insert(result, '\\')
+        i = i + 2
+      elseif next_char == 'n' then
+        table.insert(result, '\n')
+        i = i + 2
+      elseif next_char == 'r' then
+        table.insert(result, '\r')
+        i = i + 2
+      elseif next_char == 't' then
+        table.insert(result, '\t')
+        i = i + 2
+      else
+        table.insert(result, char)
+        i = i + 1
+      end
+    elseif char == '"' then
+      -- 문자열 끝
+      return table.concat(result)
+    else
+      table.insert(result, char)
+      i = i + 1
+    end
+  end
 
-  -- Worker pane 비율 계산 (1 - scheduler_ratio)
-  local worker_ratio = 1 - scheduler_ratio
+  return nil  -- 닫히지 않은 문자열
+end
 
-  -- ==========================================================================
-  -- Worker 분배 계산 (균형 분배)
-  -- ==========================================================================
-  -- 목표 레이아웃:
-  -- Workers 1-3: 1열          Workers 4-6: 2열
-  -- +--------+------+         +--------+------+------+
-  -- |        | W1   |         |        | W1   | W4   |
-  -- | Sched  +------+         | Sched  +------+------+
-  -- |        | W2   |         |        | W2   | W5   |
-  -- |        +------+         |        +------+------+
-  -- |        | W3   |         |        | W3   | W6   |
-  -- +--------+------+         +--------+------+------+
-  --
-  -- 분배 규칙:
-  -- - 4 workers: [2, 2] (균등)
-  -- - 5 workers: [3, 2] (첫 열에 1개 더)
-  -- - 6 workers: [3, 3] (균등)
+--- JSON 숫자 값 파싱
+-- @param json_str 전체 JSON 문자열
+-- @param key 찾을 키
+-- @return 숫자 또는 nil
+local function parse_json_number(json_str, key)
+  local pattern = '"' .. key .. '"%s*:%s*([%-]?[%d%.]+)'
+  local value_str = json_str:match(pattern)
+  return value_str and tonumber(value_str)
+end
 
+--- pane_startup 객체 파싱
+-- @param json_str 전체 JSON 문자열
+-- @return {[worker_num] = cmd} 테이블
+local function parse_pane_startup(json_str)
+  local result = {}
+  local obj_str = json_str:match('"pane_startup"%s*:%s*({.-})') or '{}'
+
+  for k, v in string.gmatch(obj_str, '"(%d+)"%s*:%s*"([^"]*)"') do
+    result[tonumber(k)] = v
+  end
+
+  return result
+end
+
+--- Worker 분배 계산
+-- @param workers 총 Worker 수
+-- @param max_rows 열당 최대 Worker 수
+-- @return workers_per_column 테이블, columns 수
+local function calculate_worker_distribution(workers, max_rows)
   local columns = math.ceil(workers / max_rows)
-
-  -- 균형 분배: 각 열에 가능한 균등하게 배분
   local workers_per_column = {}
   local base_per_col = math.floor(workers / columns)
   local extra = workers % columns
 
   for col = 1, columns do
-    -- 앞쪽 열부터 extra 개만큼 1씩 추가
     if col <= extra then
       table.insert(workers_per_column, base_per_col + 1)
     else
@@ -132,111 +193,170 @@ wezterm.on('gui-startup', function(cmd)
     end
   end
 
-  -- ==========================================================================
-  -- Pane 분할 (단순화된 버전)
-  -- ==========================================================================
-  -- WezTerm split('Right', size=0.5):
-  --   - 원본 pane이 왼쪽에 남고 (50%)
-  --   - 새 pane이 오른쪽에 생성 (50%)
-  --
-  -- WezTerm split('Bottom', size=0.5):
-  --   - 원본 pane이 위쪽에 남고 (50%)
-  --   - 새 pane이 아래쪽에 생성 (50%)
+  return workers_per_column, columns
+end
 
+--- 열 내에서 행 분할
+-- @param col_pane 분할할 열 pane
+-- @param rows 생성할 행 수
+-- @param cwd 작업 디렉토리
+-- @return pane 테이블
+local function split_rows_in_column(col_pane, rows, cwd)
+  local panes = { col_pane }
+
+  for row = 1, rows - 1 do
+    local remaining = rows - row
+    local size = remaining / (remaining + 1)
+    local bottom = panes[row]:split {
+      direction = 'Bottom',
+      size = size,
+      cwd = cwd,
+    }
+    if bottom then
+      table.insert(panes, bottom)
+    end
+  end
+
+  return panes
+end
+
+--- Worker pane 전체 생성
+-- @param scheduler_pane 스케줄러 pane
+-- @param startup_config 시작 설정
+-- @return worker_panes 테이블
+local function create_worker_panes(scheduler_pane, startup_config)
+  local workers_per_column, columns = calculate_worker_distribution(
+    startup_config.workers,
+    startup_config.max_rows
+  )
+
+  local worker_ratio = 1 - startup_config.scheduler_ratio
   local worker_panes = {}
 
-  -- 1단계: Worker 영역 생성 (scheduler 오른쪽)
+  -- 1단계: Worker 영역 생성
   local worker_area = scheduler_pane:split {
     direction = 'Right',
     size = worker_ratio,
-    cwd = cwd,
+    cwd = startup_config.cwd,
   }
 
-  -- 2단계: 열과 행 분할
+  if not worker_area then
+    wezterm.log_error('[orchay] Failed to create worker area')
+    return {}
+  end
+
+  -- 2단계: 열/행 분할
   if columns == 1 then
-    -- 1열: 세로로만 분할
-    local col_panes = { worker_area }
-    local rows = workers_per_column[1]
-
-    -- 세로 분할: 위에서 아래로
-    for row = 1, rows - 1 do
-      local remaining_rows = rows - row
-      local size = remaining_rows / (remaining_rows + 1)
-      local bottom_pane = col_panes[row]:split {
-        direction = 'Bottom',
-        size = size,
-        cwd = cwd,
-      }
-      table.insert(col_panes, bottom_pane)
-    end
-
-    for _, pane in ipairs(col_panes) do
+    local panes = split_rows_in_column(worker_area, workers_per_column[1], startup_config.cwd)
+    for _, pane in ipairs(panes) do
       table.insert(worker_panes, pane)
     end
-
   else
-    -- 다중 열: 균등 분할을 위해 오른쪽부터 순차적으로 분할
-    -- 예: 3열일 때 - 먼저 1/3 분할, 남은 부분에서 1/2 분할
-    --
-    -- Windows에서 size 파라미터가 정확히 적용되지 않는 문제 보정:
-    -- 새 pane(오른쪽)이 지정 크기보다 작아지는 현상이 있어 약간 보정
+    -- 다중 열
     local col_areas = {}
     local remaining_area = worker_area
 
-    -- 오른쪽부터 분할 (columns-1 번 분할)
     for col = columns, 2, -1 do
-      -- 남은 영역에서 1/col 크기로 오른쪽에 새 열 생성
-      -- Windows 보정: 약간 크게 (0.02 추가)
       local base_size = 1 / col
-      local adjusted_size = math.min(base_size + 0.02, 0.6)  -- 최대 60%
+      local adjusted_size = math.min(
+        base_size + DEFAULTS.column_size_correction,
+        DEFAULTS.max_column_ratio
+      )
       local new_col = remaining_area:split {
         direction = 'Right',
         size = adjusted_size,
-        cwd = cwd,
+        cwd = startup_config.cwd,
       }
-      table.insert(col_areas, 1, new_col)  -- 앞에 삽입 (오른쪽 → 왼쪽 순)
-    end
-    table.insert(col_areas, 1, remaining_area)  -- 첫 번째 열 (가장 왼쪽)
-
-    -- 각 열에서 세로 분할
-    for col = 1, columns do
-      local col_pane = col_areas[col]
-      local rows = workers_per_column[col]
-      local col_panes = { col_pane }
-
-      -- 세로 분할: 위에서 아래로
-      for row = 1, rows - 1 do
-        local remaining_rows = rows - row
-        local size = remaining_rows / (remaining_rows + 1)
-        local bottom_pane = col_panes[row]:split {
-          direction = 'Bottom',
-          size = size,
-          cwd = cwd,
-        }
-        table.insert(col_panes, bottom_pane)
+      if new_col then
+        table.insert(col_areas, 1, new_col)
       end
+    end
+    table.insert(col_areas, 1, remaining_area)
 
-      for _, pane in ipairs(col_panes) do
-        table.insert(worker_panes, pane)
+    -- 각 열에서 행 분할
+    for col = 1, columns do
+      if col <= #col_areas then
+        local panes = split_rows_in_column(
+          col_areas[col],
+          workers_per_column[col],
+          startup_config.cwd
+        )
+        for _, pane in ipairs(panes) do
+          table.insert(worker_panes, pane)
+        end
       end
     end
   end
 
-  -- 스케줄러 pane에 포커스
+  return worker_panes
+end
+
+-- =============================================================================
+-- gui-startup 이벤트 핸들러 (단순화됨)
+-- =============================================================================
+wezterm.on('gui-startup', function(cmd)
+  -- 1. 설정 파일 읽기
+  local home = wezterm.home_dir
+  local startup_file = home .. '/.config/wezterm/orchay-startup.json'
+
+  local content, read_err = safe_read_file(startup_file)
+  if not content then
+    -- 설정 파일 없으면 일반 시작
+    return
+  end
+
+  -- 2. JSON 파싱
+  local startup_config = {
+    cwd = parse_json_string(content, 'cwd'),
+    workers = parse_json_number(content, 'workers') or 0,
+    scheduler_cmd = parse_json_string(content, 'scheduler_cmd'),
+    width = parse_json_number(content, 'width') or DEFAULTS.window_width,
+    height = parse_json_number(content, 'height') or DEFAULTS.window_height,
+    max_rows = parse_json_number(content, 'max_rows') or DEFAULTS.max_rows,
+    scheduler_ratio = parse_json_number(content, 'scheduler_ratio') or DEFAULTS.scheduler_ratio,
+    worker_startup_cmd = parse_json_string(content, 'worker_startup_cmd') or DEFAULTS.worker_startup_cmd,
+    pane_startup = parse_pane_startup(content),
+  }
+
+  -- 3. 유효성 검증
+  if not startup_config.cwd or startup_config.workers < 1 then
+    return
+  end
+
+  -- 4. Windows 백슬래시 처리
+  startup_config.cwd = startup_config.cwd:gsub('\\\\', '\\')
+  if startup_config.scheduler_cmd then
+    startup_config.scheduler_cmd = startup_config.scheduler_cmd:gsub('\\\\', '\\')
+  end
+
+  -- 5. 설정 파일 삭제 (일회용)
+  os.remove(startup_file)
+
+  -- 6. 창 및 레이아웃 생성
+  local tab, scheduler_pane, window = mux.spawn_window { cwd = startup_config.cwd }
+  window:gui_window():set_inner_size(startup_config.width, startup_config.height)
+
+  -- 7. Worker pane 생성
+  local worker_panes = create_worker_panes(scheduler_pane, startup_config)
+  if #worker_panes == 0 then
+    wezterm.log_error('[orchay] No worker panes created')
+    return
+  end
+
+  -- 8. 스케줄러 pane에 포커스
   scheduler_pane:activate()
 
-  -- 1.5초 후에 명령 전송 (셸 초기화 대기)
-  -- Windows PowerShell에서는 \r이 엔터키로 인식됨
-  wezterm.time.call_after(1.5, function()
-    -- Worker 번호(1-indexed)별로 startup 명령 전송
+  -- 9. 명령 전송 (셸 초기화 대기 후)
+  wezterm.time.call_after(DEFAULTS.init_delay, function()
+    -- Worker에 startup 명령 전송
     for worker_num, pane in ipairs(worker_panes) do
-      local cmd = pane_startup[worker_num] or worker_startup_cmd
+      local cmd = startup_config.pane_startup[worker_num] or startup_config.worker_startup_cmd
       pane:send_text(cmd .. '\r')
     end
 
-    -- 스케줄러 명령 실행 (있으면)
-    if scheduler_cmd then
-      scheduler_pane:send_text(scheduler_cmd .. '\r')
+    -- 스케줄러 명령 전송
+    if startup_config.scheduler_cmd then
+      scheduler_pane:send_text(startup_config.scheduler_cmd .. '\r')
     end
   end)
 end)

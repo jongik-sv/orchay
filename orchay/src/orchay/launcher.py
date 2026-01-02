@@ -29,14 +29,12 @@ import glob
 import logging
 import os
 import platform
-import shlex
 import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
 
 # 직접 실행 시 패키지 경로 추가 (import 전에 실행되어야 함)
 _src_path = Path(__file__).resolve().parent.parent
@@ -215,26 +213,6 @@ def show_orchay_help() -> int:
         return result.returncode
 
 
-def _create_layout_config(workers: int) -> list[int]:
-    """Worker 수에 따른 레이아웃 구성 반환.
-
-    Args:
-        workers: Worker pane 개수 (1-6)
-
-    Returns:
-        list[int]: 각 열의 Worker 수 (예: [3] = 1열 3개, [2,2] = 2열 각 2개)
-    """
-    layout_map: dict[int, list[int]] = {
-        1: [1],
-        2: [2],
-        3: [3],
-        4: [2, 2],
-        5: [3, 2],
-        6: [3, 3],
-    }
-    return layout_map[min(workers, 6)]
-
-
 def get_pid_file(cwd: str) -> Path:
     """현재 폴더의 WezTerm PID 파일 경로."""
     return Path(cwd) / ".orchay" / "logs" / "wezterm.pid"
@@ -300,301 +278,6 @@ def kill_orchay_wezterm(cwd: str) -> None:
     log.debug("kill_orchay_wezterm() completed")
 
 
-# =============================================================================
-# Windows 전용: gui-startup 이벤트 방식
-# =============================================================================
-
-
-def launch_wezterm_windows(
-    cwd: str,
-    workers: int,
-    full_orchay_cmd_list: list[str],
-    launcher_args: argparse.Namespace,
-) -> int:
-    """Windows 전용 WezTerm 레이아웃 생성.
-
-    Windows에서는 CLI 소켓 연결 문제가 있어 gui-startup 이벤트를 사용합니다.
-    설정 파일을 생성하고 WezTerm을 시작하면, ~/.wezterm.lua의 gui-startup
-    이벤트에서 레이아웃을 생성합니다.
-
-    Args:
-        cwd: 현재 작업 디렉토리
-        workers: Worker pane 개수
-        full_orchay_cmd_list: 스케줄러 실행 명령 리스트
-        launcher_args: launcher 설정 인자
-
-    Returns:
-        int: 종료 코드 (0: 성공)
-
-    Note:
-        - CLI 소켓 연결 문제 참고: https://github.com/wezterm/wezterm/issues/4456
-        - gui-startup 이벤트 문서: https://wezterm.org/config/lua/gui-events/gui-startup.html
-    """
-    import json
-
-    # 1. 설정 파일 생성 (~/.config/wezterm/orchay-startup.json)
-    wezterm_config_dir = Path.home() / ".config" / "wezterm"
-    wezterm_config_dir.mkdir(parents=True, exist_ok=True)
-    startup_file = wezterm_config_dir / "orchay-startup.json"
-
-    # Config 로드 (worker_command.startup을 위해)
-    from orchay.utils.config import load_config
-
-    config = load_config()
-
-    # 스케줄러 pane 비율 계산 (scheduler_cols / (scheduler_cols + worker_cols))
-    scheduler_cols = launcher_args.scheduler_cols
-    worker_cols = launcher_args.worker_cols
-    scheduler_ratio = scheduler_cols / (scheduler_cols + worker_cols)
-
-    # pane_startup 포맷: {"1": "cmd1", "3": "cmd3"}
-    pane_startup_json = {
-        str(k): v for k, v in config.worker_command.pane_startup.items()
-    }
-
-    startup_config = {
-        "cwd": cwd,
-        "workers": workers,
-        "scheduler_cmd": " ".join(full_orchay_cmd_list),
-        # launcher 설정 추가
-        "width": launcher_args.width,
-        "height": launcher_args.height,
-        "max_rows": launcher_args.max_rows,
-        "scheduler_ratio": round(scheduler_ratio, 2),  # 스케줄러 pane 비율
-        "font_size": launcher_args.font_size,
-        # worker startup 명령어
-        "worker_startup_cmd": config.worker_command.startup,  # 기본값 (호환성 유지)
-        "pane_startup": pane_startup_json,  # pane별 오버라이드
-    }
-
-    with open(startup_file, "w", encoding="utf-8") as f:
-        json.dump(startup_config, f, ensure_ascii=False)
-
-    log.info(f"Created startup config: {startup_file}")
-    log.info(f"  cwd={cwd}")
-    log.info(f"  workers={workers}")
-    log.info(f"  scheduler_cmd={' '.join(full_orchay_cmd_list)}")
-
-    # 2. WezTerm 시작 (gui-startup 이벤트가 레이아웃 생성)
-    # --config-file로 orchay 전용 설정 파일 사용 (사용자 ~/.wezterm.lua 불필요)
-    # 주의: --config-file은 wezterm 전역 옵션이므로 start 앞에 위치해야 함
-    config_file = _get_bundled_file("wezterm-orchay-windows.lua")
-    wezterm_launch_args = ["wezterm", "--config-file", str(config_file), "start", "--cwd", cwd]
-
-    # 시작 전 wezterm-gui PID 목록 기록
-    pids_before = get_wezterm_gui_pids()
-    log.debug(f"WezTerm PIDs before launch: {pids_before}")
-
-    log.debug(f"Popen: {wezterm_launch_args}")
-    # WEZTERM_LOG=warn으로 불필요한 에러 로그 숨김
-    env = os.environ.copy()
-    env["WEZTERM_LOG"] = "warn"
-    subprocess.Popen(
-        wezterm_launch_args,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-        env=env,
-    )
-
-    # 잠시 대기 후 새로 생긴 wezterm-gui PID 찾기
-    time.sleep(1.5)
-    pids_after = get_wezterm_gui_pids()
-    new_pids = pids_after - pids_before
-    log.debug(f"WezTerm PIDs after launch: {pids_after}")
-    log.debug(f"New WezTerm PIDs: {new_pids}")
-
-    # 새로 생긴 PID 저장 (여러 개면 가장 큰 것 = 가장 최근)
-    if new_pids:
-        new_pid = max(new_pids)
-        save_wezterm_pid(cwd, new_pid)
-        log.info(f"WezTerm GUI started with PID: {new_pid}")
-    else:
-        log.warning("Could not detect new WezTerm GUI PID")
-
-    log.info("=" * 60)
-    log.info("Launcher completed - WezTerm gui-startup will create layout")
-    log.info("=" * 60)
-    return 0
-
-
-# =============================================================================
-# Linux/macOS 전용: CLI 방식
-# =============================================================================
-
-
-def launch_wezterm_linux(
-    cwd: str,
-    workers: int,
-    full_orchay_cmd_list: list[str],
-    launcher_args: argparse.Namespace,
-) -> int:
-    """Linux/macOS 전용 WezTerm 레이아웃 생성.
-
-    Linux에서는 CLI 소켓 연결이 안정적이므로 wezterm cli 명령을 사용합니다.
-
-    Args:
-        cwd: 현재 작업 디렉토리
-        workers: Worker pane 개수
-        full_orchay_cmd_list: 스케줄러 실행 명령 리스트
-        launcher_args: launcher 설정 인자
-
-    Returns:
-        int: 종료 코드 (0: 성공)
-    """
-    wezterm_cmd = "wezterm"
-
-    # 시작 전 wezterm-gui PID 목록 기록
-    pids_before = get_wezterm_gui_pids()
-    log.debug(f"WezTerm PIDs before launch: {pids_before}")
-
-    # 1. WezTerm 시작
-    wezterm_launch_args = [wezterm_cmd]
-    log.debug(f"Popen: {wezterm_launch_args}")
-    # WEZTERM_LOG=warn으로 불필요한 에러 로그 숨김
-    env = os.environ.copy()
-    env["WEZTERM_LOG"] = "warn"
-    subprocess.Popen(wezterm_launch_args, start_new_session=True, env=env)
-
-    log.info("Waiting for WezTerm to start (2s)...")
-    time.sleep(2)
-    log.debug("Wait complete")
-
-    # 새로 생긴 wezterm-gui PID 찾아서 저장
-    pids_after = get_wezterm_gui_pids()
-    new_pids = pids_after - pids_before
-    log.debug(f"WezTerm PIDs after launch: {pids_after}")
-    log.debug(f"New WezTerm PIDs: {new_pids}")
-
-    if new_pids:
-        new_pid = max(new_pids)
-        save_wezterm_pid(cwd, new_pid)
-        log.info(f"WezTerm GUI started with PID: {new_pid}")
-    else:
-        log.warning("Could not detect new WezTerm GUI PID")
-
-    # 2. 창 크기 조절 (wmctrl 사용)
-    if shutil.which("wmctrl"):
-        resize_cmd = [
-            "wmctrl", "-r", ":ACTIVE:", "-e",
-            f"0,0,0,{launcher_args.width},{launcher_args.height}"
-        ]
-        log.debug(f"Resize command: {resize_cmd}")
-        resize_result = subprocess.run(resize_cmd, capture_output=True, text=True)
-        log.debug(f"Resize result: returncode={resize_result.returncode}")
-
-    # 3. 레이아웃 생성
-    layout = _create_layout_config(workers)
-    column_first_panes: list[int] = []
-    column_panes: list[list[int]] = [[] for _ in layout]
-
-    log.info(f"Creating layout: {'/'.join(map(str, layout))}")
-
-    # Worker별 startup 명령어 선택을 위한 카운터
-    worker_num = 1
-
-    # 3-1. 각 열의 첫 번째 Worker 생성 (수평 분할)
-    for col in range(len(layout)):
-        # Worker별 startup 명령어 조회
-        startup_cmd = config.worker_command.get_startup_for_worker(worker_num)
-        startup_cmd_parts = shlex.split(startup_cmd)
-        log.info(f"Worker {worker_num}: startup={startup_cmd}")
-
-        if col == 0:
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", "0",
-                "--cwd", cwd, "--", *startup_cmd_parts
-            ]
-        else:
-            target_pane = column_first_panes[col - 1]
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--right", "--pane-id", str(target_pane),
-                "--cwd", cwd, "--", *startup_cmd_parts
-            ]
-
-        log.debug(f"Split command (col {col}): {split_cmd}")
-        result = subprocess.run(split_cmd, capture_output=True, text=True)
-        log.debug(f"Split result: returncode={result.returncode}, stdout={result.stdout}")
-
-        if result.returncode != 0:
-            log.error(f"열 {col + 1} 생성 실패: {result.stderr}")
-            break
-
-        try:
-            pane_id = int(result.stdout.strip())
-            column_first_panes.append(pane_id)
-            column_panes[col].append(pane_id)
-            log.debug(f"Created pane {pane_id} for column {col}")
-        except ValueError:
-            log.error(f"pane ID 파싱 실패: {result.stdout}")
-            break
-
-        worker_num += 1
-
-    # 3-2. 각 열 내에서 수직 분할 (균등 분할)
-    log.debug("Starting vertical splits...")
-    for col, workers_in_col in enumerate(layout):
-        if col >= len(column_first_panes):
-            break
-        current_pane_id = column_first_panes[col]
-
-        for row in range(1, workers_in_col):
-            # Worker별 startup 명령어 조회
-            startup_cmd = config.worker_command.get_startup_for_worker(worker_num)
-            startup_cmd_parts = shlex.split(startup_cmd)
-            log.info(f"Worker {worker_num}: startup={startup_cmd}")
-
-            remaining = workers_in_col - row
-            percent = int(remaining / (remaining + 1) * 100)
-            split_cmd = [
-                wezterm_cmd, "cli", "split-pane", "--bottom", "--percent", str(percent),
-                "--pane-id", str(current_pane_id),
-                "--cwd", cwd, "--", *startup_cmd_parts
-            ]
-            log.debug(f"Vertical split command (col {col}, row {row}): {split_cmd}")
-            result = subprocess.run(split_cmd, capture_output=True, text=True)
-            log.debug(f"Vertical split result: returncode={result.returncode}")
-
-            if result.returncode != 0:
-                log.error(f"pane 생성 실패: {result.stderr}")
-            else:
-                with contextlib.suppress(ValueError):
-                    current_pane_id = int(result.stdout.strip())
-                    column_panes[col].append(current_pane_id)
-
-            worker_num += 1
-
-    # 4. Worker 번호 로그 (startup 명령은 pane 생성 시 이미 실행됨)
-    worker_num = 1
-    for col_panes in column_panes:
-        for pane_id in col_panes:
-            log.info(f"Worker {worker_num}: pane {pane_id}")
-            worker_num += 1
-
-    log.debug("Waiting 1s before sending scheduler command...")
-    time.sleep(1)
-
-    # 5. 스케줄러 명령 전송
-    log.info("Sending scheduler command to pane 0...")
-    orchay_cmd_str = " ".join(full_orchay_cmd_list)
-    full_cmd_str = f"cd {shlex.quote(cwd)} && {orchay_cmd_str}\n"
-
-    send_text_cmd = [
-        wezterm_cmd, "cli", "send-text", "--pane-id", "0", "--no-paste", full_cmd_str
-    ]
-    log.debug(f"Send text command: {send_text_cmd}")
-    result = subprocess.run(send_text_cmd, capture_output=True, text=True)
-    log.debug(f"Send text result: returncode={result.returncode}")
-
-    if result.returncode != 0:
-        log.error(f"Error sending command: {result.stderr}")
-    else:
-        log.info("Scheduler started successfully")
-
-    log.info("=" * 60)
-    log.info("Launcher completed successfully")
-    log.info("=" * 60)
-    return 0
-
-
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     """launcher 전용 인자 파싱.
 
@@ -656,15 +339,13 @@ def main() -> int:
     log.info("=" * 60)
 
     # 서브커맨드 감지: run, exec, history는 cli.py로 위임
-    # launcher는 WezTerm 레이아웃을 생성하는 경우에만 실행 (서브커맨드 없이 호출)
     cli_subcommands = {"run", "exec", "history"}
     if len(sys.argv) > 1 and sys.argv[1] in cli_subcommands:
         log.info(f"Delegating to cli.py: {sys.argv[1]}")
         try:
             from orchay.cli import cli_main
         except ModuleNotFoundError:
-            # 직접 실행 시 (python launcher.py) - 패키지 경로 추가
-            src_dir = Path(__file__).resolve().parent.parent  # orchay/src/
+            src_dir = Path(__file__).resolve().parent.parent
             if str(src_dir) not in sys.path:
                 sys.path.insert(0, str(src_dir))
             from orchay.cli import cli_main
@@ -678,7 +359,7 @@ def main() -> int:
         return 1
     log.debug("All dependencies OK")
 
-    # --help 또는 -h 처리 (orchay 도움말 표시)
+    # --help 처리
     if "-h" in sys.argv or "--help" in sys.argv:
         print("Launcher 전용 옵션 (WezTerm 레이아웃):")
         print("  --width N             창 너비 픽셀 (기본: 1920)")
@@ -698,85 +379,60 @@ def main() -> int:
     log.debug(f"launcher_args: {launcher_args}")
     log.debug(f"orchay_args: {orchay_args}")
 
-    # 1. 파일 설정 로드 (.orchay/settings/orchay.yaml)
-    file_config: dict[str, Any] = {}
-    cwd = os.getcwd()
-    log.debug(f"cwd: {cwd}")
-    for parent in [cwd, *[str(p) for p in Path(cwd).parents]]:
-        yaml_path = Path(parent) / ".orchay" / "settings" / "orchay.yaml"
-        if yaml_path.exists():
-            try:
-                import yaml
+    # 설정 로드 (load_config() 사용)
+    from orchay.utils.config import load_config
 
-                with open(yaml_path, encoding="utf-8") as f:
-                    file_config = yaml.safe_load(f) or {}
-                log.info(f"설정 로드: {yaml_path}")
-            except Exception as e:
-                log.error(f"설정 로드 실패: {e}")
-            break
+    config = load_config()
+    log.info("설정 로드 완료")
 
-    # 파일에서 workers 로드
-    workers_config = file_config.get("workers", 3)
-    workers = int(workers_config) if isinstance(workers_config, (int, str)) else 3
+    # CLI launcher_args로 config.launcher 업데이트
+    if launcher_args.width != 1920:
+        config.launcher.width = launcher_args.width
+    if launcher_args.height != 1080:
+        config.launcher.height = launcher_args.height
+    if launcher_args.max_rows != 3:
+        config.launcher.max_rows = launcher_args.max_rows
+    if launcher_args.scheduler_cols != 100:
+        config.launcher.scheduler_cols = launcher_args.scheduler_cols
+    if launcher_args.worker_cols != 120:
+        config.launcher.worker_cols = launcher_args.worker_cols
+    if launcher_args.font_size != 11.0:
+        config.launcher.font_size = launcher_args.font_size
 
-    # 파일에서 launcher 설정 로드 (CLI 기본값 override)
-    launcher_config_raw = file_config.get("launcher", {})
-    if isinstance(launcher_config_raw, dict):
-        launcher_config = cast(dict[str, Any], launcher_config_raw)
-        width_val = launcher_config.get("width")
-        if isinstance(width_val, (int, float)):
-            launcher_args.width = int(width_val)
-        height_val = launcher_config.get("height")
-        if isinstance(height_val, (int, float)):
-            launcher_args.height = int(height_val)
-        max_rows_val = launcher_config.get("max_rows")
-        if isinstance(max_rows_val, (int, float)):
-            launcher_args.max_rows = int(max_rows_val)
-        scheduler_cols_val = launcher_config.get("scheduler_cols")
-        if isinstance(scheduler_cols_val, (int, float)):
-            launcher_args.scheduler_cols = int(scheduler_cols_val)
-        worker_cols_val = launcher_config.get("worker_cols")
-        if isinstance(worker_cols_val, (int, float)):
-            launcher_args.worker_cols = int(worker_cols_val)
-        font_size_val = launcher_config.get("font_size")
-        if isinstance(font_size_val, (int, float)):
-            launcher_args.font_size = float(font_size_val)
-
-    # 2. CLI 인자로 override (-w 또는 --workers)
+    # Workers 결정: config.workers > CLI override
+    workers = config.workers if config.workers > 0 else 3
     for i, arg in enumerate(orchay_args):
         if arg in ("-w", "--workers") and i + 1 < len(orchay_args):
             with contextlib.suppress(ValueError):
                 workers = int(orchay_args[i + 1])
             break
 
-    # 현재 작업 디렉토리
     cwd = os.getcwd()
 
-    # 0번 pane에서 실행할 명령 구성
-    # launcher가 pane 0에 보낼 때 "run" 서브커맨드를 추가 → cli.py가 처리 → main.py 실행
+    # 스케줄러 명령 구성
     orchay_base_cmd = get_orchay_cmd().split()
-    # 주의: cd와 &&는 쉘 기능이므로, wezterm cli에서 직접 실행하기 보다
-    # wezterm 시작 시 --cwd를 사용하거나, send-text에서 처리해야 함.
-    # 여기서는 orchay 실행 인자만 모음.
     full_orchay_cmd_list = orchay_base_cmd + ["run"] + orchay_args
 
+    # 기존 WezTerm 종료
     log.info("Killing existing WezTerm for this folder...")
     kill_orchay_wezterm(cwd)
     log.debug("kill_orchay_wezterm() completed")
 
-    log.info("Starting WezTerm...")
-    log.info(f"  Workers: {workers}")
-    log.info(f"  Window: {launcher_args.width}x{launcher_args.height}")
-    log.info(f"  Max rows per column: {launcher_args.max_rows}")
     log.info(f"  Command: {' '.join(full_orchay_cmd_list)}")
 
-    # 플랫폼별 분기
-    # - Windows: gui-startup 이벤트 방식 (CLI 소켓 연결 문제 회피)
-    # - Linux/macOS: CLI 방식 (안정적)
-    if platform.system() == "Windows":
-        return launch_wezterm_windows(cwd, workers, full_orchay_cmd_list, launcher_args)
-    else:
-        return launch_wezterm_linux(cwd, workers, full_orchay_cmd_list, launcher_args)
+    # 새 Launcher 사용
+    from orchay.utils.wezterm_launcher import LaunchContext, create_launcher
+
+    context = LaunchContext(
+        cwd=cwd,
+        workers=workers,
+        orchay_cmd_list=full_orchay_cmd_list,
+        config=config,
+        logger=log,
+    )
+
+    launcher = create_launcher(context)
+    return launcher.launch()
 
 
 if __name__ == "__main__":

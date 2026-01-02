@@ -8,16 +8,16 @@
 
 | 명령어 | 커밋 대상 |
 |--------|----------|
-| `start` | `010-*.md`, `wbs.md` |
+| `start` | `010-*.md`, `wbs.yaml` |
 | `ui` | `011-ui-design.md`, `ui-assets/` |
-| `draft` | `020-*.md`, `025-*.md`, `026-*.md`, `wbs.md` |
-| `build` | 소스 코드, `030-*.md`, `wbs.md` |
+| `draft` | `020-*.md`, `025-*.md`, `026-*.md`, `wbs.yaml` |
+| `build` | 소스 코드, `030-*.md`, `wbs.yaml` |
 | `test` | `070-*.md`, `test-results/` |
 | `audit` | `021-*.md`, `031-*.md` |
 | `patch` | 수정된 소스 코드 |
-| `verify` | `070-integration-test.md`, `wbs.md` |
-| `done` | `080-manual.md`, `wbs.md` |
-| `fix` | 수정된 소스 코드, `wbs.md` |
+| `verify` | `070-integration-test.md`, `wbs.yaml` |
+| `done` | `080-manual.md`, `wbs.yaml` |
+| `fix` | 수정된 소스 코드, `wbs.yaml` |
 
 ---
 

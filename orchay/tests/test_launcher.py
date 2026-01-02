@@ -106,49 +106,49 @@ class TestPrintInstallGuide:
 
 
 class TestCreateLayoutConfig:
-    """_create_layout_config 함수 테스트."""
+    """create_layout_config 함수 테스트."""
 
     def test_single_worker(self) -> None:
         """Worker 1개."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(1) == [1]
+        assert create_layout_config(1) == [1]
 
     def test_two_workers(self) -> None:
         """Worker 2개."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(2) == [2]
+        assert create_layout_config(2) == [2]
 
     def test_three_workers(self) -> None:
         """Worker 3개."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(3) == [3]
+        assert create_layout_config(3) == [3]
 
     def test_four_workers(self) -> None:
         """Worker 4개 (2x2)."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(4) == [2, 2]
+        assert create_layout_config(4) == [2, 2]
 
     def test_five_workers(self) -> None:
         """Worker 5개 (3+2)."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(5) == [3, 2]
+        assert create_layout_config(5) == [3, 2]
 
     def test_six_workers(self) -> None:
         """Worker 6개 (3+3)."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(6) == [3, 3]
+        assert create_layout_config(6) == [3, 3]
 
     def test_more_than_six_capped(self) -> None:
         """6개 초과 시 6개로 제한."""
-        from orchay.launcher import _create_layout_config
+        from orchay.utils.launcher_helpers import create_layout_config
 
-        assert _create_layout_config(10) == [3, 3]
+        assert create_layout_config(10) == [3, 3]
 
 
 class TestPidManagement:
@@ -443,56 +443,84 @@ class TestGetLogFile:
 
 
 class TestLaunchWeztermWindows:
-    """launch_wezterm_windows 함수 테스트."""
+    """WindowsLauncher 클래스 테스트."""
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows only")
     def test_creates_startup_config(self, tmp_path: Path) -> None:
         """startup config 파일 생성."""
-        from orchay.launcher import launch_wezterm_windows
+        from orchay.utils.wezterm_launcher import LaunchContext, WindowsLauncher
 
-        launcher_args = argparse.Namespace(
-            width=1920,
-            height=1080,
-            max_rows=3,
-            scheduler_cols=100,
-            worker_cols=120,
-            font_size=11.0,
+        # 최소 설정으로 Config mock 생성
+        mock_config = MagicMock()
+        mock_config.launcher.width = 1920
+        mock_config.launcher.height = 1080
+        mock_config.launcher.max_rows = 3
+        mock_config.launcher.scheduler_cols = 100
+        mock_config.launcher.worker_cols = 120
+        mock_config.launcher.font_size = 11.0
+        mock_config.launcher.startup_delay_windows = 0.1
+        mock_config.launcher.config_filename = "orchay-startup.json"
+        mock_config.launcher.lua_config_file = "wezterm-orchay.lua"
+        mock_config.worker_command.startup = "claude --dangerously-skip-permissions"
+        mock_config.worker_command.pane_startup = {}
+
+        mock_logger = MagicMock()
+        context = LaunchContext(
+            cwd=str(tmp_path),
+            workers=3,
+            orchay_cmd_list=["orchay", "run"],
+            config=mock_config,
+            logger=mock_logger,
         )
+
+        launcher = WindowsLauncher(context)
 
         with patch("subprocess.Popen"):
             with patch("time.sleep"):
-                with patch("orchay.launcher.get_wezterm_gui_pids", return_value=set()):
-                    with patch(
-                        "orchay.launcher._get_bundled_file",
+                with patch.object(
+                    launcher, "_get_wezterm_pids", return_value=set()
+                ):
+                    with patch.object(
+                        launcher,
+                        "_get_bundled_file",
                         return_value=tmp_path / "wezterm.lua",
                     ):
                         with patch.dict(os.environ, {}, clear=False):
-                            result = launch_wezterm_windows(
-                                str(tmp_path),
-                                3,
-                                ["orchay", "run"],
-                                launcher_args,
-                            )
+                            result = launcher.launch()
 
         assert result == 0
 
 
 class TestLaunchWeztermLinux:
-    """launch_wezterm_linux 함수 테스트."""
+    """LinuxLauncher 클래스 테스트."""
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Linux/macOS only")
     def test_starts_wezterm(self, tmp_path: Path) -> None:
         """WezTerm 시작."""
-        from orchay.launcher import launch_wezterm_linux
+        from orchay.utils.wezterm_launcher import LaunchContext, LinuxLauncher
 
-        launcher_args = argparse.Namespace(
-            width=1920,
-            height=1080,
-            max_rows=3,
-            scheduler_cols=100,
-            worker_cols=120,
-            font_size=11.0,
+        # 최소 설정으로 Config mock 생성
+        mock_config = MagicMock()
+        mock_config.launcher.width = 1920
+        mock_config.launcher.height = 1080
+        mock_config.launcher.max_rows = 3
+        mock_config.launcher.scheduler_cols = 100
+        mock_config.launcher.worker_cols = 120
+        mock_config.launcher.font_size = 11.0
+        mock_config.launcher.startup_delay_linux = 0.1
+        mock_config.worker_command.startup = "claude --dangerously-skip-permissions"
+        mock_config.worker_command.pane_startup = {}
+
+        mock_logger = MagicMock()
+        context = LaunchContext(
+            cwd=str(tmp_path),
+            workers=3,
+            orchay_cmd_list=["orchay", "run"],
+            config=mock_config,
+            logger=mock_logger,
         )
+
+        launcher = LinuxLauncher(context)
 
         mock_result = MagicMock()
         mock_result.returncode = 0
@@ -502,15 +530,10 @@ class TestLaunchWeztermLinux:
             with patch("subprocess.run", return_value=mock_result):
                 with patch("time.sleep"):
                     with patch("shutil.which", return_value=None):  # no wmctrl
-                        with patch(
-                            "orchay.launcher.get_wezterm_gui_pids", return_value=set()
+                        with patch.object(
+                            launcher, "_get_wezterm_pids", return_value=set()
                         ):
-                            result = launch_wezterm_linux(
-                                str(tmp_path),
-                                3,
-                                ["orchay", "run"],
-                                launcher_args,
-                            )
+                            result = launcher.launch()
 
         assert result == 0
 
@@ -566,18 +589,23 @@ class TestMain:
         yaml_file = settings_dir / "orchay.yaml"
         yaml_file.write_text("workers: 5\nlauncher:\n  width: 2560\n")
 
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = 0
+
         with patch("sys.argv", ["launcher"]):
             with patch("os.getcwd", return_value=str(tmp_path)):
                 with patch("orchay.launcher.check_all_dependencies", return_value=[]):
                     with patch("platform.system", return_value="Windows"):
                         with patch(
-                            "orchay.launcher.launch_wezterm_windows", return_value=0
-                        ) as mock_launch:
+                            "orchay.utils.wezterm_launcher.create_launcher",
+                            return_value=mock_launcher,
+                        ) as mock_create:
                             with patch("orchay.launcher.kill_orchay_wezterm"):
                                 result = main()
 
         assert result == 0
-        mock_launch.assert_called_once()
+        mock_create.assert_called_once()
+        mock_launcher.launch.assert_called_once()
 
     def test_cli_overrides_yaml(self, tmp_path: Path) -> None:
         """CLI 인자가 YAML 설정 오버라이드."""
@@ -589,52 +617,67 @@ class TestMain:
         yaml_file = settings_dir / "orchay.yaml"
         yaml_file.write_text("workers: 3\n")
 
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = 0
+
         with patch("sys.argv", ["launcher", "-w", "5"]):
             with patch("os.getcwd", return_value=str(tmp_path)):
                 with patch("orchay.launcher.check_all_dependencies", return_value=[]):
                     with patch("platform.system", return_value="Windows"):
                         with patch(
-                            "orchay.launcher.launch_wezterm_windows", return_value=0
-                        ) as mock_launch:
+                            "orchay.utils.wezterm_launcher.create_launcher",
+                            return_value=mock_launcher,
+                        ) as mock_create:
                             with patch("orchay.launcher.kill_orchay_wezterm"):
                                 result = main()
 
         assert result == 0
-        # workers=5가 사용되어야 함
-        call_args = mock_launch.call_args
-        assert call_args[0][1] == 5  # workers 인자
+        # workers=5가 사용되어야 함 (create_launcher의 context.workers)
+        call_args = mock_create.call_args
+        context = call_args[0][0]  # LaunchContext
+        assert context.workers == 5
 
     def test_platform_dispatch_windows(self, tmp_path: Path) -> None:
-        """Windows에서 launch_wezterm_windows 호출."""
+        """Windows에서 WindowsLauncher 사용."""
         from orchay.launcher import main
+
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = 0
 
         with patch("sys.argv", ["launcher"]):
             with patch("os.getcwd", return_value=str(tmp_path)):
                 with patch("orchay.launcher.check_all_dependencies", return_value=[]):
                     with patch("platform.system", return_value="Windows"):
                         with patch(
-                            "orchay.launcher.launch_wezterm_windows", return_value=0
-                        ) as mock_win:
+                            "orchay.utils.wezterm_launcher.create_launcher",
+                            return_value=mock_launcher,
+                        ) as mock_create:
                             with patch("orchay.launcher.kill_orchay_wezterm"):
                                 main()
 
-        mock_win.assert_called_once()
+        mock_create.assert_called_once()
+        mock_launcher.launch.assert_called_once()
 
     def test_platform_dispatch_linux(self, tmp_path: Path) -> None:
-        """Linux에서 launch_wezterm_linux 호출."""
+        """Linux에서 LinuxLauncher 사용."""
         from orchay.launcher import main
+
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = 0
 
         with patch("sys.argv", ["launcher"]):
             with patch("os.getcwd", return_value=str(tmp_path)):
                 with patch("orchay.launcher.check_all_dependencies", return_value=[]):
                     with patch("platform.system", return_value="Linux"):
                         with patch(
-                            "orchay.launcher.launch_wezterm_linux", return_value=0
-                        ) as mock_linux:
+                            "orchay.utils.wezterm_launcher.create_launcher",
+                            return_value=mock_launcher,
+                        ) as mock_create:
                             with patch("orchay.launcher.kill_orchay_wezterm"):
                                 main()
 
-        mock_linux.assert_called_once()
+        mock_create.assert_called_once()
+        mock_launcher.launch.assert_called_once()
 
 
 class TestFlushFileHandler:

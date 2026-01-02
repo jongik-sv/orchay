@@ -151,8 +151,8 @@ class LauncherConfig(BaseModel):
         description="WezTerm startup config 파일명",
     )
     lua_config_file: str = Field(
-        default="wezterm-orchay.lua",
-        description="WezTerm Lua 설정 파일명",
+        default="wezterm-orchay-windows.lua",
+        description="WezTerm Lua 설정 파일명 (Windows)",
     )
 
 

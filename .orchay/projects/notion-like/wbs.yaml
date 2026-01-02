@@ -398,7 +398,7 @@ workPackages:
         title: 사이드바 컴포넌트
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: critical
         assignee: "-"
         schedule: 2026-01-09 ~ 2026-01-10
@@ -421,9 +421,6 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
-        execution:
-          command: build
-          startedAt: "2026-01-02T13:57:18.851Z"
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
