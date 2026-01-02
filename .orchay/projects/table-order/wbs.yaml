@@ -52,6 +52,9 @@ workPackages:
             - TailwindCSS 3.4
             - better-sqlite3 11.x
             - socket.io 4.8
+        execution:
+          command: audit
+          startedAt: "2026-01-02T04:59:35.749Z"
       - id: TSK-00-02
         title: 프로젝트 구조 및 타입 정의
         category: infrastructure
@@ -220,13 +223,13 @@ workPackages:
             - "PATCH /api/orders/1/status → { success: true }"
             - "  body: { status: 'cooking' | 'completed' }"
         execution:
-          command: review
-          startedAt: "2026-01-02T04:57:14.155Z"
+          command: apply
+          startedAt: "2026-01-02T04:59:42.024Z"
       - id: TSK-01-04
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -255,9 +258,6 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
-        execution:
-          command: start
-          startedAt: "2026-01-02T04:58:18.017Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
