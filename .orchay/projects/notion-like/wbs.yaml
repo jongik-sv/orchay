@@ -185,6 +185,9 @@ workPackages:
             - DB에서 페이지 목록 조회 가능
             - 스토어 상태 변경 시 UI 반영
           note: WP-00의 모든 기능이 통합되어 정상 동작하는지 검증
+        execution:
+          command: verify
+          startedAt: "2026-01-02T15:54:30.494Z"
   - id: WP-01
     title: 핵심 에디터 (BlockNote)
     status: planned
@@ -473,7 +476,7 @@ workPackages:
         title: 페이지 생성/삭제/이동 기능
         category: development
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: 2026-01-11 ~ 2026-01-12
@@ -496,14 +499,11 @@ workPackages:
           apiSpec:
             - POST /api/pages { parentId? }
             - DELETE /api/pages/:id
-        execution:
-          command: build
-          startedAt: "2026-01-02T15:47:04.932Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: 2026-01-12 ~ 2026-01-13
@@ -526,9 +526,6 @@ workPackages:
           techSpec:
             - Next.js App Router 동적 라우트
             - useParams, useRouter
-        execution:
-          command: build
-          startedAt: "2026-01-02T15:47:13.570Z"
       - id: TSK-02-06
         title: 즐겨찾기 기능
         category: development

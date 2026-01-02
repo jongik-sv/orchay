@@ -3,6 +3,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PageTree } from '../PageTree';
 import { useAppStore } from '@/lib/store';
 
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // Mock store
 vi.mock('@/lib/store', async () => {
   const actual = await vi.importActual('@/lib/store');

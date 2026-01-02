@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import { Editor } from "@/components/editor/Editor";
+import { useAppStore } from "@/lib/store";
 
 interface PageData {
   id: string;
@@ -44,10 +45,19 @@ function debounce<T extends unknown[]>(
 export default function PageContent() {
   const params = useParams();
   const pageId = params?.pageId as string;
+  const setCurrentPageId = useAppStore((state) => state.setCurrentPageId);
 
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFoundState, setNotFoundState] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
+
+  // URL 변경 시 Zustand 상태 동기화
+  useEffect(() => {
+    if (pageId) {
+      setCurrentPageId(pageId);
+    }
+  }, [pageId, setCurrentPageId]);
 
   // 페이지 데이터 로드
   useEffect(() => {
@@ -56,20 +66,18 @@ export default function PageContent() {
     const loadPage = async () => {
       try {
         setLoading(true);
+        setNotFoundState(false);
         const response = await fetch(`/api/pages/${pageId}`);
 
         if (!response.ok) {
           if (response.status === 404) {
-            setSaveState({
-              status: "error",
-              message: "페이지를 찾을 수 없습니다.",
-            });
-          } else {
-            setSaveState({
-              status: "error",
-              message: "페이지를 불러오는 중 오류가 발생했습니다.",
-            });
+            setNotFoundState(true);
+            return;
           }
+          setSaveState({
+            status: "error",
+            message: "페이지를 불러오는 중 오류가 발생했습니다.",
+          });
           return;
         }
 
@@ -89,6 +97,13 @@ export default function PageContent() {
 
     loadPage();
   }, [pageId]);
+
+  // 404 상태일 때 notFound() 호출
+  useEffect(() => {
+    if (notFoundState && !loading) {
+      notFound();
+    }
+  }, [notFoundState, loading]);
 
   // 콘텐츠 저장 함수
   const saveContent = useCallback(
@@ -142,14 +157,14 @@ export default function PageContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg text-red-600">
-          {saveState.message || "페이지를 찾을 수 없습니다."}
+          {saveState.message || "페이지를 불러올 수 없습니다."}
         </div>
       </div>
     );
   }
 
   return (
-    <MainLayout sidebar={<Sidebar />}>
+    <MainLayout sidebar={<ClientSidebar />}>
       <div className="flex flex-col h-full w-full">
         {/* 헤더 영역 */}
         <div className="flex items-center justify-between px-12 py-4 border-b border-gray-200">
