@@ -80,6 +80,9 @@ workPackages:
           techSpec:
             - app/, components/, lib/, types/ 폴더
             - PRD 섹션 4 데이터 모델 기반 타입
+        execution:
+          command: build
+          startedAt: "2026-01-02T04:51:37.843Z"
       - id: TSK-00-03
         title: "WP-00 통합 확인: 프로젝트 초기화 검증"
         category: development
