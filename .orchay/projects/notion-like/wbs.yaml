@@ -430,6 +430,9 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
+        execution:
+          command: verify
+          startedAt: "2026-01-02T14:29:14.407Z"
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
