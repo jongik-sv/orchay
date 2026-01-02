@@ -15,6 +15,7 @@ from orchay.domain.policies.task_filter import (
     IMPLEMENTED_STATUSES,
     PRIORITY_ORDER,
     TaskFilterPolicy,
+    topological_sort_tasks,
 )
 from orchay.domain.workflow import ExecutionMode, WorkflowConfig, WorkflowEngine
 from orchay.models import Task, TaskCategory, TaskPriority, TaskStatus
@@ -382,3 +383,174 @@ class TestTestMode:
         assert "T2" not in result_ids  # APPROVED 제외
         assert "T3" in result_ids  # IMPLEMENT 포함
         assert "T4" in result_ids  # VERIFY 포함
+
+
+class TestTopologicalSort:
+    """위상정렬 테스트 (Dependency → Priority → Task ID)."""
+
+    def test_tc_ts_01_no_dependencies_priority_then_id(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-01: 의존성 없으면 Priority → Task ID 순 정렬."""
+        tasks = [
+            create_task(id="T1", status=TaskStatus.TODO, priority=TaskPriority.LOW),
+            create_task(id="T2", status=TaskStatus.TODO, priority=TaskPriority.CRITICAL),
+            create_task(id="T3", status=TaskStatus.TODO, priority=TaskPriority.HIGH),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        assert [t.id for t in result] == ["T2", "T3", "T1"]
+
+    def test_tc_ts_02_simple_dependency(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-02: 단순 의존성 - 의존 대상이 먼저."""
+        tasks = [
+            create_task(id="T2", status=TaskStatus.TODO, depends=["T1"]),
+            create_task(id="T1", status=TaskStatus.TODO),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        # T1이 먼저 (T2가 T1에 의존)
+        assert result[0].id == "T1"
+        assert result[1].id == "T2"
+
+    def test_tc_ts_03_chain_dependency(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-03: 체인 의존성 (T1 → T2 → T3)."""
+        tasks = [
+            create_task(id="T3", status=TaskStatus.TODO, depends=["T2"]),
+            create_task(id="T1", status=TaskStatus.TODO),
+            create_task(id="T2", status=TaskStatus.TODO, depends=["T1"]),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        assert [t.id for t in result] == ["T1", "T2", "T3"]
+
+    def test_tc_ts_04_priority_within_level(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-04: 같은 레벨 내 Priority 정렬."""
+        tasks = [
+            create_task(id="T0", status=TaskStatus.TODO),
+            create_task(
+                id="T1", status=TaskStatus.TODO, priority=TaskPriority.LOW, depends=["T0"]
+            ),
+            create_task(
+                id="T2", status=TaskStatus.TODO, priority=TaskPriority.HIGH, depends=["T0"]
+            ),
+            create_task(
+                id="T3", status=TaskStatus.TODO, priority=TaskPriority.MEDIUM, depends=["T0"]
+            ),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        # T0(레벨0) 먼저, 그 다음 T2(HIGH) > T3(MEDIUM) > T1(LOW) (레벨1)
+        assert result[0].id == "T0"
+        assert result[1].id == "T2"
+        assert result[2].id == "T3"
+        assert result[3].id == "T1"
+
+    def test_tc_ts_05_task_id_tiebreaker(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-05: 같은 레벨, 같은 Priority면 Task ID 순."""
+        tasks = [
+            create_task(id="TSK-01-03", status=TaskStatus.TODO),
+            create_task(id="TSK-01-01", status=TaskStatus.TODO),
+            create_task(id="TSK-01-02", status=TaskStatus.TODO),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        assert [t.id for t in result] == ["TSK-01-01", "TSK-01-02", "TSK-01-03"]
+
+    def test_tc_ts_06_cyclic_dependency_warning(
+        self, filter_policy: TaskFilterPolicy, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """TC-TS-06: 순환 의존성 경고 및 맨 뒤 배치."""
+        import logging
+
+        tasks = [
+            create_task(id="T1", status=TaskStatus.TODO, depends=["T2"]),
+            create_task(id="T2", status=TaskStatus.TODO, depends=["T1"]),
+            create_task(id="T3", status=TaskStatus.TODO),
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        assert "순환 의존성" in caplog.text
+        # T3는 순환 없으므로 먼저
+        assert result[0].id == "T3"
+        # T1, T2는 순환이므로 맨 뒤
+        assert {t.id for t in result[1:]} == {"T1", "T2"}
+
+    def test_tc_ts_07_external_dependency_ignored(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-07: 필터링된 목록에 없는 의존성은 무시."""
+        tasks = [
+            create_task(id="T1", status=TaskStatus.TODO, depends=["EXTERNAL"]),
+            create_task(id="T2", status=TaskStatus.TODO),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        # EXTERNAL은 tasks에 없으므로 무시, T1, T2 모두 레벨 0
+        assert len(result) == 2
+        # 둘 다 레벨 0, 같은 Priority면 Task ID 순
+        assert [t.id for t in result] == ["T1", "T2"]
+
+    def test_tc_ts_08_diamond_dependency(
+        self, filter_policy: TaskFilterPolicy
+    ) -> None:
+        """TC-TS-08: 다이아몬드 의존성 (A → B,C → D)."""
+        tasks = [
+            create_task(id="D", status=TaskStatus.TODO, depends=["B", "C"]),
+            create_task(id="C", status=TaskStatus.TODO, depends=["A"]),
+            create_task(id="B", status=TaskStatus.TODO, depends=["A"]),
+            create_task(id="A", status=TaskStatus.TODO),
+        ]
+
+        result = filter_policy.filter_executable(tasks, ExecutionMode.DESIGN)
+
+        # A(레벨0) → B,C(레벨1) → D(레벨2)
+        assert result[0].id == "A"
+        assert result[-1].id == "D"
+        # B, C는 레벨1에서 Task ID 순
+        assert {t.id for t in result[1:3]} == {"B", "C"}
+
+
+class TestTopologicalSortFunction:
+    """topological_sort_tasks 함수 직접 테스트."""
+
+    def test_empty_list(self) -> None:
+        """TC-TS-09: 빈 목록은 빈 결과를 반환합니다."""
+        result = topological_sort_tasks([], {})
+        assert result == []
+
+    def test_single_task(self) -> None:
+        """TC-TS-10: 단일 Task는 그대로 반환합니다."""
+        task = create_task(id="T1")
+        result = topological_sort_tasks([task], {task.id: task})
+        assert len(result) == 1
+        assert result[0].id == "T1"
+
+    def test_returns_new_list(self) -> None:
+        """TC-TS-11: 새 리스트를 반환합니다 (원본 수정 없음)."""
+        tasks = [
+            create_task(id="T1", priority=TaskPriority.LOW),
+            create_task(id="T2", priority=TaskPriority.HIGH),
+        ]
+        all_tasks = {t.id: t for t in tasks}
+
+        result = topological_sort_tasks(tasks, all_tasks)
+
+        assert result is not tasks
+        assert tasks[0].id == "T1"  # 원본 순서 유지

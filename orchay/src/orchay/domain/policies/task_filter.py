@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+from collections import deque
 from typing import TYPE_CHECKING
 
 from orchay.domain.workflow import ExecutionMode, WorkflowEngine
@@ -32,6 +33,87 @@ IMPLEMENTED_STATUSES: set[TaskStatus] = {
     TaskStatus.VERIFY,
     TaskStatus.DONE,
 }
+
+
+def topological_sort_tasks(
+    tasks: list[Task],
+    all_tasks_dict: dict[str, Task],
+) -> list[Task]:
+    """Dependency 기반 위상정렬 후 Priority, Task ID 순으로 정렬합니다.
+
+    Kahn's Algorithm (BFS 기반)을 사용하여 의존성 레벨을 계산하고,
+    동일 레벨 내에서는 Priority → Task ID 순으로 정렬합니다.
+
+    Args:
+        tasks: 정렬할 Task 목록 (필터링 완료된 상태)
+        all_tasks_dict: 전체 Task 딕셔너리 (의존성 조회용)
+
+    Returns:
+        정렬된 Task 리스트
+
+    정렬 순서:
+        1차: Dependency 레벨 (낮을수록 먼저, 의존이 없는 Task가 먼저)
+        2차: Priority (CRITICAL > HIGH > MEDIUM > LOW)
+        3차: Task ID (알파벳/숫자 순)
+
+    Note:
+        순환 의존성 Task는 경고 로그 후 마지막 레벨에 배치됩니다.
+    """
+    if not tasks:
+        return []
+
+    task_ids = {t.id for t in tasks}
+    task_map = {t.id: t for t in tasks}
+
+    # 1. in-degree 계산 (tasks 내에서만)
+    in_degree: dict[str, int] = {t.id: 0 for t in tasks}
+    adjacency: dict[str, list[str]] = {t.id: [] for t in tasks}
+
+    for task in tasks:
+        for dep_id in task.depends:
+            if dep_id in task_ids:
+                # dep_id → task.id 의존 관계 (dep_id가 먼저 실행되어야 함)
+                adjacency[dep_id].append(task.id)
+                in_degree[task.id] += 1
+
+    # 2. Kahn's Algorithm (BFS)
+    level_map: dict[str, int] = {}
+    queue: deque[str] = deque()
+
+    for task_id, degree in in_degree.items():
+        if degree == 0:
+            queue.append(task_id)
+            level_map[task_id] = 0
+
+    while queue:
+        current_id = queue.popleft()
+        current_level = level_map[current_id]
+
+        for neighbor_id in adjacency[current_id]:
+            in_degree[neighbor_id] -= 1
+            # 레벨은 의존 Task 중 최대 레벨 + 1
+            new_level = max(level_map.get(neighbor_id, 0), current_level + 1)
+            level_map[neighbor_id] = new_level
+
+            if in_degree[neighbor_id] == 0:
+                queue.append(neighbor_id)
+
+    # 3. 순환 의존성 처리
+    max_level = max(level_map.values()) if level_map else 0
+    unprocessed = [t_id for t_id in task_ids if t_id not in level_map]
+
+    if unprocessed:
+        logger.warning(f"순환 의존성 감지: {unprocessed}")
+        for task_id in unprocessed:
+            level_map[task_id] = max_level + 1
+
+    # 4. 복합 정렬 키: (level, priority, task_id)
+    def sort_key(task: Task) -> tuple[int, int, str]:
+        level = level_map.get(task.id, max_level + 1)
+        priority = PRIORITY_ORDER.get(task.priority, 99)
+        return (level, priority, task.id)
+
+    return sorted(tasks, key=sort_key)
 
 
 class TaskFilterPolicy:
@@ -93,8 +175,8 @@ class TaskFilterPolicy:
             if self._should_include(task, mode, all_tasks_dict, manual_cmds):
                 result.append(task)
 
-        # BR-07: 우선순위 정렬
-        result.sort(key=lambda t: PRIORITY_ORDER.get(t.priority, 99))
+        # BR-07: 의존성 → 우선순위 → Task ID 정렬
+        result = topological_sort_tasks(result, all_tasks_dict)
 
         return result
 
