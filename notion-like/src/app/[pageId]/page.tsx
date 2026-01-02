@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import { Editor } from "@/components/editor/Editor";
+import { PageHeader } from "@/components/editor/PageHeader";
 import { useAppStore } from "@/lib/store";
 
 interface PageData {
@@ -145,6 +147,106 @@ export default function PageContent() {
   // Debounce된 저장 함수 (1초)
   const debouncedSave = useMemo(() => debounce(saveContent, 1000), [saveContent]);
 
+  // 즐겨찾기 토글
+  const toggleFavorite = useCallback(async () => {
+    if (!pageId || !pageData) return;
+
+    const newFavoriteState = pageData.is_favorite === 0 ? true : false;
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_favorite: newFavoriteState }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle favorite");
+      }
+
+      const updatedPage = await response.json();
+      setPageData(updatedPage);
+    } catch (error) {
+      console.error("[PageContent] Failed to toggle favorite:", error);
+      setSaveState({
+        status: "error",
+        message: "즐겨찾기 변경에 실패했습니다.",
+      });
+    }
+  }, [pageId, pageData]);
+
+  // 제목 변경 핸들러
+  const handleTitleChange = useCallback(
+    async (title: string) => {
+      if (!pageId) return;
+
+      try {
+        setSaveState({ status: "saving" });
+
+        const response = await fetch(`/api/pages/${pageId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update title");
+        }
+
+        const updatedPage = await response.json();
+        setPageData(updatedPage);
+        setSaveState({ status: "saved" });
+
+        setTimeout(() => {
+          setSaveState({ status: "idle" });
+        }, 2000);
+      } catch (error) {
+        console.error("[PageContent] Failed to update title:", error);
+        setSaveState({
+          status: "error",
+          message: "제목 저장에 실패했습니다.",
+        });
+      }
+    },
+    [pageId]
+  );
+
+  // 아이콘 변경 핸들러
+  const handleIconChange = useCallback(
+    async (icon: string) => {
+      if (!pageId) return;
+
+      try {
+        setSaveState({ status: "saving" });
+
+        const response = await fetch(`/api/pages/${pageId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ icon }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update icon");
+        }
+
+        const updatedPage = await response.json();
+        setPageData(updatedPage);
+        setSaveState({ status: "saved" });
+
+        setTimeout(() => {
+          setSaveState({ status: "idle" });
+        }, 2000);
+      } catch (error) {
+        console.error("[PageContent] Failed to update icon:", error);
+        setSaveState({
+          status: "error",
+          message: "아이콘 저장에 실패했습니다.",
+        });
+      }
+    },
+    [pageId]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -166,26 +268,48 @@ export default function PageContent() {
   return (
     <MainLayout sidebar={<ClientSidebar />}>
       <div className="flex flex-col h-full w-full">
-        {/* 헤더 영역 */}
-        <div className="flex items-center justify-between px-12 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            {pageData.icon && (
-              <span className="text-4xl">{pageData.icon}</span>
-            )}
-            <h1 className="text-3xl font-bold">{pageData.title}</h1>
-          </div>
+        {/* 페이지 헤더 */}
+        <div className="relative">
+          <PageHeader
+            pageId={pageData.id}
+            title={pageData.title}
+            icon={pageData.icon || "📄"}
+            coverUrl={pageData.cover_url || undefined}
+            onTitleChange={handleTitleChange}
+            onIconChange={handleIconChange}
+          />
 
-          {/* 저장 상태 표시 */}
-          <div className="text-sm">
-            {saveState.status === "saving" && (
-              <span className="text-blue-600">저장 중...</span>
-            )}
-            {saveState.status === "saved" && (
-              <span className="text-green-600">저장됨 ✓</span>
-            )}
-            {saveState.status === "error" && (
-              <span className="text-red-600">{saveState.message}</span>
-            )}
+          {/* 즐겨찾기 버튼 - 헤더 우측 상단에 위치 */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={toggleFavorite}
+              className="p-2 rounded hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
+              title={pageData.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+              aria-label={pageData.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+              data-testid="favorite-toggle-btn"
+            >
+              <Star
+                size={20}
+                className={
+                  pageData.is_favorite
+                    ? "text-[#E9B44C] fill-[#E9B44C]"
+                    : "text-[#B4B4B3]"
+                }
+              />
+            </button>
+
+            {/* 저장 상태 표시 */}
+            <div className="text-sm bg-white/80 backdrop-blur-sm px-2 py-1 rounded">
+              {saveState.status === "saving" && (
+                <span className="text-blue-600">저장 중...</span>
+              )}
+              {saveState.status === "saved" && (
+                <span className="text-green-600">저장됨</span>
+              )}
+              {saveState.status === "error" && (
+                <span className="text-red-600">{saveState.message}</span>
+              )}
+            </div>
           </div>
         </div>
 

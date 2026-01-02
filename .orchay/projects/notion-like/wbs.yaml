@@ -289,7 +289,7 @@ workPackages:
         title: 페이지 헤더 컴포넌트 (아이콘, 커버, 제목)
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: "2026-01-06"
@@ -315,8 +315,8 @@ workPackages:
             - "아이콘: w-[78px] h-[78px] text-[78px]"
             - "제목: text-[40px] font-bold"
         execution:
-          command: build
-          startedAt: "2026-01-02T16:06:39.950Z"
+          command: audit
+          startedAt: "2026-01-02T16:22:24.515Z"
       - id: TSK-01-05
         title: 아이콘 선택기 컴포넌트
         category: development
@@ -502,9 +502,8 @@ workPackages:
             - POST /api/pages { parentId? }
             - DELETE /api/pages/:id
         execution:
-          command: verify
-          startedAt: "2026-01-02T16:06:33.038Z"
-          completedAt: "2026-01-02T16:12:00.000Z"
+          command: test
+          startedAt: "2026-01-02T16:18:56.501Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
@@ -561,6 +560,9 @@ workPackages:
             - Favorites 섹션에 즐겨찾기 페이지 표시
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
+        execution:
+          command: test
+          startedAt: "2026-01-02T16:19:11.554Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
@@ -590,7 +592,7 @@ workPackages:
         title: WP-02 통합 검증
         category: infrastructure
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: "2026-01-14"
