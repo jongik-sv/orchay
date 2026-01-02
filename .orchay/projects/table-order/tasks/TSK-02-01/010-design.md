@@ -227,6 +227,8 @@ mvp/src/
 ├── server.ts              # Custom Server 진입점
 ├── lib/
 │   └── socket.ts          # Socket.io 서버 설정 (서버 사이드)
+├── types/
+│   └── global.d.ts        # 전역 타입 확장 선언
 └── package.json           # dev 스크립트 수정
 ```
 
@@ -243,7 +245,20 @@ mvp/src/
 
 ## 6. 기술 명세
 
-### 6.1 server.ts 구현
+### 6.1 global.d.ts 타입 선언
+
+```typescript
+// mvp/src/types/global.d.ts
+import { Server } from 'socket.io';
+
+declare global {
+  var io: Server | undefined;
+}
+
+export {};
+```
+
+### 6.2 server.ts 구현
 
 ```typescript
 // mvp/src/server.ts
@@ -255,6 +270,11 @@ import { Server } from 'socket.io';
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
+
+// tableId 유효성 검증 함수
+function isValidTableId(tableId: unknown): tableId is number {
+  return typeof tableId === 'number' && tableId >= 1 && tableId <= 100;
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -275,7 +295,17 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log(`[Socket.io] 연결됨: ${socket.id}`);
 
-    socket.on('join:table', (tableId: number) => {
+    // 소켓 에러 핸들링
+    socket.on('error', (err) => {
+      console.error(`[Socket.io] 소켓 에러: ${socket.id}`, err);
+    });
+
+    socket.on('join:table', (tableId: unknown) => {
+      // tableId 유효성 검증
+      if (!isValidTableId(tableId)) {
+        console.warn(`[Socket.io] 잘못된 tableId: ${tableId}`);
+        return;
+      }
       const room = `table:${tableId}`;
       socket.join(room);
       console.log(`[Socket.io] ${socket.id} → ${room} 조인`);
@@ -292,7 +322,7 @@ app.prepare().then(() => {
   });
 
   // io 인스턴스를 전역으로 저장 (API 라우트에서 사용)
-  (global as any).io = io;
+  global.io = io;
 
   httpServer.listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
@@ -300,7 +330,7 @@ app.prepare().then(() => {
 });
 ```
 
-### 6.2 package.json 스크립트 수정
+### 6.3 package.json 스크립트 수정
 
 ```json
 {
@@ -312,7 +342,7 @@ app.prepare().then(() => {
 }
 ```
 
-### 6.3 의존성 추가
+### 6.4 의존성 추가
 
 ```bash
 npm install tsx --save-dev
@@ -332,6 +362,7 @@ npm install tsx --save-dev
 | AC-02 | 클라이언트 연결 시 로그 출력 | 브라우저 DevTools 확인 |
 | AC-03 | `join:table` 이벤트로 룸 조인 | 서버 로그 확인 |
 | AC-04 | `join:kitchen` 이벤트로 룸 조인 | 서버 로그 확인 |
+| AC-05 | 잘못된 tableId 입력 시 경고 로그 출력 | 서버 로그 확인 |
 
 ### 7.2 테스트 시나리오
 
@@ -347,6 +378,16 @@ npm run dev
 const socket = io('http://localhost:3000');
 socket.emit('join:table', 5);
 // 서버 로그: [Socket.io] {id} → table:5 조인
+```
+
+**테스트 3: 잘못된 tableId**
+```javascript
+// 브라우저 콘솔에서
+socket.emit('join:table', 'invalid');
+// 서버 로그: [Socket.io] 잘못된 tableId: invalid
+
+socket.emit('join:table', -1);
+// 서버 로그: [Socket.io] 잘못된 tableId: -1
 ```
 
 ---
@@ -381,7 +422,8 @@ socket.emit('join:table', 5);
 | 제약 | 설명 | 대응 방안 |
 |------|------|----------|
 | Custom Server 사용 | Vercel 배포 시 제한 | Railway 또는 자체 서버 사용 |
-| 전역 io 인스턴스 | TypeScript 타입 문제 | global 타입 확장 |
+| 전역 io 인스턴스 | TypeScript 타입 문제 | `types/global.d.ts` 타입 확장 |
+| tableId 범위 | 1~100 사이 정수만 허용 | `isValidTableId()` 검증 함수 |
 
 ---
 
