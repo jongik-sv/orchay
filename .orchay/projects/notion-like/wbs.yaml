@@ -477,10 +477,11 @@ workPackages:
         title: 페이지 생성/삭제/이동 기능
         category: development
         domain: fullstack
-        status: "[im]"
+        status: "[vf]"
         priority: high
         assignee: "-"
         schedule: 2026-01-11 ~ 2026-01-12
+        test_result: pass
         tags:
           - pages
           - crud
@@ -503,6 +504,7 @@ workPackages:
         execution:
           command: verify
           startedAt: "2026-01-02T16:06:33.038Z"
+          completedAt: "2026-01-02T16:12:00.000Z"
       - id: TSK-02-05
         title: 페이지 라우팅 및 URL 연동
         category: development
@@ -539,10 +541,11 @@ workPackages:
         title: 즐겨찾기 기능
         category: development
         domain: fullstack
-        status: "[im]"
+        status: "[vf]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-13"
+        test_result: pass
         tags:
           - favorites
         depends:
@@ -558,9 +561,6 @@ workPackages:
             - Favorites 섹션에 즐겨찾기 페이지 표시
           apiSpec:
             - "PUT /api/pages/:id { is_favorite: true/false }"
-        execution:
-          command: verify
-          startedAt: "2026-01-02T16:06:41.554Z"
       - id: TSK-02-07
         title: 검색 기능 (Cmd+K)
         category: development
