@@ -106,6 +106,9 @@ workPackages:
             - npm run build 성공
             - 타입 에러 없음
             - TailwindCSS 스타일 적용 확인
+        execution:
+          command: review
+          startedAt: "2026-01-02T05:37:07.035Z"
   - id: WP-01
     title: 데이터베이스 및 API 기반
     status: planned
@@ -220,7 +223,7 @@ workPackages:
         title: "WP-01 통합 확인: 데이터베이스 및 API 검증"
         category: development
         domain: test
-        status: "[ ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -248,9 +251,6 @@ workPackages:
             - GET /api/orders?table={id} 조회 성공
             - PATCH /api/orders/{id}/status 상태 변경 성공
             - 잘못된 요청 시 적절한 에러 반환
-        execution:
-          command: start
-          startedAt: "2026-01-02T05:35:42.904Z"
   - id: WP-02
     title: 실시간 통신 (WebSocket)
     status: planned
@@ -291,7 +291,7 @@ workPackages:
         title: 실시간 이벤트 송수신 구현
         category: development
         domain: fullstack
-        status: "[  ]"
+        status: "[ ]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
@@ -317,11 +317,14 @@ workPackages:
           techSpec:
             - lib/socket.ts - 클라이언트 유틸
             - useSocket 커스텀 훅 (선택)
+        execution:
+          command: start
+          startedAt: "2026-01-02T05:36:39.013Z"
       - id: TSK-02-03
         title: "WP-02 통합 확인: 실시간 통신 검증"
         category: development
         domain: test
-        status: "[  ]"
+        status: "[dd]"
         priority: high
         assignee: "-"
         schedule: 2026-01-03 ~ 2026-01-03
