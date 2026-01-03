@@ -677,7 +677,7 @@ workPackages:
         title: WP-03 및 전체 MVP 통합 검증
         category: infrastructure
         domain: test
-        status: "[  ]"
+        status: "[dd]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-16"
