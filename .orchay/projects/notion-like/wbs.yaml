@@ -567,10 +567,11 @@ workPackages:
         title: WP-02 통합 검증
         category: infrastructure
         domain: test
-        status: "[im]"
+        status: "[vf]"
         priority: high
         assignee: "-"
         schedule: "2026-01-14"
+        test_result: pass
         tags:
           - integration
           - verify
@@ -594,7 +595,6 @@ workPackages:
             - Cmd+K 검색 → 결과 클릭 → 페이지 이동
             - URL 직접 입력 → 해당 페이지 로드
           note: WP-02의 모든 페이지 구조 기능이 연동되어 정상 동작하는지 검증
-        execution: verify
   - id: WP-03
     title: MVP 완성 및 마무리
     status: planned
