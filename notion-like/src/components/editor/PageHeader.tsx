@@ -60,10 +60,10 @@ export function PageHeader({
   };
 
   return (
-    <div data-testid="page-header" className="bg-white border-b border-gray-200">
+    <div data-testid="page-header" className="bg-[var(--notion-bg-primary)] border-b border-[var(--notion-border-light)]">
       {/* Cover Image Area */}
       {coverUrl && (
-        <div className="w-full h-[200px] bg-gray-200 overflow-hidden relative">
+        <div className="w-full h-[200px] bg-[var(--notion-bg-tertiary)] overflow-hidden relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={coverUrl}
@@ -88,7 +88,7 @@ export function PageHeader({
           <button
             onClick={() => setIsIconPickerOpen(true)}
             data-testid="icon-change-button"
-            className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 bg-gray-300 hover:bg-gray-400 text-white px-2 py-1 rounded text-xs font-medium transition-all"
+            className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 bg-[var(--notion-button-bg)] hover:bg-[var(--notion-button-hover)] text-[var(--notion-text-primary)] px-2 py-1 rounded text-xs font-medium transition-all"
             title="Change page icon"
             aria-label="Change page icon"
           >
@@ -110,7 +110,7 @@ export function PageHeader({
           value={titleValue}
           onChange={(e) => setTitleValue(e.target.value)}
           onBlur={handleTitleBlur}
-          className="text-[40px] font-bold w-full max-w-2xl outline-none bg-transparent border-b border-transparent hover:border-gray-300 focus:border-gray-400 transition-colors"
+          className="text-[40px] font-bold w-full max-w-2xl outline-none bg-transparent border-b border-transparent hover:border-[var(--notion-border-light)] focus:border-[var(--notion-border-medium)] transition-colors text-[var(--notion-text-primary)] placeholder-[var(--notion-text-tertiary)]"
           data-testid="page-title-input"
           placeholder="Untitled"
         />

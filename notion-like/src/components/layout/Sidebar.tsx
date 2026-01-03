@@ -20,11 +20,11 @@ function SidebarItem({ icon, label, shortcut, onClick }: SidebarItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[#37352F] rounded-[4px] hover:bg-[#EFEFEF] transition-colors duration-[20ms] cursor-pointer"
+      className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[var(--notion-text-primary)] rounded-[4px] hover:bg-[var(--notion-bg-tertiary)] transition-colors duration-[20ms] cursor-pointer"
     >
-      <div className="w-4 h-4 text-[#787774] flex-shrink-0">{icon}</div>
+      <div className="w-4 h-4 text-[var(--notion-text-tertiary)] flex-shrink-0">{icon}</div>
       <span className="flex-1 text-left">{label}</span>
-      {shortcut && <span className="text-[12px] text-[#B4B4B3] ml-auto">{shortcut}</span>}
+      {shortcut && <span className="text-[12px] text-[var(--notion-text-tertiary)] ml-auto">{shortcut}</span>}
     </button>
   );
 }
@@ -34,7 +34,7 @@ function SidebarItem({ icon, label, shortcut, onClick }: SidebarItemProps) {
  */
 function SectionHeader({ label }: SectionHeaderProps) {
   return (
-    <div className="px-3 py-1 text-[12px] font-medium text-[#787774] uppercase tracking-wide">
+    <div className="px-3 py-1 text-[12px] font-medium text-[var(--notion-text-tertiary)] uppercase tracking-wide">
       {label}
     </div>
   );
@@ -52,14 +52,14 @@ export function Sidebar() {
   const handleWorkspaceClick = () => console.log('Workspace menu clicked');
 
   return (
-    <div className="w-[240px] h-screen bg-[#F7F6F3] flex flex-col border-r border-[#E9E9E7]">
+    <div className="w-[240px] h-screen bg-[var(--notion-bg-secondary)] flex flex-col border-r border-[var(--notion-border-light)]">
       {/* Workspace Header */}
       <button
         onClick={handleWorkspaceClick}
-        className="px-3 py-3 flex items-center justify-between hover:bg-[#EFEFEF] cursor-pointer rounded-[4px] mx-2 mt-1 transition-colors duration-[20ms]"
+        className="px-3 py-3 flex items-center justify-between hover:bg-[var(--notion-bg-tertiary)] cursor-pointer rounded-[4px] mx-2 mt-1 transition-colors duration-[20ms]"
       >
-        <span className="text-[14px] font-semibold text-[#37352F]">🏠 Orchay Notes</span>
-        <ChevronDown className="w-4 h-4 text-[#787774]" />
+        <span className="text-[14px] font-semibold text-[var(--notion-text-primary)]">🏠 Orchay Notes</span>
+        <ChevronDown className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
       </button>
 
       {/* Quick Actions */}
@@ -79,7 +79,7 @@ export function Sidebar() {
       </div>
 
       {/* Page Tree Area */}
-      <div className="flex-1 overflow-auto px-2 py-2 space-y-1 border-t border-[#E9E9E7]">
+      <div className="flex-1 overflow-auto px-2 py-2 space-y-1 border-t border-[var(--notion-border-light)]">
         <SectionHeader label="Favorites" />
         {/* Placeholder for TSK-02-03 */}
 
@@ -88,12 +88,12 @@ export function Sidebar() {
       </div>
 
       {/* New Page Button */}
-      <div className="p-2 border-t border-[#E9E9E7]">
+      <div className="p-2 border-t border-[var(--notion-border-light)]">
         <button
           onClick={handleNewPageClick}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[#37352F] rounded-[4px] hover:bg-[#EFEFEF] transition-colors duration-[20ms] cursor-pointer"
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[var(--notion-text-primary)] rounded-[4px] hover:bg-[var(--notion-bg-tertiary)] transition-colors duration-[20ms] cursor-pointer"
         >
-          <Plus className="w-4 h-4 text-[#787774]" />
+          <Plus className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
           <span>New page</span>
         </button>
       </div>

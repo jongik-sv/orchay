@@ -86,7 +86,7 @@ export function IconPicker({
     <div
       ref={dropdownRef}
       data-testid="icon-picker"
-      className={`absolute ${position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'} z-50 bg-white rounded-lg shadow-lg border border-gray-200`}
+      className={`absolute ${position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'} z-50 bg-[var(--notion-bg-primary)] rounded-lg shadow-lg border border-[var(--notion-border-light)]`}
       style={{
         minWidth: '320px',
         maxHeight: '400px',
@@ -95,10 +95,10 @@ export function IconPicker({
     >
       {/* Recent Emojis Section */}
       {recentEmojis.length > 0 && (
-        <div data-testid="recent-emojis-section" className="border-b border-gray-200">
+        <div data-testid="recent-emojis-section" className="border-b border-[var(--notion-border-light)]">
           <div className="px-2 py-2">
             <div
-              className="text-xs font-bold text-gray-600 uppercase px-2 py-1"
+              className="text-xs font-bold text-[var(--notion-text-tertiary)] uppercase px-2 py-1"
               style={{ fontSize: '12px', color: '#999' }}
             >
               Recent
@@ -114,7 +114,7 @@ export function IconPicker({
                   key={`recent-${index}`}
                   data-testid={`emoji-button-recent-${index}`}
                   onClick={() => handleEmojiClick(emoji)}
-                  className="hover:bg-gray-200 active:bg-gray-300 rounded transition-colors"
+                  className="hover:bg-[var(--notion-bg-tertiary)] active:bg-[var(--notion-bg-secondary)] rounded transition-colors"
                   style={{
                     width: '40px',
                     height: '40px',
@@ -142,7 +142,7 @@ export function IconPicker({
         <div key={category.id} data-testid="emoji-category" className="border-b last:border-b-0">
           <div className="px-2 py-2">
             <div
-              className="text-xs font-bold text-gray-600 uppercase px-2 py-1"
+              className="text-xs font-bold text-[var(--notion-text-tertiary)] uppercase px-2 py-1"
               style={{ fontSize: '12px', color: '#999' }}
             >
               {category.name}
@@ -158,7 +158,7 @@ export function IconPicker({
                   key={`${category.id}-${index}`}
                   data-testid={`emoji-button-${category.id}-${index}`}
                   onClick={() => handleEmojiClick(emoji)}
-                  className="hover:bg-gray-200 active:bg-gray-300 rounded transition-colors"
+                  className="hover:bg-[var(--notion-bg-tertiary)] active:bg-[var(--notion-bg-secondary)] rounded transition-colors"
                   style={{
                     width: '40px',
                     height: '40px',

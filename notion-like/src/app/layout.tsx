@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="bg-white text-gray-900">
+      <body className="bg-[var(--notion-bg-primary)] text-[var(--notion-text-primary)]">
         {children}
       </body>
     </html>

@@ -189,16 +189,16 @@ export default function PageContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">불러오는 중...</div>
+      <div className="flex items-center justify-center min-h-screen bg-[var(--notion-bg-primary)]">
+        <div className="text-lg text-[var(--notion-text-secondary)]">불러오는 중...</div>
       </div>
     );
   }
 
   if (!pageData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-red-600">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--notion-bg-primary)]">
+        <div className="text-lg text-red-500">
           {saveState.message || "페이지를 불러올 수 없습니다."}
         </div>
       </div>
@@ -223,7 +223,7 @@ export default function PageContent() {
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <button
               onClick={toggleFavorite}
-              className="p-2 rounded hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
+              className="p-2 rounded hover:bg-[var(--notion-bg-tertiary)] transition-colors bg-[var(--notion-bg-primary)]/80 backdrop-blur-sm"
               title={pageData.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
               aria-label={pageData.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
               data-testid="favorite-toggle-btn"
@@ -233,13 +233,13 @@ export default function PageContent() {
                 className={
                   pageData.is_favorite
                     ? "text-[#E9B44C] fill-[#E9B44C]"
-                    : "text-[#B4B4B3]"
+                    : "text-[var(--notion-text-tertiary)]"
                 }
               />
             </button>
 
             {/* 저장 상태 표시 */}
-            <div className="text-sm bg-white/80 backdrop-blur-sm px-2 py-1 rounded">
+            <div className="text-sm bg-[var(--notion-bg-primary)]/80 backdrop-blur-sm px-2 py-1 rounded">
               {saveState.status === "saving" && (
                 <span className="text-blue-600">저장 중...</span>
               )}
@@ -254,7 +254,7 @@ export default function PageContent() {
         </div>
 
         {/* 에디터 영역 */}
-        <div className="flex-1 overflow-auto bg-white">
+        <div className="flex-1 overflow-auto bg-[var(--notion-bg-primary)]">
           <div className="px-12 py-8">
             <Editor
               initialContent={pageData.content || undefined}
