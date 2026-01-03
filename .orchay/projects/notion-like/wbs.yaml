@@ -559,7 +559,7 @@ workPackages:
         title: 검색 기능 (Cmd+K)
         category: development
         domain: fullstack
-        status: "[ap]"
+        status: "[im]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-14"
@@ -584,7 +584,7 @@ workPackages:
         title: WP-02 통합 검증
         category: infrastructure
         domain: test
-        status: "[ap]"
+        status: "[im]"
         priority: high
         assignee: "-"
         schedule: "2026-01-14"
@@ -643,8 +643,8 @@ workPackages:
             - md:px-[96px] px-6
             - "사이드바: absolute z-50 (모바일)"
         execution:
-          command: review
-          startedAt: "2026-01-02T16:33:10.940Z"
+          command: build
+          startedAt: "2026-01-03T03:22:33.660Z"
       - id: TSK-03-02
         title: 다크모드 지원
         category: development
@@ -670,6 +670,9 @@ workPackages:
           uiSpec:
             - "Background: #191919"
             - "Text: #E6E6E4"
+        execution:
+          command: build
+          startedAt: "2026-01-03T03:22:45.198Z"
       - id: TSK-03-03
         title: 에러 처리 및 로딩 상태
         category: development

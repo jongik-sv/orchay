@@ -6,6 +6,7 @@ import { Search, Inbox, Settings, ChevronDown, Plus } from 'lucide-react';
 import { Page, useAppStore } from '@/lib/store';
 import { PageTree } from './PageTree';
 import { FavoritesList } from './FavoritesList';
+import { SearchModal } from '../ui/SearchModal';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -114,6 +115,7 @@ export function ClientSidebar() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // 페이지 목록 로드
   const loadPages = useCallback(async () => {
@@ -241,17 +243,33 @@ export function ClientSidebar() {
     }
   }, [pageCache, setPageCache]);
 
-  const handleSearchClick = () => console.log('Search clicked');
+  const handleSearchClick = useCallback(() => setSearchOpen(true), []);
   const handleUpdatesClick = () => console.log('Updates clicked');
   const handleSettingsClick = () => console.log('Settings clicked');
   const handleWorkspaceClick = () => console.log('Workspace menu clicked');
+
+  // 전역 Cmd+K 단축키 이벤트 리스너
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // 트리 구조로 변환
   const pageTree = buildPageTree(pageCache);
   const favoritePages = pageCache.filter((p) => p.is_favorite);
 
   return (
-    <div className="h-full flex flex-col">
+    <>
+      {/* 검색 모달 */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      <div className="h-full flex flex-col">
       {/* Workspace Header */}
       <button
         onClick={handleWorkspaceClick}
@@ -317,5 +335,6 @@ export function ClientSidebar() {
         </button>
       </div>
     </div>
+    </>
   );
 }
