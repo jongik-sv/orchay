@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, notFound } from "next/navigation";
-import { Star } from "lucide-react";
+import { Star, Loader2, Check, AlertCircle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import { Editor } from "@/components/editor/Editor";
 import { PageHeader } from "@/components/editor/PageHeader";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { useAppStore } from "@/lib/store";
 
 interface PageData {
@@ -48,6 +49,7 @@ export default function PageContent() {
   const params = useParams();
   const pageId = params?.pageId as string;
   const setCurrentPageId = useAppStore((state) => state.setCurrentPageId);
+  const addToast = useAppStore((state) => state.addToast);
 
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,29 +90,26 @@ export default function PageContent() {
             setNotFoundState(true);
             return;
           }
-          setSaveState({
-            status: "error",
-            message: "페이지를 불러오는 중 오류가 발생했습니다.",
-          });
+          const errorMsg = "페이지를 불러오는 중 오류가 발생했습니다.";
+          setSaveState({ status: "error", message: errorMsg });
+          addToast("error", errorMsg);
           return;
         }
 
         const data = await response.json();
         setPageData(data);
         setSaveState({ status: "idle" });
-      } catch (error) {
-        console.error("[PageContent] Failed to load page:", error);
-        setSaveState({
-          status: "error",
-          message: "페이지를 불러오는 중 오류가 발생했습니다.",
-        });
+      } catch {
+        const errorMsg = "페이지를 불러오는 중 오류가 발생했습니다.";
+        setSaveState({ status: "error", message: errorMsg });
+        addToast("error", errorMsg);
       } finally {
         setLoading(false);
       }
     };
 
     loadPage();
-  }, [pageId]);
+  }, [pageId, addToast]);
 
   // 404 상태일 때 notFound() 호출
   useEffect(() => {
@@ -148,15 +147,12 @@ export default function PageContent() {
         saveTimeoutRef.current = setTimeout(() => {
           setSaveState({ status: "idle" });
         }, 2000);
-      } catch (error) {
-        console.error("[PageContent] Update failed:", error);
-        setSaveState({
-          status: "error",
-          message: errorMessage,
-        });
+      } catch {
+        setSaveState({ status: "error", message: errorMessage });
+        addToast("error", errorMessage);
       }
     },
-    [pageId]
+    [pageId, addToast]
   );
 
   // 콘텐츠 저장 함수
@@ -189,9 +185,9 @@ export default function PageContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--notion-bg-primary)]">
-        <div className="text-lg text-[var(--notion-text-secondary)]">불러오는 중...</div>
-      </div>
+      <MainLayout sidebar={<ClientSidebar />}>
+        <PageSkeleton />
+      </MainLayout>
     );
   }
 
@@ -239,15 +235,28 @@ export default function PageContent() {
             </button>
 
             {/* 저장 상태 표시 */}
-            <div className="text-sm bg-[var(--notion-bg-primary)]/80 backdrop-blur-sm px-2 py-1 rounded">
+            <div
+              className="flex items-center gap-1.5 text-sm bg-[var(--notion-bg-primary)]/80 backdrop-blur-sm px-2 py-1 rounded"
+              data-testid="save-status"
+              data-save-state={saveState.status}
+            >
               {saveState.status === "saving" && (
-                <span className="text-blue-600">저장 중...</span>
+                <>
+                  <Loader2 size={14} className="text-blue-600 animate-spin" />
+                  <span className="text-blue-600">저장 중...</span>
+                </>
               )}
               {saveState.status === "saved" && (
-                <span className="text-green-600">저장됨</span>
+                <>
+                  <Check size={14} className="text-green-600" />
+                  <span className="text-green-600">저장됨</span>
+                </>
               )}
               {saveState.status === "error" && (
-                <span className="text-red-600">{saveState.message}</span>
+                <>
+                  <AlertCircle size={14} className="text-red-600" />
+                  <span className="text-red-600">{saveState.message}</span>
+                </>
               )}
             </div>
           </div>

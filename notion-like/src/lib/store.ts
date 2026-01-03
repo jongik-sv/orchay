@@ -16,6 +16,15 @@ export interface Page {
 export type PageWithRequired = Required<Omit<Page, 'parentId' | 'children'>> &
   Pick<Page, 'parentId' | 'children'>;
 
+// Toast 타입 정의
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export interface Toast {
+  id: string;
+  type: ToastType;
+  message: string;
+}
+
 interface AppStore {
   // UI 상태
   sidebarOpen: boolean;
@@ -40,6 +49,11 @@ interface AppStore {
   expandedFolders: Set<string>;
   toggleFolderExpanded: (folderId: string) => void;
   setExpandedFolders: (folderIds: string[]) => void;
+
+  // Toast 상태
+  toasts: Toast[];
+  addToast: (type: ToastType, message: string) => void;
+  removeToast: (id: string) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -88,6 +102,20 @@ export const useAppStore = create<AppStore>()(
       setExpandedFolders: (folderIds: string[]) =>
         set(() => ({
           expandedFolders: new Set(folderIds),
+        })),
+
+      // Toast 상태
+      toasts: [],
+      addToast: (type: ToastType, message: string) =>
+        set((state) => ({
+          toasts: [
+            ...state.toasts,
+            { id: `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, type, message },
+          ],
+        })),
+      removeToast: (id: string) =>
+        set((state) => ({
+          toasts: state.toasts.filter((toast) => toast.id !== id),
         })),
     }),
     {

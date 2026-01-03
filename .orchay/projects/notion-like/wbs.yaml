@@ -655,7 +655,7 @@ workPackages:
         title: 에러 처리 및 로딩 상태
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-16"
@@ -677,7 +677,7 @@ workPackages:
         title: WP-03 및 전체 MVP 통합 검증
         category: infrastructure
         domain: test
-        status: "[ap]"
+        status: "[  ]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-16"
