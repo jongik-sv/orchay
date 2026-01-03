@@ -621,7 +621,7 @@ workPackages:
         title: 반응형 레이아웃 적용
         category: development
         domain: frontend
-        status: "[ap]"
+        status: "[im]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-15"
@@ -642,9 +642,6 @@ workPackages:
           uiSpec:
             - md:px-[96px] px-6
             - "사이드바: absolute z-50 (모바일)"
-        execution:
-          command: build
-          startedAt: "2026-01-03T03:22:33.660Z"
       - id: TSK-03-02
         title: 다크모드 지원
         category: development

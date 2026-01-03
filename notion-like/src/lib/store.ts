@@ -21,6 +21,11 @@ interface AppStore {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
 
+  // 모바일 사이드바 상태
+  mobileSidebarOpen: boolean;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
+
   // 페이지 상태
   currentPageId: string | null;
   setCurrentPageId: (id: string | null) => void;
@@ -44,6 +49,11 @@ export const useAppStore = create<AppStore>()(
       sidebarOpen: true,
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
+      // 모바일 사이드바 상태
+      mobileSidebarOpen: false,
+      openMobileSidebar: () => set(() => ({ mobileSidebarOpen: true })),
+      closeMobileSidebar: () => set(() => ({ mobileSidebarOpen: false })),
 
       // 페이지 상태
       currentPageId: null,

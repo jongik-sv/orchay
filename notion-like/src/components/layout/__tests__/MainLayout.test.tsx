@@ -1,11 +1,30 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { MainLayout } from '../MainLayout';
 import { useAppStore } from '@/lib/store';
 
+// matchMedia mock (데스크톱 모드)
+const createMatchMedia = (matches: boolean) => {
+  return (query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  });
+};
+
 describe('MainLayout', () => {
   beforeEach(() => {
-    useAppStore.setState({ sidebarOpen: true });
+    window.matchMedia = createMatchMedia(false) as any; // 데스크톱 모드
+    useAppStore.setState({ sidebarOpen: true, mobileSidebarOpen: false });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should render sidebar and editor area', () => {
