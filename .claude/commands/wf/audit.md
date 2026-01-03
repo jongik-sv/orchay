@@ -123,8 +123,6 @@ Task: TSK-01-01-01
 
 📄 생성: 031-code-review-claude-1.md
 
-다음: /wf:patch 또는 /wf:verify
-
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:audit:success
 ```

@@ -130,7 +130,6 @@ npx tsx .orchay/script/transition.ts {Task-ID} verify -p {project}
 | 3. API 통합 테스트 | 엔드포인트별 결과/응답시간 |
 | 4. UI 통합 테스트 | 화면별 테스트 결과 |
 | 5. 테스트 요약 | 통계, 발견된 이슈 |
-| 6. 다음 단계 | /wf:done 안내 |
 
 ---
 
@@ -159,8 +158,6 @@ Task: TSK-01-01-01 | Category: development
 
 📄 생성: 070-integration-test.md
 
-다음: /wf:done TSK-01-01-01
-
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:verify:success
 ```
@@ -186,8 +183,6 @@ Task: TSK-02-01-01 | Category: defect
 └── test-result: none → pass ✅
 
 📄 생성: 070-test-results.md
-
-다음: /wf:done TSK-02-01-01
 
 ---
 ORCHAY_DONE:{project}/TSK-02-01-01:verify:success
@@ -215,8 +210,6 @@ Task: TSK-03-01-01 | Category: infrastructure
 └── test-result: none → pass ✅
 
 📄 생성: 070-infra-test.md
-
-다음: /wf:done TSK-03-01-01
 
 ---
 ORCHAY_DONE:{project}/TSK-03-01-01:verify:success

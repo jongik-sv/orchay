@@ -165,8 +165,6 @@ Task: TSK-01-01-01
 ├── 030-implementation.md (리뷰 반영 이력 추가)
 └── 031-...(적용완료).md
 
-다음: /wf:audit (재리뷰) 또는 /wf:verify
-
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:patch:success
 ```

@@ -160,8 +160,6 @@ Task: TSK-01-01-01
 ├── 010-design.md
 └── 021-...(적용완료).md
 
-다음: /wf:review (재리뷰) 또는 /wf:build
-
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:apply:success
 ```

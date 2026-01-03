@@ -132,8 +132,6 @@ Task: TSK-01-01-01 | 리뷰어: claude-1
 
 이슈 분포: P1(0) P2(1) P3(1) P4(2) P5(1) = 5건
 
-다음: /wf:apply 또는 /wf:build
-
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:review:success
 ```

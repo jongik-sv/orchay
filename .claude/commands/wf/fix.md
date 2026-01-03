@@ -35,7 +35,7 @@ parallel-processing: true
 | 유형 | 조건 | 실행 단계 |
 |------|------|----------|
 | Backend-only | 영향 파일에 Controller/Service/API 포함 | 1 → 2 → 4 → 5 |
-| Frontend-only | 영향 파일에 Component/Vue/Page 포함 | 1 → 3 → 4 → 5 |
+| Frontend-only | 영향 파일에 Component/Page/UI 포함 | 1 → 3 → 4 → 5 |
 | Full-stack | 백엔드 + 프론트엔드 모두 | 1 → 2 → 3 → 4 → 5 |
 
 ---
@@ -101,7 +101,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} fix -p {project} --start
 ```
 🔄 E2E 테스트-수정 루프:
 ├── 1️⃣ 결함 재현 E2E 테스트 작성
-├── 2️⃣ Playwright 테스트 실행
+├── 2️⃣ E2E 테스트 도구 실행
 ├── 3️⃣ 실패 분석
 │   ├── Locator 실패 → data-testid 확인
 │   ├── Timeout → waitFor 추가
@@ -165,8 +165,6 @@ Task: TSK-02-01-01 | Category: defect
 
 📄 생성: 030-implementation.md
 
-다음: /wf:audit 또는 /wf:verify
-
 ---
 ORCHAY_DONE:{project}/TSK-02-01-01:fix:success
 ```
@@ -192,8 +190,6 @@ Task: TSK-02-02-01 | Category: defect
 └── E2E: 3/3 ✅
 
 📄 생성: 030-implementation.md
-
-다음: /wf:audit 또는 /wf:verify
 
 ---
 ORCHAY_DONE:{project}/TSK-02-02-01:fix:success

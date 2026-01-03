@@ -83,19 +83,19 @@ npx tsx .orchay/script/transition.ts {Task-ID} build -p {project} --start
 
 **구현 플래그 설정**:
 - `hasBackend`: "Backend", "API", "Service", "Controller" 키워드
-- `hasFrontend`: "Frontend", "UI", "화면", "Vue", "React" 키워드
+- `hasFrontend`: "Frontend", "UI", "화면", "Component", "Page" 키워드
 
 ### 2단계: Backend 구현 (TDD)
 
 **Agent**: backend-architect
 
 1. **Red Phase** (`026-test-specification.md` 기반):
-   - 단위 테스트 시나리오 표 → Vitest 코드 변환
+   - 단위 테스트 시나리오 표 → 테스트 코드 변환
    - `025-traceability-matrix.md`로 커버리지 확인
 
 2. **Green Phase**:
    - Controller/Service/Repository 구현
-   - Prisma 스키마/모델 구현
+   - DB 스키마/모델 구현
 
 3. **Refactor Phase** ⭐:
    - **SOLID 원칙**
@@ -125,11 +125,11 @@ npx tsx .orchay/script/transition.ts {Task-ID} build -p {project} --start
    - 색상/폰트: 테마 가이드 또는 이미지 추출
 
 2. **API 연동**:
-   - useFetch/useAsyncData 활용
+   - 비동기 데이터 처리 (프레임워크 규칙 참조)
    - 에러 처리 및 사용자 피드백
 
 3. **E2E 테스트 코드** (`026-test-specification.md` 기반):
-   - E2E 시나리오 표 → Playwright 코드 변환
+   - E2E 시나리오 표 → E2E 테스트 도구로 코드 변환
    - data-testid 셀렉터 목록 활용
    - Fixture 데이터 생성
 
@@ -195,24 +195,9 @@ npx tsx .orchay/script/transition.ts {Task-ID} build -p {project}
 
 ---
 
-## 프로젝트 코딩 규칙 (CLAUDE.md)
+## 프로젝트 코딩 규칙
 
-### Backend
-- TypeScript 필수
-- 파일 접근은 Server Routes 통해서만
-- Prisma ORM 사용
-
-### Frontend
-- Vue 3 Composition API (`<script setup>`)
-- 일반 HTML 금지, **PrimeVue 4.x** 우선 사용
-- Pinia 상태 관리
-
-### CSS 중앙화 원칙 ⭐
-- `:style` 및 HEX 하드코딩 **금지**
-- `main.css` Tailwind 클래스로 통일
-- **권장**: `:class="\`node-icon-${type}\`"`
-- **금지**: `:style="{ backgroundColor: '#3b82f6' }"`
-- **예외**: 동적 계산 필수 (paddingLeft, 드래그)
+> ⚠️ **`CLAUDE.md` 참조**: 프로젝트별 기술 스택, 코딩 컨벤션, 스타일 규칙은 `CLAUDE.md`를 따릅니다.
 
 ---
 
@@ -263,8 +248,6 @@ Task: TSK-01-01-01 | Full-stack
 └── WBS: test-result → pass
 
 📊 품질: TDD 85% | E2E 100% | FR/BR 100%
-
-다음: /wf:audit 또는 /wf:verify
 
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:build:success

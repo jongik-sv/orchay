@@ -41,11 +41,11 @@ parallel-processing: true
 
 ## 테스트 유형
 
-| 유형 | 도구 | 대상 | 실행 단계 |
-|------|------|------|----------|
-| TDD | Vitest | Backend 단위/통합 | 1 → 2 → 4 |
-| E2E | Playwright | Frontend 시나리오 | 1 → 3 → 4 |
-| all | 모두 | TDD + E2E | 1 → 2 → 3 → 4 |
+| 유형 | 대상 | 실행 단계 |
+|------|------|----------|
+| TDD | Backend 단위/통합 | 1 → 2 → 4 |
+| E2E | Frontend 시나리오 | 1 → 3 → 4 |
+| all | TDD + E2E | 1 → 2 → 3 → 4 |
 
 ---
 
@@ -88,7 +88,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} test -p {project} --start
 
 ```
 🔄 TDD 테스트-수정 루프:
-├── 1️⃣ Vitest 실행
+├── 1️⃣ 단위 테스트 실행
 ├── 2️⃣ 실패 분석
 │   ├── AssertionError → 비즈니스 로직 수정
 │   ├── TypeError → 타입/null 체크
@@ -111,7 +111,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} test -p {project} --start
 
 ```
 🔄 E2E 테스트-수정 루프:
-├── 1️⃣ Playwright 실행
+├── 1️⃣ E2E 테스트 도구 실행
 ├── 2️⃣ 실패 분석
 │   ├── Locator 실패 → data-testid 확인
 │   ├── Timeout → waitFor 추가
@@ -173,8 +173,6 @@ Task: TSK-01-01-01 | 유형: all
 
 📝 문서 동기화: 2개 문서 업데이트
 📋 WBS: test-result → pass
-
-다음: /wf:audit 또는 /wf:verify
 
 ---
 ORCHAY_DONE:{project}/TSK-01-01-01:test:success
