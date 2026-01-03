@@ -220,10 +220,7 @@ workPackages:
           techSpec:
             - "@blocknote/react useCreateBlockNote"
             - "@blocknote/mantine BlockNoteView"
-        execution:
-          command: verify
-          startedAt: "2026-01-02T23:30:00.000Z"
-          completedAt: "2026-01-02T23:45:00.000Z"
+        execution: verify
       - id: TSK-01-02
         title: 에디터 콘텐츠 저장/로드 구현
         category: development
@@ -266,10 +263,7 @@ workPackages:
           - styling
         depends:
           - TSK-01-01
-        execution:
-          command: verify
-          startedAt: "2026-01-02T23:45:00.000Z"
-          completedAt: "2026-01-02T23:55:00.000Z"
+        execution: verify
         requirements:
           prdRef: TRD 2. UI/UX 디자인 시스템
           items:
@@ -342,10 +336,7 @@ workPackages:
           uiSpec:
             - Notion 스타일 드롭다운 그림자
             - 그리드 8열
-        execution:
-          command: verify
-          startedAt: "2026-01-02T14:44:09.924Z"
-          completedAt: "2026-01-02T14:45:00.000Z"
+        execution: verify
       - id: TSK-01-99
         title: WP-01 통합 검증
         category: development
@@ -407,10 +398,7 @@ workPackages:
           uiSpec:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
-        execution:
-          command: verify
-          startedAt: "2026-01-02T13:55:00.296Z"
-          completedAt: "2026-01-02T23:59:00.000Z"
+        execution: verify
       - id: TSK-02-02
         title: 사이드바 컴포넌트
         category: development
@@ -439,10 +427,7 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
-        execution:
-          command: verify
-          startedAt: "2026-01-02T14:44:17.082Z"
-          completedAt: "2026-01-02T15:35:00.000Z"
+        execution: verify
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
@@ -527,10 +512,7 @@ workPackages:
           techSpec:
             - Next.js App Router 동적 라우트
             - useParams, useRouter
-        execution:
-          command: verify
-          startedAt: "2026-01-02T15:58:28.417Z"
-          completedAt: "2026-01-03T01:00:00.000Z"
+        execution: verify
       - id: TSK-02-06
         title: 즐겨찾기 기능
         category: development
@@ -559,10 +541,11 @@ workPackages:
         title: 검색 기능 (Cmd+K)
         category: development
         domain: fullstack
-        status: "[im]"
+        status: "[vf]"
         priority: medium
         assignee: "-"
         schedule: "2026-01-14"
+        test_result: pass
         tags:
           - search
         depends:
@@ -611,6 +594,7 @@ workPackages:
             - Cmd+K 검색 → 결과 클릭 → 페이지 이동
             - URL 직접 입력 → 해당 페이지 로드
           note: WP-02의 모든 페이지 구조 기능이 연동되어 정상 동작하는지 검증
+        execution: verify
   - id: WP-03
     title: MVP 완성 및 마무리
     status: planned
@@ -642,6 +626,7 @@ workPackages:
           uiSpec:
             - md:px-[96px] px-6
             - "사이드바: absolute z-50 (모바일)"
+        execution: verify
       - id: TSK-03-02
         title: 다크모드 지원
         category: development
@@ -650,6 +635,7 @@ workPackages:
         priority: low
         assignee: "-"
         schedule: "2026-01-15"
+        test_result: pass
         tags:
           - theme
           - darkmode
@@ -667,6 +653,7 @@ workPackages:
           uiSpec:
             - "Background: #191919"
             - "Text: #E6E6E4"
+        execution: verify
       - id: TSK-03-03
         title: 에러 처리 및 로딩 상태
         category: development
