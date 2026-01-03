@@ -11,9 +11,8 @@ import { defineEventHandler, readBody, getRouterParam, createError } from 'h3';
 import { promises as fs } from 'fs';
 import { parse as parseYaml } from 'yaml';
 import type { WbsNode, WbsMetadata } from '../../../../../../../types';
-import { parseWbsYaml } from '../../../../../../utils/wbs/yamlParser/index';
-import { serializeWbsToYaml, type SerializeContext } from '../../../../../../utils/wbs/yamlSerializer/index';
-import type { YamlWbsRoot } from '../../../../../../utils/wbs/yamlParser/_types';
+import { parseWbsYaml, type YamlWbsRoot } from '../../../../../../utils/wbs/yamlParser';
+import { serializeWbsToYaml, type SerializeContext } from '../../../../../../utils/wbs/yamlSerializer';
 import { findTaskInTree } from '../../../../../../utils/wbs/taskService';
 import {
   fileExists,

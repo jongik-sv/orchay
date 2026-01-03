@@ -427,7 +427,6 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
-        execution: verify
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
@@ -512,7 +511,6 @@ workPackages:
           techSpec:
             - Next.js App Router 동적 라우트
             - useParams, useRouter
-        execution: verify
       - id: TSK-02-06
         title: 즐겨찾기 기능
         category: development

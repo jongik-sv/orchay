@@ -76,12 +76,19 @@ export interface YamlRequirements {
 }
 
 /**
- * Task 실행 정보
+ * Task 실행 정보 (객체 형태)
  */
-export interface YamlExecution {
+export interface YamlExecutionObject {
   command?: string;
   startedAt?: string;
 }
+
+/**
+ * Task 실행 정보 (문자열 또는 객체)
+ * - 문자열: "design", "build", "test" 등
+ * - 객체: { command: "design", startedAt: "2025-01-01T00:00:00" }
+ */
+export type YamlExecution = string | YamlExecutionObject;
 
 /**
  * Task

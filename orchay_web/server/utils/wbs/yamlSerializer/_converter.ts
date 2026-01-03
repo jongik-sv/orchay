@@ -8,7 +8,7 @@ import type {
   YamlActivity,
   YamlTask,
   YamlRequirements,
-} from '../yamlParser/_types';
+} from '../yamlParser';
 
 /**
  * ScheduleRange → 일정 문자열 변환

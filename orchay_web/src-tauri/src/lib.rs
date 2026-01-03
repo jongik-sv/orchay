@@ -1,4 +1,5 @@
 mod commands;
+mod watcher;
 
 use commands::{config, files, projects};
 
@@ -19,6 +20,7 @@ pub fn run() {
             files::check_init_status,
             files::ensure_orchay_structure,
             files::read_file_content,
+            files::read_file_content_base64,
             files::write_file_content,
             files::list_task_documents,
             // Projects
@@ -27,6 +29,11 @@ pub fn run() {
             projects::get_wbs,
             projects::put_wbs,
             projects::get_settings,
+            projects::list_project_files,
+            // Watcher
+            watcher::start_watching,
+            watcher::stop_watching,
+            watcher::is_watching,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

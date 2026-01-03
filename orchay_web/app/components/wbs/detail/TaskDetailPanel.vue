@@ -60,17 +60,6 @@
 
     <!-- 정상 상태 -->
     <template v-else #content>
-      <!-- DEBUG: Tauri 반응성 확인용 -->
-      <div class="p-2 mb-2 bg-yellow-100 border border-yellow-400 rounded text-sm text-black">
-        <div><strong>DEBUG:</strong></div>
-        <div>id = {{ selectedTask?.id || 'null' }}</div>
-        <div>priority = {{ selectedTask?.priority || 'null' }}</div>
-        <div>schedule = {{ JSON.stringify(selectedTask?.schedule) || 'null' }}</div>
-        <div>requirements = {{ JSON.stringify(selectedTask?.requirements?.slice(0, 2)) || 'null' }} ({{ selectedTask?.requirements?.length || 0 }}개)</div>
-        <div>documents = {{ selectedTask?.documents?.length || 0 }}개</div>
-        <div>tags = {{ JSON.stringify(selectedTask?.tags) || 'null' }}</div>
-      </div>
-
       <div class="task-detail-content overflow-y-auto space-y-4">
         <!-- 기본 정보 (TSK-05-01) -->
         <WbsDetailTaskBasicInfo
@@ -133,18 +122,6 @@ const projectStore = useProjectStore()
 const { selectedTask, selectedProjectId, loadingTask, error } = storeToRefs(selectionStore)
 const toast = useToast()
 const notification = useNotification()
-
-// ============================================================
-// DEBUG: Tauri 반응성 확인용 Watcher
-// ============================================================
-watch(selectedTask, (newVal, oldVal) => {
-  console.log('[TaskDetailPanel] selectedTask 변경 감지:', {
-    hadOldValue: !!oldVal,
-    hasNewValue: !!newVal,
-    newId: newVal?.id,
-    newTitle: newVal?.title
-  })
-}, { immediate: true, deep: true })
 
 // ============================================================
 // State

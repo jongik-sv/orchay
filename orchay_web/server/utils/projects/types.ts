@@ -118,26 +118,5 @@ export interface WbsYaml {
   workPackages: unknown[]; // WP 상세 구조는 별도 타입으로 정의 필요
 }
 
-/**
- * 프로젝트 생성 DTO
- */
-export interface CreateProjectDto {
-  id: string;
-  name: string;
-  description?: string;
-  wbsDepth?: 3 | 4;
-  scheduledStart?: string;
-  scheduledEnd?: string;
-}
-
-/**
- * 프로젝트 수정 DTO
- */
-export interface UpdateProjectDto {
-  name?: string;
-  description?: string;
-  status?: 'active' | 'archived';
-  wbsDepth?: 3 | 4;
-  scheduledStart?: string;
-  scheduledEnd?: string;
-}
+// CreateProjectDto, UpdateProjectDto는 projectValidators.ts에서 Zod로 정의됨
+// import { CreateProjectDto, UpdateProjectDto } from '../validators/projectValidators';

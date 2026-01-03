@@ -49,6 +49,7 @@ export interface WbsNode {
   attributes?: Record<string, string>;  // TSK-03-05: 커스텀 속성 (예: test-result)
   completed?: CompletedTimestamps;  // TSK-03-06: 단계별 완료시각 (예: { bd: "2025-12-15 10:30" })
   rawContent?: string;  // 요구사항 원본 마크다운
+  execution?: string;  // 실행 중 상태 (예: "design", "build", "test") - 스피너 표시용
 }
 
 // 시리얼라이저 컨텍스트

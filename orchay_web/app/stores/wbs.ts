@@ -9,6 +9,7 @@ import type { WbsNode } from '~/types/store'
 import type { WbsMetadata, AllWbsResponse, ProjectWbsNode } from '~/types'
 import * as tauriApi from '../utils/tauri'
 import { parseWbsMarkdown } from '../utils/wbsParser'
+import { parseWbsYaml } from '../utils/wbsYamlParser'
 
 // 트리를 평탄화하는 헬퍼 (fetchAllWbs용)
 function flattenNodes(nodes: WbsNode[]): WbsNode[] {
@@ -169,7 +170,7 @@ export const useWbsStore = defineStore('wbs', () => {
       let parsedTree: WbsNode[] = []
 
       if (tauriApi.isTauri()) {
-        // Tauri 환경: Rust 커맨드로 마크다운 읽기 → 파싱
+        // Tauri 환경: Rust 커맨드로 YAML 읽기 → 파싱
         const configStore = useConfigStore()
         if (!configStore.basePath) {
           tree.value = []
@@ -177,7 +178,7 @@ export const useWbsStore = defineStore('wbs', () => {
           return
         }
         const wbsContent = await tauriApi.getWbs(configStore.basePath, projectId)
-        parsedTree = parseWbsMarkdown(wbsContent)
+        parsedTree = parseWbsYaml(wbsContent)
       } else {
         // Web/Electron 환경: Nitro API 사용
         const response = await $fetch<{ metadata: WbsMetadata; tree: WbsNode[] }>(
@@ -251,7 +252,7 @@ export const useWbsStore = defineStore('wbs', () => {
             try {
               console.log('[WbsStore] Loading WBS for project:', project.id)
               const wbsContent = await tauriApi.getWbs(basePath, project.id)
-              const projectTree = parseWbsMarkdown(wbsContent)
+              const projectTree = parseWbsYaml(wbsContent)
               console.log('[WbsStore] Parsed', projectTree.length, 'nodes for', project.id)
 
               // Task 개수 및 진행률 계산 (프리픽스 추가 전에 계산)
@@ -429,6 +430,269 @@ export const useWbsStore = defineStore('wbs', () => {
     searchQuery.value = query
   }
 
+  // ============================================================
+  // 부분 업데이트 로직 (ID 기반 diff)
+  // ============================================================
+
+  /**
+   * 노드 변경 여부 확인
+   * 핵심 속성만 비교하여 성능 최적화
+   */
+  function hasNodeChanged(oldNode: WbsNode, newNode: WbsNode): boolean {
+    return (
+      oldNode.title !== newNode.title ||
+      oldNode.status !== newNode.status ||
+      oldNode.progress !== newNode.progress ||
+      oldNode.execution !== newNode.execution ||
+      oldNode.assignee !== newNode.assignee ||
+      oldNode.priority !== newNode.priority ||
+      JSON.stringify(oldNode.completed) !== JSON.stringify(newNode.completed)
+    )
+  }
+
+  /**
+   * 노드 속성 인플레이스 업데이트
+   * Vue reactivity를 유지하면서 변경된 속성만 업데이트
+   */
+  function updateNodeInPlace(oldNode: WbsNode, newNode: WbsNode): void {
+    oldNode.title = newNode.title
+    oldNode.status = newNode.status
+    oldNode.progress = newNode.progress
+    oldNode.execution = newNode.execution
+    oldNode.assignee = newNode.assignee
+    oldNode.priority = newNode.priority
+    oldNode.schedule = newNode.schedule
+    oldNode.tags = newNode.tags
+    oldNode.depends = newNode.depends
+    oldNode.completed = newNode.completed
+    oldNode.attributes = newNode.attributes
+    oldNode.rawContent = newNode.rawContent
+    oldNode.requirements = newNode.requirements
+  }
+
+  /**
+   * ID 기반 부분 업데이트
+   * 새 트리와 기존 flatNodes를 비교하여 변경된 노드만 업데이트
+   */
+  function applyPartialUpdate(newTree: WbsNode[]): {
+    added: string[]
+    updated: string[]
+    removed: string[]
+  } {
+    const newFlatNodes = flattenTree(newTree)
+    const oldIds = new Set(flatNodes.value.keys())
+    const newIds = new Set(newFlatNodes.keys())
+
+    const result = {
+      added: [] as string[],
+      updated: [] as string[],
+      removed: [] as string[],
+    }
+
+    // 추가된 노드
+    for (const id of newIds) {
+      if (!oldIds.has(id)) {
+        result.added.push(id)
+      }
+    }
+
+    // 삭제된 노드
+    for (const id of oldIds) {
+      if (!newIds.has(id)) {
+        result.removed.push(id)
+      }
+    }
+
+    // 변경된 노드 (속성 비교)
+    for (const id of newIds) {
+      if (oldIds.has(id)) {
+        const oldNode = flatNodes.value.get(id)!
+        const newNode = newFlatNodes.get(id)!
+
+        if (hasNodeChanged(oldNode, newNode)) {
+          result.updated.push(id)
+          // 기존 노드의 속성만 업데이트 (Vue reactivity 유지)
+          updateNodeInPlace(oldNode, newNode)
+        }
+      }
+    }
+
+    // 추가된 노드 처리
+    for (const id of result.added) {
+      flatNodes.value.set(id, newFlatNodes.get(id)!)
+    }
+
+    // 삭제된 노드 처리
+    for (const id of result.removed) {
+      flatNodes.value.delete(id)
+    }
+
+    // 트리 구조 업데이트 (노드 추가/삭제 반영)
+    syncTreeStructure(tree.value, newTree)
+
+    return result
+  }
+
+  /**
+   * 트리 구조 동기화 (재귀)
+   * 기존 트리의 참조를 유지하면서 구조만 동기화
+   */
+  function syncTreeStructure(oldTree: WbsNode[], newTree: WbsNode[]): void {
+    const newIds = new Set(newTree.map(n => n.id))
+
+    // 삭제된 노드 제거 (역순 순회)
+    for (let i = oldTree.length - 1; i >= 0; i--) {
+      if (!newIds.has(oldTree[i].id)) {
+        oldTree.splice(i, 1)
+      }
+    }
+
+    // 추가/순서 변경 처리
+    for (let i = 0; i < newTree.length; i++) {
+      const newNode = newTree[i]
+      const oldIndex = oldTree.findIndex(n => n.id === newNode.id)
+
+      if (oldIndex === -1) {
+        // 새 노드 추가
+        oldTree.splice(i, 0, newNode)
+      } else if (oldIndex !== i) {
+        // 순서 변경
+        const [moved] = oldTree.splice(oldIndex, 1)
+        oldTree.splice(i, 0, moved)
+      }
+
+      // 자식 노드 재귀 처리
+      if (oldTree[i].children && newNode.children) {
+        syncTreeStructure(oldTree[i].children, newNode.children)
+      }
+    }
+  }
+
+  /**
+   * WBS 변경 이벤트 핸들러
+   * 특정 프로젝트의 WBS가 변경되었을 때 호출
+   * 다중 프로젝트 모드에서는 해당 프로젝트 노드의 자식만 업데이트
+   */
+  async function handleWbsChanged(projectId: string): Promise<{
+    added: string[]
+    updated: string[]
+    removed: string[]
+  } | null> {
+    console.log('[WbsStore] handleWbsChanged:', projectId)
+
+    try {
+      let newTree: WbsNode[] = []
+
+      if (tauriApi.isTauri()) {
+        const configStore = useConfigStore()
+        if (!configStore.basePath) {
+          console.warn('[WbsStore] No base path configured')
+          return null
+        }
+
+        const wbsContent = await tauriApi.getWbs(configStore.basePath, projectId)
+        newTree = parseWbsYaml(wbsContent)
+      } else {
+        const response = await $fetch<{ tree: WbsNode[] }>(`/api/projects/${projectId}/wbs`)
+        newTree = response.tree
+      }
+
+      // 다중 프로젝트 모드: 프로젝트 프리픽스 추가 및 프로젝트 노드 자식만 업데이트
+      if (isMultiProjectMode.value) {
+        // 1. 새 트리에 프로젝트 프리픽스 추가
+        const prefixedTree = addProjectPrefixToNodes(newTree, projectId)
+
+        // 2. 기존 트리에서 해당 프로젝트 노드 찾기
+        const projectNode = tree.value.find(n => n.id === projectId)
+        if (!projectNode) {
+          console.warn('[WbsStore] Project node not found:', projectId)
+          return null
+        }
+
+        // 3. 프로젝트 노드의 자식에 대해 부분 업데이트 적용
+        const changes = applyPartialUpdateToChildren(projectNode, prefixedTree)
+        console.log('[WbsStore] Partial update applied (multi-project):', changes)
+
+        // 4. flatNodes 재구성
+        flatNodes.value = flattenTree(tree.value)
+
+        return changes
+      } else {
+        // 단일 프로젝트 모드: 전체 트리 업데이트
+        const changes = applyPartialUpdate(newTree)
+        console.log('[WbsStore] Partial update applied:', changes)
+        return changes
+      }
+    } catch (e) {
+      console.error('[WbsStore] Failed to handle WBS change:', e)
+      return null
+    }
+  }
+
+  /**
+   * 프로젝트 노드의 자식에 대해 부분 업데이트 적용
+   * 다중 프로젝트 모드용
+   */
+  function applyPartialUpdateToChildren(
+    projectNode: WbsNode,
+    newChildren: WbsNode[]
+  ): { added: string[]; updated: string[]; removed: string[] } {
+    const result = { added: [] as string[], updated: [] as string[], removed: [] as string[] }
+
+    if (!projectNode.children) {
+      projectNode.children = []
+    }
+
+    // 기존 자식 노드들의 flat map
+    const oldChildrenFlat = flattenTree(projectNode.children)
+    const newChildrenFlat = flattenTree(newChildren)
+
+    const oldIds = new Set(oldChildrenFlat.keys())
+    const newIds = new Set(newChildrenFlat.keys())
+
+    // 추가된 노드
+    for (const id of newIds) {
+      if (!oldIds.has(id)) {
+        result.added.push(id)
+      }
+    }
+
+    // 삭제된 노드
+    for (const id of oldIds) {
+      if (!newIds.has(id)) {
+        result.removed.push(id)
+      }
+    }
+
+    // 변경된 노드 (속성 비교 및 in-place 업데이트)
+    for (const id of newIds) {
+      if (oldIds.has(id)) {
+        const oldNode = oldChildrenFlat.get(id)!
+        const newNode = newChildrenFlat.get(id)!
+
+        if (hasNodeChanged(oldNode, newNode)) {
+          result.updated.push(id)
+          updateNodeInPlace(oldNode, newNode)
+        }
+      }
+    }
+
+    // 트리 구조 동기화 (추가/삭제 반영)
+    syncTreeStructure(projectNode.children, newChildren)
+
+    // 프로젝트 노드의 진행률/태스크 개수 업데이트
+    const tasks = Array.from(newChildrenFlat.values()).filter(n => n.type === 'task')
+    const taskCount = tasks.length
+    const progress = taskCount > 0
+      ? Math.round(tasks.reduce((sum, t) => sum + (t.progress || 0), 0) / taskCount)
+      : 0
+
+    projectNode.taskCount = taskCount
+    projectNode.progress = progress
+
+    return result
+  }
+
   return {
     // State
     tree,
@@ -455,7 +719,10 @@ export const useWbsStore = defineStore('wbs', () => {
     expandAll,
     collapseAll,
     clearWbs,
-    setSearchQuery
+    setSearchQuery,
+    // 부분 업데이트
+    handleWbsChanged,
+    applyPartialUpdate,
   }
 })
 

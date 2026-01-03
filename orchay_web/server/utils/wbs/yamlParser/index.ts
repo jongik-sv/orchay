@@ -99,6 +99,6 @@ export function parseWbsYaml(yamlContent: string): {
   return { metadata, tree };
 }
 
-// 타입 및 유틸 함수 re-export
-export type { YamlWbsRoot, YamlWorkPackage, YamlActivity, YamlTask } from './_types';
-export { convertWorkPackages, convertTask, convertActivity } from './_converter';
+// NOTE: Types and converter functions are NOT re-exported here
+// to avoid Nuxt auto-import duplicate warnings.
+// Import directly from './_types' or './_converter' if needed.

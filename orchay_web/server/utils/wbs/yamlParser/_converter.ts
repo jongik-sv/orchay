@@ -11,18 +11,35 @@ import type {
 } from './_types';
 
 /**
- * 일정 문자열 파싱 ("YYYY-MM-DD ~ YYYY-MM-DD")
+ * 일정 문자열 파싱
+ * - 범위 형식: "YYYY-MM-DD ~ YYYY-MM-DD"
+ * - 단일 날짜: "YYYY-MM-DD"
  */
 export function parseScheduleString(schedule: string | undefined): ScheduleRange | undefined {
   if (!schedule) return undefined;
 
-  const match = schedule.match(/^(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})$/);
-  if (!match) return undefined;
+  // 문자열로 변환 (숫자나 다른 타입일 수 있음)
+  const scheduleStr = String(schedule).trim();
 
-  return {
-    start: match[1],
-    end: match[2],
-  };
+  // 범위 형식: "YYYY-MM-DD ~ YYYY-MM-DD"
+  const rangeMatch = scheduleStr.match(/^(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})$/);
+  if (rangeMatch) {
+    return {
+      start: rangeMatch[1],
+      end: rangeMatch[2],
+    };
+  }
+
+  // 단일 날짜 형식: "YYYY-MM-DD"
+  const singleMatch = scheduleStr.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (singleMatch) {
+    return {
+      start: singleMatch[1],
+      end: singleMatch[1],
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -146,6 +163,16 @@ export function convertTask(task: YamlTask): WbsNode {
     completed: task.completed,
     rawContent: convertRequirementsToMarkdown(task.requirements),
   };
+
+  // execution 필드 처리 (스피너 표시용)
+  // "design" 또는 { command: "design" } 형태 모두 지원
+  if (task.execution) {
+    if (typeof task.execution === 'string') {
+      node.execution = task.execution;
+    } else if (task.execution.command) {
+      node.execution = task.execution.command;
+    }
+  }
 
   // 커스텀 속성 처리
   const attributes: Record<string, string> = {};

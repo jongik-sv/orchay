@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::time::SystemTime;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -213,4 +215,98 @@ pub async fn get_settings(
         .map_err(|_| format!("Settings not found: {}", setting_type))?;
 
     serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))
+}
+
+// ============================================================
+// Project Files API
+// ============================================================
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFile {
+    pub name: String,
+    pub path: String,
+    pub relative_path: String,
+    #[serde(rename = "type")]
+    pub file_type: String,
+    pub size: u64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 파일 확장자로 타입 결정
+fn get_file_type(filename: &str) -> String {
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
+    match ext.as_str() {
+        "md" => "markdown".to_string(),
+        "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => "image".to_string(),
+        "json" => "json".to_string(),
+        _ => "other".to_string(),
+    }
+}
+
+/// SystemTime을 ISO8601 문자열로 변환
+fn system_time_to_iso_string(time: SystemTime) -> String {
+    let datetime: DateTime<Utc> = time.into();
+    datetime.to_rfc3339()
+}
+
+/// 프로젝트 파일 목록 조회 (tasks 폴더 제외)
+#[tauri::command]
+pub async fn list_project_files(
+    base_path: String,
+    project_id: String,
+) -> Result<Vec<ProjectFile>, String> {
+    let project_path = PathBuf::from(&base_path)
+        .join(".orchay")
+        .join("projects")
+        .join(&project_id);
+
+    if !project_path.exists() || !project_path.is_dir() {
+        return Err(format!("Project not found: {}", project_id));
+    }
+
+    let mut files: Vec<ProjectFile> = Vec::new();
+
+    let entries = fs::read_dir(&project_path)
+        .map_err(|e| format!("Failed to read project folder: {}", e))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let filename = entry.file_name().to_string_lossy().to_string();
+
+        // tasks 폴더 제외
+        if path.is_dir() && filename == "tasks" {
+            continue;
+        }
+
+        // 파일만 처리
+        if path.is_file() {
+            let metadata = fs::metadata(&path).ok();
+            let (size, created_at, updated_at) = if let Some(meta) = metadata {
+                (
+                    meta.len(),
+                    meta.created().ok().map(system_time_to_iso_string).unwrap_or_default(),
+                    meta.modified().ok().map(system_time_to_iso_string).unwrap_or_default(),
+                )
+            } else {
+                (0, String::new(), String::new())
+            };
+
+            files.push(ProjectFile {
+                name: filename.clone(),
+                path: path.to_string_lossy().to_string(),
+                relative_path: filename.clone(),
+                file_type: get_file_type(&filename),
+                size,
+                created_at,
+                updated_at,
+            });
+        }
+    }
+
+    // 파일명 정렬
+    files.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Ok(files)
 }

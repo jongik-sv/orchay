@@ -192,7 +192,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 - /wf:build: 구현 시작 ([ap] → [im])
 
 ---
-ORCHAY_DONE:TSK-01-01:design:success
+ORCHAY_DONE:{project}/TSK-01-01:design:success
 ```
 
 ---
@@ -215,7 +215,7 @@ ORCHAY_DONE:TSK-01-01:design:success
 📊 결과: 성공 5, 실패 0, 스킵 3 (다른 카테고리)
 
 ---
-ORCHAY_DONE:WP-01:design:success
+ORCHAY_DONE:{project}/WP-01:design:success
 ```
 
 ---
@@ -242,12 +242,12 @@ ORCHAY_DONE:WP-01:design:success
 
 **성공:**
 ```
-ORCHAY_DONE:{task-id}:design:success
+ORCHAY_DONE:{project}/{task-id}:design:success
 ```
 
 **실패:**
 ```
-ORCHAY_DONE:{task-id}:design:error:{에러 요약}
+ORCHAY_DONE:{project}/{task-id}:design:error:{에러 요약}
 ```
 
 > ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.

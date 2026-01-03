@@ -10,9 +10,8 @@ import { promises as fs } from 'fs';
 import { parse as parseYaml } from 'yaml';
 import type { WbsNode, WbsMetadata, AllWbsResponse, ProjectWbsNode } from '../../../types';
 import type { ProjectListItem } from '../projects/types';
-import { parseWbsYaml } from './yamlParser/index';
-import { serializeWbsToYaml, type SerializeContext } from './yamlSerializer/index';
-import type { YamlWbsRoot } from './yamlParser/_types';
+import { parseWbsYaml, type YamlWbsRoot } from './yamlParser';
+import { serializeWbsToYaml, type SerializeContext } from './yamlSerializer';
 import { validateWbs } from './validation/index';
 import {
   fileExists,

@@ -13,8 +13,6 @@
  *   -f, --force         manual approval 시 확인 없이 실행
  *   -s, --start         전환 가능 여부 확인 후 execution 필드 설정
  *   -e, --end           execution 필드 제거
- *   -d, --desc <text>   execution.description 업데이트
- *   -w, --worker <id>   Worker ID (--start와 함께 사용)
  *
  * Output (JSON):
  *   실행 모드: { success, taskId, previousStatus, newStatus, command, reason? }
@@ -85,19 +83,12 @@ interface TaskInfo {
 // WBS YAML 타입 정의
 // ====================
 
-interface ExecutionInfo {
-  command: string;
-  description?: string;
-  startedAt: string;
-  worker?: number;
-}
-
 interface WbsTask {
   id: string;
   title: string;
   category: string;
   status: string;
-  execution?: ExecutionInfo;
+  execution?: string;  // 실행 중인 명령어 (예: "build", "design")
   [key: string]: unknown;
 }
 
@@ -301,14 +292,10 @@ function updateTaskStatus(wbsData: WbsYaml, taskId: string, newStatus: string): 
 // ====================
 
 /**
- * Task에 execution 필드 설정
+ * Task에 execution 필드 설정 (실행 중인 명령어만 저장)
  */
-function setTaskExecution(task: WbsTask, command: string, worker?: number): void {
-  task.execution = {
-    command,
-    startedAt: new Date().toISOString(),
-    ...(worker !== undefined && { worker }),
-  };
+function setTaskExecution(task: WbsTask, command: string): void {
+  task.execution = command;
 }
 
 /**
@@ -316,17 +303,6 @@ function setTaskExecution(task: WbsTask, command: string, worker?: number): void
  */
 function clearTaskExecution(task: WbsTask): void {
   delete task.execution;
-}
-
-/**
- * Task의 execution.description 업데이트
- */
-function updateTaskDescription(task: WbsTask, description: string): boolean {
-  if (task.execution) {
-    task.execution.description = description;
-    return true;
-  }
-  return false;
 }
 
 // ====================
@@ -564,8 +540,7 @@ async function startExecution(
   taskId: string,
   command: string,
   projectId: string,
-  workflows: WorkflowsConfig,
-  worker?: number
+  workflows: WorkflowsConfig
 ): Promise<CheckOutput> {
   // 1. 검증 수행
   const checkResult = await checkTransition(taskId, command, projectId, workflows);
@@ -602,7 +577,7 @@ async function startExecution(
     };
   }
 
-  setTaskExecution(task, command, worker);
+  setTaskExecution(task, command);
 
   // 4. WBS YAML 파일 저장
   try {
@@ -672,64 +647,6 @@ async function endExecution(
   };
 }
 
-/**
- * --desc 모드: execution.description 업데이트
- */
-async function updateDescription(
-  taskId: string,
-  projectId: string,
-  description: string
-): Promise<TransitionOutput> {
-  // 1. WBS YAML 파일 읽기
-  let wbsData: WbsYaml;
-  try {
-    wbsData = await readWbsYaml(projectId);
-  } catch (error) {
-    return {
-      success: false,
-      reason: 'WBS_NOT_FOUND',
-      message: `WBS 파일을 찾을 수 없습니다: ${projectId}/wbs.yaml`
-    };
-  }
-
-  // 2. Task 찾기
-  const task = findTaskInWbs(wbsData, taskId);
-  if (!task) {
-    return {
-      success: false,
-      reason: 'TASK_NOT_FOUND',
-      message: `Task를 찾을 수 없습니다: ${taskId}`
-    };
-  }
-
-  // 3. execution.description 업데이트
-  if (!updateTaskDescription(task, description)) {
-    return {
-      success: false,
-      reason: 'NO_EXECUTION',
-      message: `Task에 실행 중인 작업이 없습니다. --start로 먼저 시작하세요.`,
-    };
-  }
-
-  // 4. WBS YAML 파일 저장
-  try {
-    await writeWbsYaml(projectId, wbsData);
-  } catch (error) {
-    return {
-      success: false,
-      reason: 'WRITE_FAILED',
-      message: `WBS 파일 저장 실패: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    };
-  }
-
-  return {
-    success: true,
-    project: projectId,
-    taskId,
-    message: `description이 업데이트되었습니다: ${description}`,
-  };
-}
-
 // ====================
 // 메인 함수
 // ====================
@@ -743,8 +660,6 @@ async function main(): Promise<void> {
       force: { type: 'boolean', short: 'f', default: false },
       start: { type: 'boolean', short: 's', default: false },
       end: { type: 'boolean', short: 'e', default: false },
-      desc: { type: 'string', short: 'd' },
-      worker: { type: 'string', short: 'w' },
     },
     allowPositionals: true,
   });
@@ -753,19 +668,17 @@ async function main(): Promise<void> {
   const projectOption = values.project;
   const startMode = values.start;
   const endMode = values.end;
-  const descValue = values.desc;
-  const workerValue = values.worker ? parseInt(values.worker, 10) : undefined;
 
-  // --end 또는 --desc 모드: command 없이도 실행 가능
-  if (endMode || descValue !== undefined) {
+  // --end 모드: command 없이도 실행 가능
+  if (endMode) {
     if (!taskIdInput) {
-      outputError('INVALID_ARGS', 'Usage: npx tsx transition.ts <task-id> [-p project] [--end | --desc "text"]');
+      outputError('INVALID_ARGS', 'Usage: npx tsx transition.ts <task-id> [-p project] --end');
       return;
     }
   } else {
     // 일반 모드: task-id와 command 필수
     if (positionals.length < 2) {
-      outputError('INVALID_ARGS', 'Usage: npx tsx transition.ts <task-id> <command> [-p project] [-s] [-w worker]');
+      outputError('INVALID_ARGS', 'Usage: npx tsx transition.ts <task-id> <command> [-p project] [-s]');
       return;
     }
   }
@@ -787,13 +700,6 @@ async function main(): Promise<void> {
       return;
     }
 
-    // --desc 모드: execution.description 업데이트
-    if (descValue !== undefined) {
-      const result = await updateDescription(taskId, projectId, descValue);
-      output(result);
-      return;
-    }
-
     // 워크플로우 로드
     let workflows: WorkflowsConfig;
     try {
@@ -805,7 +711,7 @@ async function main(): Promise<void> {
 
     if (startMode) {
       // --start 모드: 검증 + execution 필드 설정
-      const result = await startExecution(taskId, command, projectId, workflows, workerValue);
+      const result = await startExecution(taskId, command, projectId, workflows);
       console.log(JSON.stringify(result, null, 2));
       process.exitCode = result.canTransition ? 0 : 1;
     } else {

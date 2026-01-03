@@ -51,6 +51,25 @@ local DEFAULTS = {
   -- WezTerm의 split()이 size 파라미터를 약간 작게 적용하는 문제 보정
   column_size_correction = 0.02,
   max_column_ratio = 0.6,
+
+  -- ===== CPU 최적화 설정 =====
+  -- 화면 갱신
+  max_fps = 30,                    -- 기본 60 → 30fps (CPU 절약)
+  animation_fps = 1,               -- 애니메이션 최소화
+
+  -- 커서 최적화
+  cursor_blink_rate = 0,           -- 깜빡임 비활성화 (0 = 끔)
+
+  -- 시각 효과 최적화
+  enable_scroll_bar = false,       -- 스크롤바 비활성화
+  visual_bell_fade_in = 0,         -- 비주얼 벨 비활성화
+  visual_bell_fade_out = 0,
+
+  -- 렌더링 최적화
+  front_end = 'OpenGL',            -- WebGpu 대신 OpenGL (더 안정적)
+
+  -- 출력 병합 (CPU 절약)
+  mux_output_parser_coalesce_delay_ms = 10,  -- 기본 3ms → 10ms
 }
 
 -- =============================================================================
@@ -68,6 +87,18 @@ config.tab_bar_at_bottom = DEFAULTS.tab_bar_at_bottom
 config.scrollback_lines = DEFAULTS.scrollback_lines
 config.audible_bell = DEFAULTS.audible_bell
 config.default_cursor_style = DEFAULTS.cursor_style
+
+-- ===== CPU 최적화 설정 적용 =====
+config.max_fps = DEFAULTS.max_fps
+config.animation_fps = DEFAULTS.animation_fps
+config.cursor_blink_rate = DEFAULTS.cursor_blink_rate
+config.enable_scroll_bar = DEFAULTS.enable_scroll_bar
+config.front_end = DEFAULTS.front_end
+
+config.visual_bell = {
+  fade_in_duration_ms = DEFAULTS.visual_bell_fade_in,
+  fade_out_duration_ms = DEFAULTS.visual_bell_fade_out,
+}
 
 -- =============================================================================
 -- 유틸리티 함수

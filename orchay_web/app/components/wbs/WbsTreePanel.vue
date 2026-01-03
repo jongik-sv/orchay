@@ -327,6 +327,13 @@ onMounted(() => {
               <!-- NodeIcon 컴포넌트 -->
               <NodeIcon :type="slotProps.node.data.node.type" />
 
+              <!-- 실행 중 스피너 (execution 필드 존재 시) -->
+              <i
+                v-if="slotProps.node.data.node.type === 'task' && slotProps.node.data.node.execution"
+                class="pi pi-spinner pi-spin wbs-execution-spinner"
+                :title="`실행 중: ${slotProps.node.data.node.execution}`"
+              />
+
               <!-- 노드 제목 -->
               <span
                 class="wbs-tree-node-title"
@@ -429,5 +436,12 @@ onMounted(() => {
   font-size: 12px;
   color: #9ca3af;
   margin-left: 8px;
+}
+
+/* 실행 중 스피너 스타일 */
+.wbs-execution-spinner {
+  color: #fbbf24; /* amber-400 */
+  font-size: 14px;
+  flex-shrink: 0;
 }
 </style>

@@ -172,7 +172,7 @@ Task: TSK-01-01-01
 다음: /wf:review 또는 /wf:approve
 
 ---
-ORCHAY_DONE:TSK-01-01-01:ui:success
+ORCHAY_DONE:{project}/TSK-01-01-01:ui:success
 ```
 
 ---
@@ -195,12 +195,12 @@ ORCHAY_DONE:TSK-01-01-01:ui:success
 
 **성공:**
 ```
-ORCHAY_DONE:{task-id}:ui:success
+ORCHAY_DONE:{project}/{task-id}:ui:success
 ```
 
 **실패:**
 ```
-ORCHAY_DONE:{task-id}:ui:error:{에러 요약}
+ORCHAY_DONE:{project}/{task-id}:ui:error:{에러 요약}
 ```
 
 > ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.

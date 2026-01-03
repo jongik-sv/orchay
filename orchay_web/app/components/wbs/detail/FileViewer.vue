@@ -93,6 +93,8 @@ import { marked } from 'marked'
 import mermaid from 'mermaid'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github-dark.css'
+import * as tauriApi from '~/utils/tauri'
+import { useConfigStore } from '~/stores/config'
 
 // marked에 highlight.js 연동
 marked.use({
@@ -366,7 +368,7 @@ watch(
 // ============================================================
 
 /**
- * 파일 내용 로드
+ * 파일 내용 로드 (Tauri/Web 환경 분기)
  */
 async function loadFileContent(): Promise<void> {
   loading.value = true
@@ -375,29 +377,10 @@ async function loadFileContent(): Promise<void> {
   imageDataUrl.value = null
 
   try {
-    // Task 문서인 경우 taskId 기반 API 사용
-    let apiUrl: string
-    if (props.taskId) {
-      const projectParam = props.projectId ? `?project=${encodeURIComponent(props.projectId)}` : ''
-      apiUrl = `/api/tasks/${props.taskId}/documents/${encodeURIComponent(props.file.name)}${projectParam}`
+    if (tauriApi.isTauri()) {
+      await loadFileContentTauri()
     } else {
-      apiUrl = `/api/files/content?path=${encodeURIComponent(props.file.path)}`
-    }
-
-    if (isImage.value) {
-      // 이미지: ArrayBuffer로 받아서 Data URL 생성
-      const blob = await $fetch<Blob>(apiUrl, { responseType: 'blob' })
-
-      const reader = new FileReader()
-      reader.onload = () => {
-        imageDataUrl.value = reader.result as string
-      }
-      reader.readAsDataURL(blob)
-    } else {
-      // 텍스트 파일
-      const response = await $fetch<FileContentResponse | { content: string }>(apiUrl)
-      content.value = response.content
-      emit('loaded', response.content)
+      await loadFileContentWeb()
     }
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : '파일을 불러오는 데 실패했습니다'
@@ -406,6 +389,84 @@ async function loadFileContent(): Promise<void> {
     console.error('File load error:', e)
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * Tauri 환경에서 파일 로드
+ * Rust 커맨드로 로컬 파일 시스템에서 직접 읽기
+ */
+async function loadFileContentTauri(): Promise<void> {
+  const configStore = useConfigStore()
+  if (!configStore.basePath) {
+    throw new Error('Base path not configured')
+  }
+
+  // 파일 절대 경로 구성
+  let filePath: string
+  if (props.taskId && props.projectId) {
+    // Task 문서: .orchay/projects/{projectId}/tasks/{taskId}/{filename}
+    filePath = `${configStore.basePath}/.orchay/projects/${props.projectId}/tasks/${props.taskId}/${props.file.name}`
+  } else if (props.file.path) {
+    // 프로젝트 파일: 이미 절대 경로
+    filePath = props.file.path
+  } else {
+    throw new Error('Cannot determine file path')
+  }
+
+  // Windows 경로 정규화
+  filePath = filePath.replace(/\//g, '\\')
+
+  if (isImage.value) {
+    // 이미지: Base64로 읽어서 Data URL 생성
+    const base64Content = await tauriApi.readFileContentBase64(filePath)
+    const ext = fileExtension.value
+    const mimeMap: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml'
+    }
+    const mimeType = mimeMap[ext] || 'application/octet-stream'
+    imageDataUrl.value = `data:${mimeType};base64,${base64Content}`
+  } else {
+    // 텍스트 파일
+    const textContent = await tauriApi.readFileContent(filePath)
+    content.value = textContent
+    emit('loaded', textContent)
+  }
+}
+
+/**
+ * Web 환경에서 파일 로드
+ * Nitro API를 통해 서버에서 파일 읽기
+ */
+async function loadFileContentWeb(): Promise<void> {
+  // Task 문서인 경우 taskId 기반 API 사용
+  let apiUrl: string
+  if (props.taskId) {
+    const projectParam = props.projectId ? `?project=${encodeURIComponent(props.projectId)}` : ''
+    apiUrl = `/api/tasks/${props.taskId}/documents/${encodeURIComponent(props.file.name)}${projectParam}`
+  } else {
+    apiUrl = `/api/files/content?path=${encodeURIComponent(props.file.path)}`
+  }
+
+  if (isImage.value) {
+    // 이미지: ArrayBuffer로 받아서 Data URL 생성
+    const blob = await $fetch<Blob>(apiUrl, { responseType: 'blob' })
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      imageDataUrl.value = reader.result as string
+    }
+    reader.readAsDataURL(blob)
+  } else {
+    // 텍스트 파일
+    const response = await $fetch<FileContentResponse | { content: string }>(apiUrl)
+    content.value = response.content
+    emit('loaded', response.content)
   }
 }
 

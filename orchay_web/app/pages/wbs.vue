@@ -10,6 +10,7 @@
 import WbsTreePanel from '~/components/wbs/WbsTreePanel.vue'
 import NodeDetailPanel from '~/components/wbs/detail/NodeDetailPanel.vue'
 import { decodePathSegment } from '~/utils/urlPath'
+import { useWbsWatcher } from '~/composables/useWbsWatcher'
 
 // ============================================================
 // Page Metadata
@@ -37,6 +38,21 @@ const selectionStore = useSelectionStore()
 // ============================================================
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+// ============================================================
+// WBS 파일 변경 감지 (실시간 업데이트)
+// ============================================================
+const { isWatching } = useWbsWatcher({
+  onChanged: async (event) => {
+    console.log('[WbsPage] WBS changed:', event.projectId, event.path)
+
+    // 변경된 프로젝트의 WBS만 부분 업데이트
+    const changes = await wbsStore.handleWbsChanged(event.projectId)
+    if (changes) {
+      console.log('[WbsPage] Applied changes:', changes)
+    }
+  }
+})
 
 /**
  * URL 쿼리에서 projectId 추출 및 형식 검증

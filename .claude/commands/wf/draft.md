@@ -197,12 +197,12 @@ npx tsx .orchay/script/transition.ts {Task-ID} draft -p {project}
 
 **성공:**
 ```
-ORCHAY_DONE:{task-id}:draft:success
+ORCHAY_DONE:{project}/{task-id}:draft:success
 ```
 
 **실패:**
 ```
-ORCHAY_DONE:{task-id}:draft:error:{에러 요약}
+ORCHAY_DONE:{project}/{task-id}:draft:error:{에러 요약}
 ```
 
 > ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.

@@ -1,3 +1,4 @@
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -84,10 +85,19 @@ pub async fn ensure_orchay_structure(base_path: String) -> Result<InitResponse, 
     })
 }
 
-/// 파일 읽기
+/// 파일 읽기 (텍스트)
 #[tauri::command]
 pub async fn read_file_content(file_path: String) -> Result<String, String> {
     fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))
+}
+
+/// 파일 읽기 (바이너리 → Base64)
+/// 이미지 등 바이너리 파일을 Base64로 인코딩하여 반환
+#[tauri::command]
+pub async fn read_file_content_base64(file_path: String) -> Result<String, String> {
+    let bytes = fs::read(&file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    Ok(BASE64.encode(&bytes))
 }
 
 /// 파일 쓰기

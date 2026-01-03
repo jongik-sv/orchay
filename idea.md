@@ -72,4 +72,11 @@ gh release delete v0.1.0 --repo jongik-sv/orchay --yes
 
 PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
 
+설피
+cd C:\project\orchay\orchay
+  uv venv
+  uv pip install -e ".[dev]"
 
+
+  cd C:\project\orchay\orchay
+  pip install -e ".[dev]"

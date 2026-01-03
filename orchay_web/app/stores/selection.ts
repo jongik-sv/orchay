@@ -341,15 +341,36 @@ export const useSelectionStore = defineStore('selection', () => {
 
   /**
    * 프로젝트 파일 목록 조회 (TSK-09-01)
+   * Tauri/Web 환경 분기 지원
    */
   async function fetchProjectFiles(projectId: string): Promise<void> {
     loadingFiles.value = true
 
     try {
-      const response = await $fetch<ProjectFilesResponse>(
-        `/api/projects/${projectId}/files`
-      )
-      selectedProjectFiles.value = response.files
+      if (tauriApi.isTauri()) {
+        // Tauri 환경: Rust 커맨드 사용
+        const configStore = useConfigStore()
+        if (!configStore.basePath) {
+          throw new Error('Base path not configured')
+        }
+        const files = await tauriApi.listProjectFiles(configStore.basePath, projectId)
+        // ProjectFile 타입 매핑 (Tauri → App)
+        selectedProjectFiles.value = files.map(f => ({
+          name: f.name,
+          path: f.path,
+          relativePath: f.relativePath,
+          type: f.type,
+          size: f.size,
+          createdAt: f.createdAt,
+          updatedAt: f.updatedAt
+        }))
+      } else {
+        // Web 환경: Nitro API 호출
+        const response = await $fetch<ProjectFilesResponse>(
+          `/api/projects/${projectId}/files`
+        )
+        selectedProjectFiles.value = response.files
+      }
     } catch (e) {
       console.error('Failed to fetch project files:', e)
       selectedProjectFiles.value = []

@@ -71,10 +71,6 @@ export function serializeWbsToYaml(
   });
 }
 
-// 유틸 함수 re-export
-export {
-  convertToYamlWorkPackages,
-  convertNodeToYamlWorkPackage,
-  convertNodeToYamlActivity,
-  convertNodeToYamlTask,
-} from './_converter';
+// NOTE: Converter functions are NOT re-exported here
+// to avoid Nuxt auto-import duplicate warnings.
+// Import directly from './_converter' if needed.
