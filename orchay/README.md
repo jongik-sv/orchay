@@ -387,8 +387,6 @@ await watcher.stop()
 | `[ ]` | TODO | 미시작 |
 | `[bd]` | BASIC_DESIGN | 기본 설계 |
 | `[dd]` | DETAIL_DESIGN | 상세 설계 |
-| `[an]` | ANALYSIS | 분석 |
-| `[ds]` | DESIGN | 설계 완료 |
 | `[ap]` | APPROVED | 승인됨 |
 | `[im]` | IMPLEMENT | 구현됨 |
 | `[fx]` | FIX | 수정 중 |

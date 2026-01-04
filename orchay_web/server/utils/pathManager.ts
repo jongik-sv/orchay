@@ -22,7 +22,7 @@
  * ```
  */
 
-import { join, normalize, isAbsolute, resolve, dirname } from 'path';
+import { join, normalize, isAbsolute } from 'path';
 import { existsSync } from 'fs';
 import { validateBasePath } from './validators/pathValidators';
 
@@ -60,7 +60,7 @@ class PathManager {
 
   /**
    * 초기 경로 결정
-   * 우선순위: 환경변수 → 상위 디렉토리 탐색 → process.cwd()
+   * 우선순위: 환경변수 → process.cwd()
    */
   private resolveInitialPath(): string {
     // 1. 환경변수 확인
@@ -71,36 +71,10 @@ class PathManager {
       return normalized;
     }
 
-    // 2. 상위 디렉토리에서 .orchay 찾기
-    const foundPath = this.findOrchayRoot();
-    if (foundPath) {
-      console.log(`[PathManager] Found .orchay at: ${foundPath}`);
-      return foundPath;
-    }
-
-    // 3. 현재 디렉토리 사용
+    // 2. 현재 디렉토리 사용 (호출 폴더)
     const cwd = process.cwd();
     console.log(`[PathManager] Using cwd: ${cwd}`);
     return cwd;
-  }
-
-  /**
-   * 상위 디렉토리에서 .orchay 폴더 찾기
-   * @returns .orchay가 있는 부모 디렉토리 경로 또는 null
-   */
-  private findOrchayRoot(): string | null {
-    const startDir = process.env.INIT_CWD || process.env.PWD || process.cwd();
-    let current = resolve(startDir);
-    const root = dirname(current);
-
-    while (current !== root) {
-      const orchayPath = join(current, '.orchay');
-      if (existsSync(orchayPath)) {
-        return current; // .orchay의 부모 디렉토리 반환
-      }
-      current = dirname(current);
-    }
-    return null;
   }
 
   /**

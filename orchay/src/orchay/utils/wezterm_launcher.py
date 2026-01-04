@@ -130,11 +130,50 @@ class WeztermLauncher(ABC):
         self.log.debug(f"Saved WezTerm PID {pid} to {pid_file}")
 
     def _get_bundled_file(self, filename: str) -> Path:
-        """번들된 파일 경로 반환."""
-        # orchay 패키지 루트 경로 (pyproject.toml 위치)
-        # utils/wezterm_launcher.py → utils/ → orchay/ → src/ → orchay/ (패키지 루트)
-        package_dir = Path(__file__).resolve().parent.parent.parent.parent
-        return package_dir / filename
+        """PyInstaller 번들 파일 또는 패키지 데이터 파일 경로 반환.
+
+        Args:
+            filename: 파일명 (예: wezterm-orchay-windows.lua)
+
+        Returns:
+            Path: 파일 경로
+
+        Note:
+            - PyInstaller frozen: sys._MEIPASS 또는 _internal 폴더
+            - pip/pipx 설치: importlib.resources로 패키지 데이터 접근
+            - 개발 환경: src/orchay/data/ 폴더
+        """
+        import sys
+
+        if getattr(sys, "frozen", False):
+            # PyInstaller frozen 환경
+            meipass = getattr(sys, "_MEIPASS", None)
+            if meipass:
+                # One-folder 모드: _MEIPASS/orchay/data/
+                data_path = Path(meipass) / "orchay" / "data" / filename
+                if data_path.exists():
+                    return data_path
+                # fallback: _MEIPASS 루트
+                return Path(meipass) / filename
+            # fallback: 실행 파일 옆의 _internal 폴더
+            internal_path = Path(sys.executable).parent / "_internal" / "orchay" / "data" / filename
+            if internal_path.exists():
+                return internal_path
+            return Path(sys.executable).parent / filename
+        else:
+            # pip/pipx 설치 또는 개발 환경
+            # importlib.resources 사용 (Python 3.9+)
+            try:
+                from importlib.resources import files
+
+                data_file = files("orchay.data").joinpath(filename)
+                # files()는 Traversable 반환, Path로 변환
+                return Path(str(data_file))
+            except (ImportError, ModuleNotFoundError, TypeError):
+                # fallback: 직접 경로 계산
+                # utils/wezterm_launcher.py → utils/ → orchay/ → data/
+                package_dir = Path(__file__).resolve().parent.parent
+                return package_dir / "data" / filename
 
     @abstractmethod
     def _pre_launch_setup(self) -> None:

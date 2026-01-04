@@ -179,8 +179,7 @@ def cli_main() -> int:
         # 스케줄러 실행
         from orchay.main import main as run_scheduler
 
-        run_scheduler()
-        return 0
+        return run_scheduler()
 
     args = parser.parse_args()
 
@@ -192,15 +191,13 @@ def cli_main() -> int:
         sys.argv = [sys.argv[0]] + sys.argv[2:]
         from orchay.main import main as run_scheduler
 
-        run_scheduler()
-        return 0
+        return run_scheduler()
     elif args.command is None:
         # 서브커맨드 없이 인자가 있는 경우 (기존 호환성)
         # 기존 main.py 방식으로 처리
         from orchay.main import main as run_scheduler
 
-        run_scheduler()
-        return 0
+        return run_scheduler()
     else:
         parser.print_help()
         return 1

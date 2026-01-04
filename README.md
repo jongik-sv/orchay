@@ -149,10 +149,82 @@ orchay project_name
 - **실시간 모니터링**: TUI 및 웹 대시보드
 - **의존성 관리**: Task 간 의존성 자동 추적
 
+## 빌드
+
+### 빌드 트리거 요약
+
+| 프로젝트 | 배포 대상 | 트리거 | 워크플로우 |
+|----------|-----------|--------|------------|
+| orchay-init | npm | **수동** (`npm publish`) | - |
+| orchay | PyPI | 태그 `v*` push | `pypi.yml` |
+| orchay | GitHub Releases (실행파일) | `orchay/**` 변경 | `release.yml` |
+| orchay_web | GitHub Releases (Electron) | `orchay_web/**` 변경 | `release-electron.yml` |
+| orchay_web | GitHub Releases (Tauri) | `orchay_web/**` 변경 | `release-tauri.yml` |
+
+### orchay-init (npm)
+
+```bash
+cd orchay-init
+
+# 버전 업데이트 + 배포
+npm version patch
+npm login          # 최초 1회
+npm publish
+```
+
+### orchay (PyPI + 실행파일)
+
+```bash
+# PyPI 배포 (자동): 태그 push 시 GitHub Actions 실행
+cd orchay
+# pyproject.toml에서 version 수정 후
+git tag v0.2.0
+git push origin v0.2.0
+
+# 실행파일 빌드 (자동): orchay/** 변경 시 GitHub Actions 실행
+# 결과: GitHub Releases에 orchay-{linux,windows,macos}-x64.zip
+```
+
+로컬 빌드:
+```bash
+cd orchay
+pip install pyinstaller .
+pyinstaller orchay.spec
+# 결과: dist/orchay/
+```
+
+### orchay_web (Electron / Tauri)
+
+```bash
+cd orchay_web
+
+# Electron 빌드
+npm run electron:build
+npm run dist:win      # Windows
+npm run dist:mac      # macOS  
+npm run dist:linux    # Linux
+
+# Tauri 빌드 (Rust 필요)
+npm run tauri:build
+```
+
+자동 배포: `orchay_web/**` 변경 시 GitHub Actions 실행
+- Electron → `electron-latest` 릴리스
+- Tauri → `tauri-latest` 릴리스
+
+### 필요한 설정
+
+| 서비스 | 설정 |
+|--------|------|
+| npm | `npm login` 필요 |
+| PyPI | GitHub Environments에 `pypi` 생성 + [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) 구성 |
+| GitHub Releases | 자동 (GITHUB_TOKEN) |
+
 ## 문서
 
 - [orchay 스케줄러 상세](./orchay/README.md)
 - [orchay_web 대시보드](./orchay_web/README.md)
+- [배포 상세 가이드](./docs/deployment-guide.md)
 
 ## 라이선스
 

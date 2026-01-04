@@ -72,6 +72,13 @@ gh release delete v0.1.0 --repo jongik-sv/orchay --yes
 
 PS C:\project\table-order>  python C:\project\orchay\orchay\src\orchay\launcher.py mvp
 
+
+     1. 소스에서 실행: uv run --project orchay python -m orchay
+     2. 빌드: pyinstaller orchay.spec
+     3. exe 실행: dist\orchay\orchay.exe
+
+     
+
 설피
 cd C:\project\orchay\orchay
   uv venv

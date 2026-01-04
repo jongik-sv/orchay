@@ -31,6 +31,15 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/orchay"]
 
+[tool.hatch.build.targets.wheel.sources]
+# 패키지 데이터 파일 포함 (lua, tcss 등)
+"src/orchay" = "orchay"
+
+[tool.hatch.build.targets.wheel.force-include]
+# 비-Python 파일 명시적 포함
+"src/orchay/data/wezterm-orchay-windows.lua" = "orchay/data/wezterm-orchay-windows.lua"
+"src/orchay/ui/styles.tcss" = "orchay/ui/styles.tcss"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

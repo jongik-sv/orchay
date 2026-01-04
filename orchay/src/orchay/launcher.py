@@ -102,7 +102,11 @@ def check_dependency(cmd: str) -> bool:
 def check_all_dependencies() -> list[str]:
     """모든 의존성 체크 후 누락된 것들 반환."""
     missing: list[str] = []
-    for dep in ["wezterm", "claude", "uv"]:
+    # frozen 환경에서는 uv 불필요
+    required = ["wezterm", "claude"]
+    if not getattr(sys, "frozen", False):
+        required.append("uv")
+    for dep in required:
         if not check_dependency(dep):
             missing.append(dep)
     return missing
@@ -412,13 +416,12 @@ def main() -> int:
     # 스케줄러 명령 구성
     orchay_base_cmd = get_orchay_cmd().split()
     full_orchay_cmd_list = orchay_base_cmd + ["run"] + orchay_args
+    log.info(f"  Command: {' '.join(full_orchay_cmd_list)}")
 
     # 기존 WezTerm 종료
     log.info("Killing existing WezTerm for this folder...")
     kill_orchay_wezterm(cwd)
     log.debug("kill_orchay_wezterm() completed")
-
-    log.info(f"  Command: {' '.join(full_orchay_cmd_list)}")
 
     # 새 Launcher 사용
     from orchay.utils.wezterm_launcher import LaunchContext, create_launcher
