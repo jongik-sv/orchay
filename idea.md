@@ -80,3 +80,4 @@ cd C:\project\orchay\orchay
 
   cd C:\project\orchay\orchay
   pip install -e ".[dev]"
+

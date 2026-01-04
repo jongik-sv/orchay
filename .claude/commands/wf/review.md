@@ -1,7 +1,25 @@
 ---
 subagent:
-  primary: refactoring-expert
-  description: 설계 품질 분석 및 리뷰 수행
+  phases:
+    - id: collect
+      agent: requirements-analyst
+      description: 검증 대상 문서 수집
+    - id: architecture-review
+      agent: system-architect
+      description: 아키텍처, 컴포넌트 분할, 확장성 검증
+      parallel-with: [security-review, quality-review]
+    - id: security-review
+      agent: security-engineer
+      description: OWASP Top 10, 인증/인가, 암호화 검증
+      parallel-with: [architecture-review, quality-review]
+    - id: quality-review
+      agent: quality-engineer
+      description: 문서 완전성, 추적성, 테스트 가능성 검증
+      parallel-with: [architecture-review, security-review]
+    - id: report
+      agent: refactoring-expert
+      description: 리뷰 결과 통합 및 문서 작성
+      depends-on: [architecture-review, security-review, quality-review]
 mcp-servers: [sequential-thinking, context7]
 hierarchy-input: true
 parallel-processing: true
@@ -27,11 +45,43 @@ parallel-processing: true
 
 ---
 
+## 실행 플로우 (Phase 기반)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: collect (requirements-analyst)                     │
+│ - 검증 대상 문서 수집 (010, 025, 026, PRD, TRD)              │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Phase 2:        │ │ Phase 3:        │ │ Phase 4:        │
+│ architecture-   │ │ security-       │ │ quality-        │
+│ review          │ │ review          │ │ review          │
+│ (system-        │⇄│ (security-      │⇄│ (quality-       │
+│  architect)     │ │  engineer)      │ │  engineer)      │
+│                 │ │                 │ │                 │
+│ SOLID, 확장성   │ │ OWASP, 인증    │ │ 완전성, 추적성  │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │                   │                   │
+        └───────────────────┴───────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 5: report (refactoring-expert)                        │
+│ - 리뷰 결과 통합 및 021-design-review-{llm}-{n}.md 작성      │
+│ [depends-on: architecture-review, security-review, quality] │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 생성 산출물
 
 | 파일 | 내용 |
 |------|------|
-| `021-design-review-{llm}-{n}.md` | 설계 리뷰 결과 |
+| `021-design-review-{llm}-{n}.md` | 설계 리뷰 결과 (3개 관점 통합) |
 
 ---
 

@@ -398,7 +398,7 @@ workPackages:
           uiSpec:
             - "사이드바: w-[240px] bg-[#F7F6F3]"
             - "에디터: flex-1 overflow-auto"
-        execution: verify
+        execution: test
       - id: TSK-02-02
         title: 사이드바 컴포넌트
         category: development
@@ -427,6 +427,7 @@ workPackages:
           uiSpec:
             - "퀵 액션: 호버 시 bg-[#EFEFEF]"
             - "섹션 구분선: border-[#E9E9E7]"
+        execution: test
       - id: TSK-02-03
         title: 페이지 트리 컴포넌트 (중첩 구조)
         category: development
@@ -677,7 +678,7 @@ workPackages:
         title: WP-03 및 전체 MVP 통합 검증
         category: infrastructure
         domain: test
-        status: "[dd]"
+        status: "[ap]"
         priority: critical
         assignee: "-"
         schedule: "2026-01-16"

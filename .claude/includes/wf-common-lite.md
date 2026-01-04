@@ -74,7 +74,7 @@
 
 | 코드 | 의미 | Category | 칸반 |
 |------|------|----------|------|
-| `[ ]` | Todo | 공통 | Todo |
+| `[  ]` | Todo | 공통 | Todo |
 | `[bd]` | 기본설계 | development | Design |
 | `[dd]` | 상세설계 | development, simple-dev | Detail |
 | `[an]` | 분석 | defect | Detail |

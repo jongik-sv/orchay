@@ -32,7 +32,7 @@ export function FavoritesList({ favorites, onToggleFavorite }: FavoritesListProp
   if (!favorites || favorites.length === 0) {
     return (
       <div
-        className="px-3 py-2 text-[12px] text-[#B4B4B3] italic"
+        className="px-3 py-2 text-[12px] text-[var(--notion-text-tertiary)] italic"
         data-testid="favorites-empty"
       >
         No favorites yet
@@ -46,7 +46,7 @@ export function FavoritesList({ favorites, onToggleFavorite }: FavoritesListProp
         <div
           key={page.id}
           className={`group flex items-center gap-2 px-3 py-1.5 rounded-[4px] cursor-pointer transition-colors ${
-            currentPageId === page.id ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'
+            currentPageId === page.id ? 'bg-[var(--notion-bg-tertiary)]' : 'hover:bg-[var(--notion-bg-tertiary)]'
           }`}
           onClick={() => handleSelect(page.id)}
           data-testid={`favorite-item-${page.id}`}
@@ -68,7 +68,7 @@ export function FavoritesList({ favorites, onToggleFavorite }: FavoritesListProp
           </span>
 
           {/* 페이지 제목 */}
-          <span className="flex-1 text-[14px] text-[#37352F] font-[400] truncate">
+          <span className="flex-1 text-[14px] text-[var(--notion-text-primary)] font-[400] truncate">
             {page.title}
           </span>
         </div>

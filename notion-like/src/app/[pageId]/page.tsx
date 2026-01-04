@@ -28,6 +28,14 @@ interface SaveState {
   message?: string;
 }
 
+// API 요청용 타입 (is_favorite는 boolean으로 전송)
+interface PageUpdatePayload {
+  content?: string;
+  title?: string;
+  icon?: string;
+  is_favorite?: boolean;
+}
+
 /**
  * Debounce 유틸리티 함수
  * @param fn 실행할 함수
@@ -120,7 +128,7 @@ export default function PageContent() {
 
   // [MAJOR-002] 공통 페이지 업데이트 함수 - DRY 원칙 적용
   const updatePage = useCallback(
-    async (updates: Partial<PageData>, errorMessage: string) => {
+    async (updates: PageUpdatePayload, errorMessage: string) => {
       if (!pageId) return;
 
       try {
@@ -167,8 +175,8 @@ export default function PageContent() {
   // 즐겨찾기 토글 - [MAJOR-002] 공통 함수 사용
   const toggleFavorite = useCallback(() => {
     if (!pageData) return;
-    const newFavoriteState = pageData.is_favorite === 0 ? true : false;
-    updatePage({ is_favorite: newFavoriteState ? 1 : 0 }, "즐겨찾기 변경에 실패했습니다.");
+    const newFavoriteState = pageData.is_favorite === 0;
+    updatePage({ is_favorite: newFavoriteState }, "즐겨찾기 변경에 실패했습니다.");
   }, [pageData, updatePage]);
 
   // 제목 변경 핸들러 - [MAJOR-002] 공통 함수 사용

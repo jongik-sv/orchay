@@ -56,7 +56,7 @@ export default defineNuxtConfig({
 
   // 개발 서버 설정
   devServer: {
-    port: 3000
+    port: 13200
   },
 
   // 호환성 날짜

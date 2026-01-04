@@ -22,7 +22,7 @@
   --notion-button-hover: #d4d4d4;
   --notion-button-active: #c4c4c4;
 
-  /* Accent Colors (Notion 팔레트) */
+  /* Accent Colors (Notion palette) */
   --notion-red: #f81b13;
   --notion-orange: #fa8500;
   --notion-yellow: #ebdb34;
@@ -33,14 +33,32 @@
   --notion-gray: #626060;
 }
 
+/* Manual Theme Support - .dark class */
+html.dark {
+  --notion-bg-primary: #191919;
+  --notion-bg-secondary: #2a2a2a;
+  --notion-bg-tertiary: #3a3a37;
+  --notion-text-primary: #e6e6e4;
+  --notion-text-secondary: #b3b3b1;
+  --notion-text-tertiary: #a1a1aa;
+  --notion-border-light: #3d3d3a;
+  --notion-border-medium: #4d4d4a;
+
+  /* Button Colors - Dark Mode */
+  --notion-button-bg: #4d4d4a;
+  --notion-button-hover: #5d5d5a;
+  --notion-button-active: #6d6d6a;
+}
+
+/* System preference based dark mode (fallback) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --notion-bg-primary: #191919;
     --notion-bg-secondary: #2a2a2a;
     --notion-bg-tertiary: #3a3a37;
     --notion-text-primary: #e6e6e4;
     --notion-text-secondary: #b3b3b1;
-    --notion-text-tertiary: #808080;
+    --notion-text-tertiary: #a1a1aa;
     --notion-border-light: #3d3d3a;
     --notion-border-medium: #4d4d4a;
 
@@ -51,7 +69,7 @@
   }
 }
 
-/* 다크모드 전환 시 부드러운 애니메이션 */
+/* Smooth transition for theme switching */
 * {
   margin: 0;
   padding: 0;
@@ -61,7 +79,7 @@
               border-color 150ms ease;
 }
 
-/* 트랜지션 제외 요소 (성능 최적화) */
+/* Exclude transition for performance */
 img, video, canvas, svg {
   transition: none;
 }
@@ -75,7 +93,7 @@ body {
   line-height: 1.5;
 }
 
-/* 레이아웃 */
+/* Layout */
 .sidebar {
   width: 240px;
   background-color: var(--notion-bg-secondary);
@@ -88,7 +106,7 @@ body {
   padding: 0 96px;
 }
 
-/* 타이포그래피 */
+/* Typography */
 h1,
 h2,
 h3,
@@ -114,29 +132,28 @@ h3 {
 
 /* ============================================
    BlockNote Editor Notion Style Overrides
-   TSK-01-03: Notion 스타일 에디터 CSS 적용
    ============================================ */
 
-/* 1. BlockNote 기본 오버라이드 */
+/* 1. BlockNote basic override */
 .bn-block {
-  margin: 1px 0; /* 블록 간 간격 1px */
+  margin: 1px 0;
 }
 
-/* 에디터 컨테이너 */
+/* Editor container */
 .bn-editor {
-  padding: 96px; /* 데스크톱 패딩 */
+  padding: 96px;
   background-color: var(--notion-bg-primary);
   color: var(--notion-text-primary);
 }
 
-/* 반응형: 모바일에서는 패딩 축소 */
+/* Responsive: reduce padding on mobile */
 @media (max-width: 768px) {
   .bn-editor {
     padding: 24px;
   }
 }
 
-/* 2. 블록 핸들 스타일 */
+/* 2. Block handle style */
 .bn-block-content {
   position: relative;
 }
@@ -151,7 +168,7 @@ h3 {
   opacity: 1;
 }
 
-/* 3. 슬래시 메뉴 스타일 */
+/* 3. Slash menu style */
 .bn-popover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--notion-border-light);
@@ -159,7 +176,7 @@ h3 {
   background-color: var(--notion-bg-primary);
 }
 
-/* 메뉴 아이템 */
+/* Menu item */
 .bn-menu-item {
   padding: 6px 12px;
   transition: background-color 0.1s ease;
@@ -170,31 +187,31 @@ h3 {
   background-color: var(--notion-bg-tertiary);
 }
 
-/* 4. 제목 블록 스타일 */
+/* 4. Heading block style */
 .bn-heading {
   font-weight: 600;
   line-height: 1.3;
 }
 
 .bn-heading[level="1"] {
-  font-size: 1.875rem; /* 30px */
+  font-size: 1.875rem;
   margin-top: 2rem;
   margin-bottom: 0.5rem;
 }
 
 .bn-heading[level="2"] {
-  font-size: 1.5rem; /* 24px */
+  font-size: 1.5rem;
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
 }
 
 .bn-heading[level="3"] {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.25rem;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
 
-/* 5. Placeholder 스타일 */
+/* 5. Placeholder style */
 .bn-editor [data-placeholder] {
   color: var(--notion-text-tertiary);
   pointer-events: none;
@@ -204,20 +221,20 @@ h3 {
   content: attr(data-placeholder);
 }
 
-/* 6. 추가 Notion 스타일 튜닝 */
-/* 본문 텍스트 스타일 */
+/* 6. Additional Notion style tuning */
+/* Body text style */
 .bn-block-content {
   font-size: 16px;
   line-height: 1.5;
   color: var(--notion-text-primary);
 }
 
-/* 인라인 콘텐츠 스타일 */
+/* Inline content style */
 .bn-inline-content {
   color: var(--notion-text-primary);
 }
 
-/* 코드 블록 스타일 */
+/* Code block style */
 .bn-code-block {
   background-color: var(--notion-bg-secondary);
   border-radius: 4px;
@@ -226,19 +243,19 @@ h3 {
   font-size: 14px;
 }
 
-/* 인용 블록 스타일 */
+/* Quote block style */
 .bn-quote-block {
   border-left: 3px solid var(--notion-text-primary);
   padding-left: 14px;
   color: var(--notion-text-secondary);
 }
 
-/* 리스트 스타일 */
+/* List style */
 .bn-list-item {
   padding-left: 4px;
 }
 
-/* 드래그 핸들 스타일 (6점 점) */
+/* Drag handle style */
 .bn-drag-handle {
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -254,12 +271,65 @@ h3 {
 
 /* ============================================
    Dark Mode BlockNote Overrides
-   TSK-03-02: 다크모드 지원
    ============================================ */
+
+html.dark .bn-popover,
+:root:not(.light) .bn-popover {
+  background-color: var(--notion-bg-secondary);
+  border-color: var(--notion-border-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .bn-menu-item:hover,
+:root:not(.light) .bn-menu-item:hover {
+  background-color: var(--notion-bg-tertiary);
+}
+
+html.dark .bn-code-block,
+:root:not(.light) .bn-code-block {
+  background-color: var(--notion-bg-secondary);
+}
+
+html.dark .bn-editor,
+:root:not(.light) .bn-editor {
+  background-color: var(--notion-bg-primary);
+  color: var(--notion-text-primary);
+}
+
+html.dark .bn-inline-content,
+:root:not(.light) .bn-inline-content {
+  color: var(--notion-text-primary);
+}
+
+html.dark .bn-side-menu,
+:root:not(.light) .bn-side-menu {
+  background-color: var(--notion-bg-secondary);
+}
+
+html.dark .bn-slash-menu,
+:root:not(.light) .bn-slash-menu {
+  background-color: var(--notion-bg-secondary);
+  border-color: var(--notion-border-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .bn-toolbar,
+:root:not(.light) .bn-toolbar {
+  background-color: var(--notion-bg-secondary);
+  border-color: var(--notion-border-light);
+}
+
+html.dark .bn-editor input,
+html.dark .bn-editor textarea,
+:root:not(.light) .bn-editor input,
+:root:not(.light) .bn-editor textarea {
+  background-color: var(--notion-bg-secondary);
+  color: var(--notion-text-primary);
+  border-color: var(--notion-border-light);
+}
 
 /* ============================================
    Skeleton Loading Animation
-   TSK-03-03: 페이지 로딩 스켈레톤
    ============================================ */
 
 @keyframes skeleton-pulse {
@@ -274,7 +344,6 @@ h3 {
 
 /* ============================================
    Toast Slide-in Animation
-   TSK-03-03: Toast 알림 시스템
    ============================================ */
 
 @keyframes slide-in-right {
@@ -290,55 +359,4 @@ h3 {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out forwards;
-}
-
-@media (prefers-color-scheme: dark) {
-  .bn-popover {
-    background-color: var(--notion-bg-secondary);
-    border-color: var(--notion-border-light);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  }
-
-  .bn-menu-item:hover {
-    background-color: var(--notion-bg-tertiary);
-  }
-
-  .bn-code-block {
-    background-color: var(--notion-bg-secondary);
-  }
-
-  /* BlockNote 에디터 내부 스타일 */
-  .bn-editor {
-    background-color: var(--notion-bg-primary);
-    color: var(--notion-text-primary);
-  }
-
-  .bn-inline-content {
-    color: var(--notion-text-primary);
-  }
-
-  .bn-side-menu {
-    background-color: var(--notion-bg-secondary);
-  }
-
-  /* 슬래시 메뉴 */
-  .bn-slash-menu {
-    background-color: var(--notion-bg-secondary);
-    border-color: var(--notion-border-light);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  }
-
-  /* 툴바 */
-  .bn-toolbar {
-    background-color: var(--notion-bg-secondary);
-    border-color: var(--notion-border-light);
-  }
-
-  /* 입력 필드 */
-  .bn-editor input,
-  .bn-editor textarea {
-    background-color: var(--notion-bg-secondary);
-    color: var(--notion-text-primary);
-    border-color: var(--notion-border-light);
-  }
 }

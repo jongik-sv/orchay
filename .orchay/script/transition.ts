@@ -26,7 +26,22 @@ import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 
 // ====================
-// 타입 정의
+// 에러 코드 타입
+// ====================
+
+type ErrorReason =
+  | 'INVALID_ARGS'
+  | 'PROJECT_REQUIRED'
+  | 'WBS_NOT_FOUND'
+  | 'TASK_NOT_FOUND'
+  | 'INVALID_TRANSITION'
+  | 'INVALID_ACTION'
+  | 'WRITE_FAILED'
+  | 'WORKFLOW_LOAD_FAILED'
+  | 'UNEXPECTED_ERROR';
+
+// ====================
+// 워크플로우 타입 정의
 // ====================
 
 interface Transition {
@@ -42,12 +57,61 @@ interface Workflow {
   actions?: Record<string, string[]>;
 }
 
+interface StateConfig {
+  id: string;
+  label: string;
+  labelEn: string;
+  icon: string;
+  color: string;
+  severity: string;
+  progressWeight: number;
+  phase: string;
+}
+
+interface CommandConfig {
+  label: string;
+  labelEn: string;
+  icon: string;
+  severity: string;
+  isAction?: boolean;
+}
+
+interface ExecutionMode {
+  label: string;
+  labelEn: string;
+  description: string;
+  workflowScope: string;
+  stopAfterCommand?: string;
+  stopAtState: string | null;
+  dependencyCheck: 'ignore' | 'check-implemented';
+  manualCommands: string[];
+  requiresSelection?: boolean;
+  targetStatuses?: string[];
+  color: string;
+}
+
+interface CategoryConfig {
+  label: string;
+  labelEn: string;
+  icon: string;
+  color: string;
+  description: string;
+}
+
 interface WorkflowsConfig {
+  $schema?: string;
   version: string;
-  states: Record<string, { id: string; label: string }>;
-  commands: Record<string, unknown>;
+  defaultCategory: string;
+  states: Record<string, StateConfig>;
+  commands: Record<string, CommandConfig>;
+  executionModes: Record<string, ExecutionMode>;
+  categories: Record<string, CategoryConfig>;
   workflows: Record<string, Workflow>;
 }
+
+// ====================
+// 출력 타입 정의
+// ====================
 
 interface TransitionOutput {
   success: boolean;
@@ -56,7 +120,7 @@ interface TransitionOutput {
   previousStatus?: string;
   newStatus?: string;
   command?: string;
-  reason?: string;
+  reason?: ErrorReason | string;
   message?: string;
 }
 
@@ -68,7 +132,7 @@ interface CheckOutput {
   currentStatus?: string;
   targetStatus?: string;
   command?: string;
-  reason?: string;
+  reason?: ErrorReason | string;
   message?: string;
 }
 
@@ -88,7 +152,14 @@ interface WbsTask {
   title: string;
   category: string;
   status: string;
-  execution?: string;  // 실행 중인 명령어 (예: "build", "design")
+  execution?: string;
+  [key: string]: unknown;
+}
+
+interface WbsActivity {
+  id: string;
+  title?: string;
+  tasks?: WbsTask[];
   [key: string]: unknown;
 }
 
@@ -96,13 +167,25 @@ interface WbsWorkPackage {
   id: string;
   title: string;
   tasks?: WbsTask[];
-  activities?: { id: string; tasks?: WbsTask[] }[];
+  activities?: WbsActivity[];
+  [key: string]: unknown;
+}
+
+interface WbsProject {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface WbsMeta {
+  version: string;
+  depth: number;
   [key: string]: unknown;
 }
 
 interface WbsYaml {
-  project: { id: string; [key: string]: unknown };
-  wbs: { version: string; depth: number; [key: string]: unknown };
+  project: WbsProject;
+  wbs: WbsMeta;
   workPackages: WbsWorkPackage[];
 }
 
@@ -182,15 +265,64 @@ function isActionAllowed(
  */
 function isActionCommand(workflows: WorkflowsConfig, command: string): boolean {
   const cmd = workflows.commands[command];
-  return cmd && typeof cmd === 'object' && 'isAction' in cmd && cmd.isAction === true;
+  return cmd != null && cmd.isAction === true;
 }
 
 /**
- * test 명령어 특수 처리: [im] 이후 상태에서 모두 실행 가능
+ * 특정 명령어에 대해 targetStatuses가 정의되어 있는지 조회
+ * executionModes에서 해당 명령어와 연관된 모드의 targetStatuses 반환
  */
-function isTestAllowed(currentStatus: string): boolean {
-  const allowedStatuses = ['[im]', '[vf]', '[xx]'];
-  return allowedStatuses.includes(currentStatus);
+function getTargetStatuses(
+  workflows: WorkflowsConfig,
+  command: string
+): string[] | null {
+  for (const [modeKey, mode] of Object.entries(workflows.executionModes)) {
+    if (modeKey === command && mode.targetStatuses) {
+      return mode.targetStatuses;
+    }
+  }
+  return null;
+}
+
+/**
+ * 명령어가 targetStatuses를 가진 특수 액션인지 확인
+ */
+function hasTargetStatuses(workflows: WorkflowsConfig, command: string): boolean {
+  return getTargetStatuses(workflows, command) !== null;
+}
+
+/**
+ * 특정 상태에서 명령어 실행 가능 여부 확인 (targetStatuses 기반)
+ * workflows.json의 executionModes.[command].targetStatuses 참조
+ */
+function isTargetStatusAllowed(
+  workflows: WorkflowsConfig,
+  command: string,
+  currentStatus: string
+): boolean {
+  const targetStatuses = getTargetStatuses(workflows, command);
+  if (!targetStatuses) return false;
+  return targetStatuses.includes(currentStatus);
+}
+
+/**
+ * 특정 액션이 허용되는 상태 목록 조회
+ */
+function getStatesForAction(
+  workflows: WorkflowsConfig,
+  category: string,
+  command: string
+): string[] {
+  const workflow = workflows.workflows[category];
+  if (!workflow?.actions) return [];
+
+  const states: string[] = [];
+  for (const [state, commands] of Object.entries(workflow.actions)) {
+    if (commands.includes(command)) {
+      states.push(state);
+    }
+  }
+  return states;
 }
 
 // ====================
@@ -246,13 +378,17 @@ function findTaskInWbs(wbsData: WbsYaml, taskId: string): WbsTask | null {
 /**
  * WBS YAML에서 Task 정보 추출
  */
-function getTaskInfo(wbsData: WbsYaml, taskId: string): TaskInfo | null {
+function getTaskInfo(
+  wbsData: WbsYaml,
+  taskId: string,
+  workflows: WorkflowsConfig
+): TaskInfo | null {
   const task = findTaskInWbs(wbsData, taskId);
   if (!task) return null;
 
   return {
     id: task.id,
-    category: task.category || 'development',
+    category: task.category || workflows.defaultCategory,
     status: task.status,
     statusCode: extractStatusCode(task.status),
   };
@@ -353,7 +489,7 @@ async function checkTransition(
   }
 
   // 2. Task 정보 추출
-  const taskInfo = getTaskInfo(wbsData, taskId);
+  const taskInfo = getTaskInfo(wbsData, taskId, workflows);
   if (!taskInfo) {
     return {
       success: true,
@@ -386,9 +522,9 @@ async function checkTransition(
 
   // 4. 액션 명령어 검증 (상태 전환 없음)
   if (isActionCommand(workflows, command)) {
-    // test 명령어 특수 처리: [im] 이후 상태에서 모두 허용
-    if (command === 'test') {
-      if (isTestAllowed(currentStatus)) {
+    // targetStatuses가 있는 특수 액션 (예: test)
+    if (hasTargetStatuses(workflows, command)) {
+      if (isTargetStatusAllowed(workflows, command, currentStatus)) {
         return {
           success: true,
           canTransition: true,
@@ -399,6 +535,8 @@ async function checkTransition(
           command,
         };
       } else {
+        const targetStatuses = getTargetStatuses(workflows, command);
+        const allowedStr = targetStatuses?.join(', ') || 'N/A';
         return {
           success: true,
           canTransition: false,
@@ -407,7 +545,7 @@ async function checkTransition(
           currentStatus,
           command,
           reason: 'INVALID_ACTION',
-          message: `현재 상태 ${currentStatus}에서 '${command}' 액션을 실행할 수 없습니다. 필요 상태: [im], [vf], [xx]`,
+          message: `현재 상태 ${currentStatus}에서 '${command}' 액션을 실행할 수 없습니다. 필요 상태: ${allowedStr}`,
         };
       }
     }
@@ -424,14 +562,7 @@ async function checkTransition(
         command,
       };
     } else {
-      // 허용된 상태 목록 조회
-      const workflow = workflows.workflows[category];
-      const allowedStates = workflow?.actions
-        ? Object.keys(workflow.actions).filter(state =>
-            workflow.actions![state].includes(command)
-          )
-        : [];
-
+      const allowedStates = getStatesForAction(workflows, category, command);
       return {
         success: true,
         canTransition: false,
@@ -490,7 +621,7 @@ async function executeTransition(
     };
   }
 
-  const category = task.category || 'development';
+  const category = task.category || workflows.defaultCategory;
   const currentStatus = task.status;
 
   // 3. 전환 규칙 검색

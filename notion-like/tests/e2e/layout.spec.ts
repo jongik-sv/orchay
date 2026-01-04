@@ -21,28 +21,20 @@ test.describe('MainLayout', () => {
 
   test('사이드바를 토글할 수 있다', async ({ page }) => {
     const sidebar = page.locator('[data-testid="sidebar"]');
+    const toggleBtn = page.locator('[data-testid="sidebar-toggle"]');
     const openBtn = page.locator('[data-testid="sidebar-open-btn"]');
 
     // 초기 상태: 사이드바 표시
     await expect(sidebar).toBeVisible();
 
-    // 사이드바를 접기 위해 상태 변경 (E2E에서는 UI를 통해 토글)
-    // 주의: 현재 설계에서는 사이드바 내 토글 버튼이 아직 구현되지 않았으므로
-    // 우선 상태 변경으로 테스트 진행
-    await page.evaluate(() => {
-      // Zustand store 직접 접근 (테스트 목적)
-      const store = (window as any).__appStore;
-      if (store) {
-        store.toggleSidebar();
-      }
-    });
-
+    // 사이드바 내 토글 버튼 클릭하여 접기
+    await toggleBtn.click();
     await page.waitForTimeout(300);
 
     // 사이드바 숨김 확인
     await expect(sidebar).not.toBeVisible();
     await expect(openBtn).toBeVisible();
-    await page.screenshot({ path: 'e2e-002-toggle-closed.png' });
+    await page.screenshot({ path: 'test-results/e2e-002-toggle-closed.png' });
 
     // 다시 열기 버튼 클릭
     await openBtn.click();
@@ -50,6 +42,6 @@ test.describe('MainLayout', () => {
 
     // 사이드바 표시 확인
     await expect(sidebar).toBeVisible();
-    await page.screenshot({ path: 'e2e-002-toggle-open.png' });
+    await page.screenshot({ path: 'test-results/e2e-002-toggle-open.png' });
   });
 });

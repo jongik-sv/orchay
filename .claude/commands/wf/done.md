@@ -131,7 +131,7 @@ Task명: Project CRUD 구현
 Category: development
 
 워크플로우 완료:
-✅ [ ] Todo
+✅ [  ] Todo
 ✅ [dd] 상세설계
 ✅ [ap] 승인
 ✅ [im] 구현

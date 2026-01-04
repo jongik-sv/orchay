@@ -1,6 +1,7 @@
 'use client';
 
-import { Search, Inbox, Settings, ChevronDown, Plus } from 'lucide-react';
+import { Search, Inbox, Settings, ChevronDown, Plus, PanelLeftClose } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -45,6 +46,8 @@ function SectionHeader({ label }: SectionHeaderProps) {
  * Notion 스타일의 워크스페이스 네비게이션 및 페이지 트리 제공
  */
 export function Sidebar() {
+  const { toggleSidebar } = useAppStore();
+
   const handleSearchClick = () => console.log('Search clicked');
   const handleUpdatesClick = () => console.log('Updates clicked');
   const handleSettingsClick = () => console.log('Settings clicked');
@@ -53,14 +56,24 @@ export function Sidebar() {
 
   return (
     <div className="w-[240px] h-screen bg-[var(--notion-bg-secondary)] flex flex-col border-r border-[var(--notion-border-light)]">
-      {/* Workspace Header */}
-      <button
-        onClick={handleWorkspaceClick}
-        className="px-3 py-3 flex items-center justify-between hover:bg-[var(--notion-bg-tertiary)] cursor-pointer rounded-[4px] mx-2 mt-1 transition-colors duration-[20ms]"
-      >
-        <span className="text-[14px] font-semibold text-[var(--notion-text-primary)]">🏠 Orchay Notes</span>
-        <ChevronDown className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
-      </button>
+      {/* Workspace Header with Toggle Button */}
+      <div className="px-2 py-2 mt-1 flex items-center justify-between">
+        <button
+          onClick={handleWorkspaceClick}
+          className="flex-1 px-2 py-2 flex items-center justify-between hover:bg-[var(--notion-bg-tertiary)] cursor-pointer rounded-[4px] transition-colors duration-[20ms]"
+        >
+          <span className="text-[14px] font-semibold text-[var(--notion-text-primary)]">🏠 Orchay Notes</span>
+          <ChevronDown className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
+        </button>
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded hover:bg-[var(--notion-bg-tertiary)] transition-colors duration-[20ms] cursor-pointer"
+          aria-label="사이드바 접기"
+          data-testid="sidebar-toggle"
+        >
+          <PanelLeftClose className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
+        </button>
+      </div>
 
       {/* Quick Actions */}
       <div className="px-2 py-1 space-y-0.5">

@@ -51,6 +51,7 @@ workPackages:
             - "Task: id, category, domain, status, priority, depends, blocked_by"
             - "Worker: id, pane_id, state, current_task, dispatch_time"
             - "Config: workers, interval, detection, recovery, dispatch, history"
+        execution: test
       - id: TSK-01-02
         title: WBS 파서 구현
         category: development

@@ -125,18 +125,37 @@ npx tsx .orchay/script/transition.ts {Task-ID} test -p {project} --start
 
 ### 4단계: 결과 문서 생성
 
-```
-생성 파일:
-├── 070-tdd-test-results.md (Task 폴더)
-├── 070-e2e-test-results.md (Task 폴더)
-└── test-results/[timestamp]/
-    ├── tdd/coverage/
-    └── e2e/
-        ├── e2e-test-report.html ← 브라우저 열기
-        └── screenshots/
+> ⚠️ **MUST**: 이 단계를 완료하지 않으면 완료 신호를 출력하지 마세요.
+
+**1. 타임스탬프 디렉토리 생성** (형식: `YYYYMMDD-HHMMSS`):
+
+```bash
+# 타임스탬프 생성 및 디렉토리 구조 생성
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p test-results/${TIMESTAMP}/tdd/coverage
+mkdir -p test-results/${TIMESTAMP}/e2e/screenshots
 ```
 
-**WBS 업데이트**: `test-result: none` → `pass` | `fail`
+**2. 테스트 결과 파일 생성**:
+
+| 파일 | 경로 | 필수 |
+|------|------|------|
+| TDD 결과서 | `{Task폴더}/070-tdd-test-results.md` | ✅ |
+| E2E 결과서 | `{Task폴더}/070-e2e-test-results.md` | ✅ |
+| 커버리지 리포트 | `test-results/{timestamp}/tdd/coverage/` | ✅ |
+| E2E HTML 리포트 | `test-results/{timestamp}/e2e/e2e-test-report.html` | ✅ |
+| 스크린샷 | `test-results/{timestamp}/e2e/screenshots/` | ⚠️ (실패 시) |
+
+**3. 검증** (완료 신호 출력 전 필수 확인):
+
+```bash
+# 폴더 존재 및 파일 생성 확인
+ls -la test-results/${TIMESTAMP}/
+ls -la test-results/${TIMESTAMP}/tdd/coverage/
+ls -la test-results/${TIMESTAMP}/e2e/
+```
+
+**4. WBS 업데이트**: `test-result: none` → `pass` | `fail`
 
 ---
 

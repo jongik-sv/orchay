@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Inbox, Settings, ChevronDown, Plus } from 'lucide-react';
+import { Search, Inbox, Settings, ChevronDown, Plus, Sun, Moon } from 'lucide-react';
 import { Page, useAppStore } from '@/lib/store';
 import { PageTree } from './PageTree';
 import { FavoritesList } from './FavoritesList';
@@ -23,18 +23,18 @@ function SidebarItem({ icon, label, shortcut, onClick }: SidebarItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[#37352F] rounded-[4px] hover:bg-[#EFEFEF] transition-colors duration-[20ms] cursor-pointer"
+      className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[var(--notion-text-primary)] rounded-[4px] hover:bg-[var(--notion-bg-tertiary)] transition-colors duration-[20ms] cursor-pointer"
     >
-      <div className="w-4 h-4 text-[#787774] flex-shrink-0">{icon}</div>
+      <div className="w-4 h-4 text-[var(--notion-text-tertiary)] flex-shrink-0">{icon}</div>
       <span className="flex-1 text-left">{label}</span>
-      {shortcut && <span className="text-[12px] text-[#B4B4B3] ml-auto">{shortcut}</span>}
+      {shortcut && <span className="text-[12px] text-[var(--notion-text-tertiary)] ml-auto">{shortcut}</span>}
     </button>
   );
 }
 
 function SectionHeader({ label }: SectionHeaderProps) {
   return (
-    <div className="px-3 py-1 text-[12px] font-medium text-[#787774] uppercase tracking-wide">
+    <div className="px-3 py-1 text-[12px] font-medium text-[var(--notion-text-tertiary)] uppercase tracking-wide">
       {label}
     </div>
   );
@@ -116,6 +116,42 @@ export function ClientSidebar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    // Initialize theme from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      }
+    } else {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(systemDark ? 'dark' : 'light');
+      if (systemDark) {
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [theme]);
 
   // 페이지 목록 로드
   const loadPages = useCallback(async () => {
@@ -273,10 +309,10 @@ export function ClientSidebar() {
       {/* Workspace Header */}
       <button
         onClick={handleWorkspaceClick}
-        className="px-3 py-3 flex items-center justify-between hover:bg-[#EFEFEF] cursor-pointer rounded-[4px] mx-2 mt-1 transition-colors duration-[20ms]"
+        className="px-3 py-3 flex items-center justify-between hover:bg-[var(--notion-bg-tertiary)] cursor-pointer rounded-[4px] mx-2 mt-1 transition-colors duration-[20ms]"
       >
-        <span className="text-[14px] font-semibold text-[#37352F]">🏠 Orchay Notes</span>
-        <ChevronDown className="w-4 h-4 text-[#787774]" />
+        <span className="text-[14px] font-semibold text-[var(--notion-text-primary)]">🏠 Orchay Notes</span>
+        <ChevronDown className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
       </button>
 
       {/* Quick Actions */}
@@ -296,7 +332,7 @@ export function ClientSidebar() {
       </div>
 
       {/* Page Tree Area */}
-      <div className="flex-1 overflow-auto px-2 py-2 space-y-1 border-t border-[#E9E9E7]">
+      <div className="flex-1 overflow-auto px-2 py-2 space-y-1 border-t border-[var(--notion-border-light)]">
         {/* Favorites Section */}
         <SectionHeader label="Favorites" />
         <FavoritesList
@@ -307,11 +343,11 @@ export function ClientSidebar() {
         {/* Private Section */}
         <SectionHeader label="Private" />
         {loading ? (
-          <div className="px-3 py-2 text-sm text-[#787774]">불러오는 중...</div>
+          <div className="px-3 py-2 text-sm text-[var(--notion-text-tertiary)]">불러오는 중...</div>
         ) : error ? (
           <div className="px-3 py-2 text-sm text-red-500">{error}</div>
         ) : pageTree.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-[#787774]">
+          <div className="px-3 py-2 text-sm text-[var(--notion-text-tertiary)]">
             페이지가 없습니다. 새 페이지를 만들어보세요.
           </div>
         ) : (
@@ -323,14 +359,19 @@ export function ClientSidebar() {
         )}
       </div>
 
-      {/* New Page Button */}
-      <div className="p-2 border-t border-[#E9E9E7]">
+      {/* New Page Button & Theme Toggle */}
+      <div className="p-2 border-t border-[var(--notion-border-light)] space-y-1">
+        <SidebarItem
+          icon={theme === 'dark' ? <Sun /> : <Moon />}
+          label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          onClick={toggleTheme}
+        />
         <button
           onClick={() => handleNewPage()}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[#37352F] rounded-[4px] hover:bg-[#EFEFEF] transition-colors duration-[20ms] cursor-pointer"
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] text-[var(--notion-text-primary)] rounded-[4px] hover:bg-[var(--notion-bg-tertiary)] transition-colors duration-[20ms] cursor-pointer"
           data-testid="new-page-btn"
         >
-          <Plus className="w-4 h-4 text-[#787774]" />
+          <Plus className="w-4 h-4 text-[var(--notion-text-tertiary)]" />
           <span>New page</span>
         </button>
       </div>

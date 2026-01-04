@@ -2,7 +2,7 @@
 # CLI 인자로 override 가능 (예: --workers 5)
 
 # Worker 설정
-workers: 4 # 동시 실행 Worker pane 수 (1-6)
+workers: 2 # 동시 실행 Worker pane 수 (1-6)
 interval: 10 # 상태 모니터링 간격 (초)
 
 # 출력 설정
@@ -37,7 +37,12 @@ launcher:
 worker_command:
   startup: "claude --model opus --dangerously-skip-permissions" # 워커 pane 시작 시 실행할 기본 명령어
   pane_startup:  # 선택적: 특정 pane(1-6)에 다른 startup 지정
-    # 1: "claude --model opus --dangerously-skip-permissions"
-    # 3: "$env:ANTHROPIC_AUTH_TOKEN='4d9c61dced944c52a5e63a9066604506.ZG6p3NTTl3AbX6O4'; $env:ANTHROPIC_BASE_URL='https://api.z.ai/api/anthropic'; claude --dangerously-skip-permissions"
+    1: "$env:ANTHROPIC_AUTH_TOKEN='4d9c61dced944c52a5e63a9066604506.ZG6p3NTTl3AbX6O4'; $env:ANTHROPIC_BASE_URL='https://api.z.ai/api/anthropic'; claude --dangerously-skip-permissions"
+    2: "$env:ANTHROPIC_AUTH_TOKEN='4d9c61dced944c52a5e63a9066604506.ZG6p3NTTl3AbX6O4'; $env:ANTHROPIC_BASE_URL='https://api.z.ai/api/anthropic'; claude --dangerously-skip-permissions"
+    # 1: "opencode --model zai/glm-4.7"
+    # 2: "opencode --model zai/glm-4.7"
+    # 2: "claude --model opus --dangerously-skip-permissions"
+    # 3: "opencode --model google/gemini-3-pro-high"
     # 4: "$env:ANTHROPIC_AUTH_TOKEN='4d9c61dced944c52a5e63a9066604506.ZG6p3NTTl3AbX6O4'; $env:ANTHROPIC_BASE_URL='https://api.z.ai/api/anthropic'; claude --dangerously-skip-permissions"
+    # opencode는  `opencode models` 명령어로 확인해볼 것
 

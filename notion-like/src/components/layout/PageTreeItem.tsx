@@ -60,7 +60,7 @@ export function PageTreeItem({
     <div>
       {/* 페이지 항목 */}
       <div
-        className="group flex items-center gap-1 px-3 py-1.5 rounded-[4px] hover:bg-[#EFEFEF] cursor-pointer transition-colors"
+        className="group flex items-center gap-1 px-3 py-1.5 rounded-[4px] hover:bg-[var(--notion-bg-tertiary)] cursor-pointer transition-colors"
         style={{ paddingLeft: `${paddingLeft}px` }}
         onClick={() => onSelect(page.id)}
         onContextMenu={handleContextMenu}
@@ -79,9 +79,9 @@ export function PageTreeItem({
             data-testid={`toggle-btn-${page.id}`}
           >
             {isExpanded ? (
-              <ChevronDown size={16} className="text-[#B4B4B3]" />
+              <ChevronDown size={16} className="text-[var(--notion-text-tertiary)]" />
             ) : (
-              <ChevronRight size={16} className="text-[#B4B4B3]" />
+              <ChevronRight size={16} className="text-[var(--notion-text-tertiary)]" />
             )}
           </button>
         ) : (
@@ -92,7 +92,7 @@ export function PageTreeItem({
         <span className="text-[18px] leading-none flex-shrink-0">{page.icon || '📄'}</span>
 
         {/* 페이지 제목 */}
-        <span className="flex-1 text-[14px] text-[#37352F] font-[400] truncate">
+        <span className="flex-1 text-[14px] text-[var(--notion-text-primary)] font-[400] truncate">
           {page.title}
         </span>
 
@@ -100,10 +100,10 @@ export function PageTreeItem({
         {isHovered && (
           <button
             onClick={handleMoreClick}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#DFDFDF] transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--notion-bg-tertiary)] transition-colors"
             data-testid={`more-btn-${page.id}`}
           >
-            <MoreHorizontal size={14} className="text-[#787774]" />
+            <MoreHorizontal size={14} className="text-[var(--notion-text-tertiary)]" />
           </button>
         )}
       </div>

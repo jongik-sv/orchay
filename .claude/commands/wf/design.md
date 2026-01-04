@@ -1,7 +1,26 @@
 ---
 subagent:
-  primary: system-architect
-  description: 통합 설계 문서 생성 (기본설계 + 상세설계)
+  phases:
+    - id: context
+      agent: requirements-analyst
+      description: 입력 검증, 컨텍스트 수집, 범위 검증, UI 플래그 설정
+    - id: design-doc
+      agent: system-architect
+      description: 010-design.md 생성
+      parallel-with: [traceability, test-spec]
+    - id: traceability
+      agent: requirements-analyst
+      description: 025-traceability-matrix.md 생성
+      parallel-with: [design-doc, test-spec]
+    - id: test-spec
+      agent: quality-engineer
+      description: 026-test-specification.md 생성
+      parallel-with: [design-doc, traceability]
+    - id: ui-design
+      agent: frontend-architect
+      description: 011-ui-design.md 및 ui-assets/ 생성 (wf:ui 인라인)
+      condition: hasUI
+      depends-on: [design-doc]
 mcp-servers: [sequential-thinking, context7]
 hierarchy-input: true
 parallel-processing: true
@@ -9,7 +28,7 @@ parallel-processing: true
 
 # /wf:design - 통합 설계 (Lite)
 
-> **상태 전환**: `[ ] Todo` → `[dd]`
+> **상태 전환**: `[  ] Todo` → `[dd]`
 > **적용 category**: `development`
 > **계층 입력**: WP/ACT/Task 단위 (WP/ACT 입력 시 하위 Task 병렬 처리)
 >
@@ -30,11 +49,56 @@ parallel-processing: true
 
 ---
 
+## 실행 플로우 (Phase 기반)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: context (requirements-analyst)                     │
+│ - 입력 검증, 컨텍스트 수집, 범위 검증, UI 플래그 설정        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Phase 2:        │ │ Phase 3:        │ │ Phase 4:        │
+│ design-doc      │ │ traceability    │ │ test-spec       │
+│ (system-        │ │ (requirements-  │ │ (quality-       │
+│  architect)     │⇄│  analyst)       │⇄│  engineer)      │
+│                 │ │                 │ │                 │
+│ 010-design.md   │ │ 025-trace...md  │ │ 026-test...md   │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │                   │                   │
+        └───────────────────┴───────────────────┘
+                            │
+                    [hasUI = true?]
+                            │
+            ┌───────────────┴───────────────┐
+            │ Yes                           │ No
+            ▼                               │
+┌─────────────────────────┐                 │
+│ Phase 5: ui-design      │                 │
+│ (frontend-architect)    │                 │
+│                         │                 │
+│ 011-ui-design.md        │                 │
+│ ui-assets/*.svg         │                 │
+│ [condition: hasUI]      │                 │
+└─────────────────────────┘                 │
+            │                               │
+            └───────────────┬───────────────┘
+                            │
+                    [상태 전환: [dd]]
+```
+
+---
+
 ## 상태 전환 규칙
 
-| category | 현재 | 다음 | 생성 문서 |
-|----------|------|------|----------|
-| development | `[ ]` | `[dd]` | `010-design.md` |
+| category | domain | hasUI | 현재 | 다음 | 생성 문서 |
+|----------|--------|-------|------|------|----------|
+| development | backend/infra/test | false | `[  ]` | `[dd]` | 010, 025, 026 |
+| development | frontend/fullstack | true | `[  ]` | `[dd]` | 010, 025, 026, **011, ui-assets/** |
+
+> **hasUI 판별**: wbs.yaml의 Task `domain` 필드가 `frontend` 또는 `fullstack`이면 true
 
 ---
 
@@ -56,16 +120,34 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 **에러 출력:**
 ```
 [ERROR] 현재 상태 [{currentStatus}]에서 'start' 명령어를 사용할 수 없습니다.
-필요한 상태: [ ]
+필요한 상태: [  ]
 ```
 
-### Phase 1: 입력 검증
+### Phase 1: 입력 검증 및 UI 플래그 설정
 
 | 검증 | 확인 | 조치 |
 |------|------|------|
 | Task 존재 | wbs.yaml에서 Task ID 확인 | 없으면 에러 |
-| 상태 확인 | `[ ]` Todo 상태여야 함 | 아니면 에러 |
+| 상태 확인 | `[  ]` Todo 상태여야 함 | 아니면 에러 |
 | 카테고리 확인 | `development` 여야 함 | 아니면 에러 |
+| **UI 플래그** | `domain` 필드 확인 | hasUI 설정 |
+
+**hasUI 판별 기준** (domain 기반):
+
+| domain 값 | hasUI | 설명 |
+|-----------|-------|------|
+| `frontend` | true | 프론트엔드 컴포넌트, 페이지 |
+| `fullstack` | true | 페이지 통합 (UI + API) |
+| `backend` | false | API, 서비스 로직 |
+| `infra` | false | 인프라, 설정 |
+| `test` | false | 테스트 코드 |
+
+```yaml
+# wbs.yaml 예시
+- id: TSK-02-01
+  title: AppLayout 컴포넌트 구현
+  domain: frontend  # → hasUI = true
+```
 
 ### Phase 2: 컨텍스트 수집
 
@@ -103,7 +185,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 | `025-traceability-matrix.md` | 요구사항 추적성 | ✅ |
 | `026-test-specification.md` | 테스트 명세 | ✅ |
 
-> ⚠️ **모든 3개 문서를 반드시 생성해야 합니다. 하나라도 누락되면 Phase 5로 진행하지 마세요.**
+> ⚠️ **모든 3개 문서를 반드시 생성해야 합니다. 하나라도 누락되면 다음 Phase로 진행하지 마세요.**
 
 **010-design.md 주요 섹션** (템플릿 참조: `.orchay/templates/010-design.md`):
 
@@ -148,7 +230,47 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 | 6. data-testid 목록 | 페이지별 셀렉터 정의 |
 | 7. 테스트 커버리지 목표 | 단위/E2E 커버리지 기준 |
 
-### Phase 5: 상태 전환 ⭐ (필수)
+### Phase 5: UI 설계 (조건부) ⭐
+
+> **조건**: `hasUI = true` (domain이 `frontend` 또는 `fullstack`)
+> **전제조건**: 010-design.md 존재 필수
+
+**생성 위치**: `.orchay/projects/{project}/tasks/{TSK-ID}/`
+
+| 문서 | 용도 | 조건 |
+|------|------|------|
+| `011-ui-design.md` | 화면 설계 문서 | hasUI |
+| `ui-assets/*.svg` | 화면 와이어프레임 | hasUI |
+
+**실행 내용** (wf:ui 로직 인라인):
+1. 010-design.md 분석 → 화면 요구사항 추출
+2. UI 테마 가이드 참조 (`.orchay/{project}/ui-theme-*.md`)
+3. 화면 흐름 설계 (SCR-XX)
+4. 화면별 상세 설계 (레이아웃, 컴포넌트, 상태, 액션)
+5. SVG 화면 생성 (ui-assets/)
+6. 011-ui-design.md 작성
+
+**SVG 파일명 규칙**:
+```
+screen-{순번}-{화면명}.svg           # 기본 상태
+screen-{순번}-{화면명}-{상태}.svg    # 상태별 변화
+```
+
+**011-ui-design.md 주요 섹션** (템플릿 참조: `.orchay/templates/011-ui-design.md` 또는 wf:ui 참조):
+
+| 섹션 | 내용 |
+|------|------|
+| 1. 화면 목록 | SCR-XX, 목적, SVG 참조 |
+| 2. 화면 전환 흐름 | Mermaid stateDiagram, 액션-화면 매트릭스 |
+| 3. 화면별 상세 | 레이아웃, 컴포넌트, 상태, 액션 |
+| 4. 공통 컴포넌트 | 모달, 알림, 토스트 |
+| 5. 반응형 설계 | Breakpoint (Desktop/Tablet/Mobile) |
+| 6. 접근성 | 키보드 네비게이션, ARIA, 색상 대비 |
+| 7. SVG 파일 목록 | 전체 SVG 파일 미리보기 |
+
+> ⚠️ **hasUI = false인 경우 이 Phase를 건너뛰고 Phase 6(상태 전환)으로 진행합니다.**
+
+### Phase 6: 상태 전환 ⭐ (필수)
 
 > ⚠️ **이 단계는 반드시 수행해야 합니다. 생략하면 execution 필드가 남습니다.**
 
@@ -158,30 +280,73 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 npx tsx .orchay/script/transition.ts {Task-ID} design -p {project}
 ```
 
-- 성공: `{ "success": true, "oldStatus": "[ ]", "newStatus": "[dd]" }`
+- 성공: `{ "success": true, "oldStatus": "[  ]", "newStatus": "[dd]" }`
 - execution 필드 자동 삭제됨
 
 ---
 
 ## 출력 예시
 
+### UI Task 출력 (hasUI = true)
+
 ```
 [wf:design] 통합 설계 시작
 
-입력: TSK-01-01
+입력: TSK-02-01
 카테고리: development
+domain: frontend → hasUI: true
 
 📋 컨텍스트 수집 완료
-├── PRD 참조: 섹션 3.1
+├── PRD 참조: 섹션 6.2
 ├── TRD 참조: 확인됨
-└── 범위 검증: 통과
+├── 범위 검증: 통과
+└── UI 플래그: true (domain=frontend)
 
 📝 문서 생성:
 ├── 010-design.md ✅
 ├── 025-traceability-matrix.md ✅
 └── 026-test-specification.md ✅
 
-🔄 상태 전환: [ ] → [dd]
+🎨 UI 설계 (hasUI=true):
+├── 화면 분석: 4개
+├── 011-ui-design.md ✅
+└── ui-assets/ (SVG 7개)
+    ├── screen-01-list.svg
+    ├── screen-01-list-empty.svg
+    ├── screen-02-form.svg
+    └── ...
+
+🔄 상태 전환: [  ] → [dd]
+
+✅ 완료
+
+---
+ORCHAY_DONE:{project}/TSK-02-01:design:success
+```
+
+### Non-UI Task 출력 (hasUI = false)
+
+```
+[wf:design] 통합 설계 시작
+
+입력: TSK-01-01
+카테고리: development
+domain: backend → hasUI: false
+
+📋 컨텍스트 수집 완료
+├── PRD 참조: 섹션 3.1
+├── TRD 참조: 확인됨
+├── 범위 검증: 통과
+└── UI 플래그: false (domain=backend)
+
+📝 문서 생성:
+├── 010-design.md ✅
+├── 025-traceability-matrix.md ✅
+└── 026-test-specification.md ✅
+
+🎨 UI 설계: 스킵 (hasUI=false)
+
+🔄 상태 전환: [  ] → [dd]
 
 ✅ 완료
 
@@ -196,25 +361,28 @@ ORCHAY_DONE:{project}/TSK-01-01:design:success
 ```
 [wf:design] 통합 설계 (병렬 처리)
 
-입력: WP-01
-대상 Task: 5개 ([ ] Todo + development 필터)
+입력: WP-02
+대상 Task: 5개 ([  ] Todo + development 필터)
 
 📦 병렬 처리:
-├── [1/5] TSK-01-01 ✅ → [dd]
-├── [2/5] TSK-01-02 ✅ → [dd]
-├── [3/5] TSK-01-03 ✅ → [dd]
-├── [4/5] TSK-02-01 ✅ → [dd]
-└── [5/5] TSK-02-02 ✅ → [dd]
+├── [1/5] TSK-02-01 ✅ → [dd] (UI ✅)
+├── [2/5] TSK-02-02 ✅ → [dd] (UI ❌)
+├── [3/5] TSK-02-03 ✅ → [dd] (UI ✅)
+├── [4/5] TSK-02-04 ✅ → [dd] (UI ❌)
+└── [5/5] TSK-02-05 ✅ → [dd] (UI ✅)
 
 📊 결과: 성공 5, 실패 0, 스킵 3 (다른 카테고리)
+🎨 UI 설계: 3개 Task에 적용됨
 
 ---
-ORCHAY_DONE:{project}/WP-01:design:success
+ORCHAY_DONE:{project}/WP-02:design:success
 ```
 
 ---
 
 ## 에러 케이스
+
+### 기본 에러
 
 | 에러 | 메시지 |
 |------|--------|
@@ -225,6 +393,28 @@ ORCHAY_DONE:{project}/WP-01:design:success
 | 010 템플릿 없음 | `[ERROR] 010-design.md 템플릿을 찾을 수 없습니다` |
 | 025 템플릿 없음 | `[ERROR] 025-traceability-matrix.md 템플릿을 찾을 수 없습니다` |
 | 026 템플릿 없음 | `[ERROR] 026-test-specification.md 템플릿을 찾을 수 없습니다` |
+
+### UI 설계 관련 에러 (hasUI = true인 경우)
+
+| 에러 | 메시지 | 처리 |
+|------|--------|------|
+| 010 문서 없음 | `[ERROR] UI 설계를 위해 010-design.md가 필요합니다` | Phase 5 실패 |
+| UI 테마 없음 | `[WARN] UI 테마 가이드가 없습니다. 기본 스타일 적용` | 경고 후 계속 |
+| SVG 생성 실패 | `[ERROR] SVG 생성 실패: {파일명}` | Phase 5 실패 |
+| 화면 요구사항 없음 | `[WARN] 010-design.md에 화면 요구사항이 없습니다` | 경고 후 계속 |
+
+### UI 설계 실패 시 복구
+
+UI 설계(Phase 5)가 실패한 경우:
+
+1. 기본 설계 문서(010, 025, 026)가 생성되었는지 확인
+2. 상태가 `[dd]`로 전환되었는지 확인
+3. 수동으로 UI 설계 실행:
+   ```bash
+   /wf:ui {project}/{task-id}
+   ```
+
+> wf:ui는 `[dd]` 상태에서 독립적으로 실행 가능합니다.
 
 ---
 
@@ -258,5 +448,8 @@ ORCHAY_DONE:{project}/{task-id}:design:error:{에러 요약}
 
 <!--
 wf:design lite
-Version: 1.0
+Version: 1.1
+Changelog:
+  1.1 - UI 서브에이전트 통합 (ui-design phase 추가, hasUI 조건부 실행)
+  1.0 - 초기 버전
 -->

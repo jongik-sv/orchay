@@ -1,7 +1,25 @@
 ---
 subagent:
-  primary: refactoring-expert
-  description: 코드 품질 분석 및 리뷰 수행
+  phases:
+    - id: collect
+      agent: backend-architect
+      description: 구현 파일 수집 및 분석 대상 결정
+    - id: quality-audit
+      agent: refactoring-expert
+      description: 복잡도, 중복, 네이밍, SOLID 검증
+      parallel-with: [security-audit, performance-audit]
+    - id: security-audit
+      agent: security-engineer
+      description: 인젝션, 인증, 암호화 취약점 검증
+      parallel-with: [quality-audit, performance-audit]
+    - id: performance-audit
+      agent: performance-engineer
+      description: 쿼리 최적화, 메모리, 캐싱 검증
+      parallel-with: [quality-audit, security-audit]
+    - id: report
+      agent: refactoring-expert
+      description: 코드 리뷰 결과 통합 및 문서 작성
+      depends-on: [quality-audit, security-audit, performance-audit]
 mcp-servers: [sequential-thinking, context7]
 hierarchy-input: true
 parallel-processing: true
@@ -27,11 +45,43 @@ parallel-processing: true
 
 ---
 
+## 실행 플로우 (Phase 기반)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: collect (backend-architect)                        │
+│ - 구현 파일 수집, 030-implementation.md에서 파일 목록 추출   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Phase 2:        │ │ Phase 3:        │ │ Phase 4:        │
+│ quality-audit   │ │ security-audit  │ │ performance-    │
+│ (refactoring-   │ │ (security-      │ │ audit           │
+│  expert)        │⇄│  engineer)      │⇄│ (performance-   │
+│                 │ │                 │ │  engineer)      │
+│ SOLID, 중복,   │ │ 인젝션, 인증,  │ │ 쿼리, 메모리,  │
+│ 복잡도         │ │ 암호화         │ │ 캐싱           │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │                   │                   │
+        └───────────────────┴───────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 5: report (refactoring-expert)                        │
+│ - 코드 리뷰 결과 통합 및 031-code-review-{llm}-{n}.md 작성   │
+│ [depends-on: quality-audit, security-audit, performance]    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 생성 산출물
 
 | 파일 | 내용 |
 |------|------|
-| `031-code-review-{llm}-{n}.md` | 코드 리뷰 결과 |
+| `031-code-review-{llm}-{n}.md` | 코드 리뷰 결과 (3개 관점 통합) |
 
 ---
 

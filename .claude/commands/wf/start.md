@@ -8,7 +8,7 @@ parallel-processing: true
 
 # /wf:start - 워크플로우 시작 (Lite)
 
-> **상태 전환**: `[ ] Todo` → `[dd] 상세설계`
+> **상태 전환**: `[  ] Todo` → `[dd] 상세설계`
 > **적용 category**: `development`, `defect`, `infrastructure`
 > **계층 입력**: WP/ACT/Task 단위 (WP/ACT 입력 시 하위 Task 병렬 처리)
 
@@ -31,9 +31,9 @@ parallel-processing: true
 
 | category | 현재 | 다음 | 생성 문서 | 내부 호출 |
 |----------|------|------|----------|----------|
-| development | `[ ]` | `[dd]` | `010-design.md` | `/wf:design` |
-| defect | `[ ]` | `[dd]` | `010-defect-analysis.md` | - |
-| infrastructure | `[ ]` | `[dd]` | `010-tech-design.md` | - |
+| development | `[  ]` | `[dd]` | `010-design.md` | `/wf:design` |
+| defect | `[  ]` | `[dd]` | `010-defect-analysis.md` | - |
+| infrastructure | `[  ]` | `[dd]` | `010-tech-design.md` | - |
 
 > **참고**: development 카테고리는 내부적으로 `/wf:design` 워크플로우를 호출합니다.
 
@@ -57,16 +57,16 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 **에러 출력:**
 ```
 [ERROR] 현재 상태 [{currentStatus}]에서 'start' 명령어를 사용할 수 없습니다.
-필요한 상태: [ ]
+필요한 상태: [  ]
 ```
 
 ### 1. 계층 입력 처리
 
 | 입력 | 처리 | 필터 |
 |------|------|------|
-| `TSK-XX-XX` | 단일 Task | `[ ]` |
-| `ACT-XX-XX` | ACT 내 모든 Task 병렬 | `[ ]` |
-| `WP-XX` | WP 내 모든 Task 병렬 | `[ ]` |
+| `TSK-XX-XX` | 단일 Task | `[  ]` |
+| `ACT-XX-XX` | ACT 내 모든 Task 병렬 | `[  ]` |
+| `WP-XX` | WP 내 모든 Task 병렬 | `[  ]` |
 
 ### 2. Task 정보 수집
 
@@ -134,7 +134,7 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 [wf:start] 워크플로우 시작 (병렬 처리)
 
 입력: WP-01
-대상 Task: 8개 ([ ] Todo 필터)
+대상 Task: 8개 ([  ] Todo 필터)
 
 📦 병렬 처리:
 ├── [1/8] TSK-01-01-01 ✅ → [dd]

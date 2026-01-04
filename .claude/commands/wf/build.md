@@ -1,14 +1,25 @@
 ---
 subagent:
-  primary: backend-architect
-  parallel:
-    - backend-architect
-    - frontend-architect
+  phases:
+    - id: analysis
+      agent: system-architect
+      description: 설계 문서 분석 및 구현 플래그 설정
+    - id: backend
+      agent: backend-architect
+      description: TDD 기반 백엔드 구현
+      condition: hasBackend
+      parallel-with: frontend
+    - id: frontend
+      agent: frontend-architect
+      description: UI 구현 및 E2E 테스트
+      condition: hasFrontend
+      parallel-with: backend
+    - id: test-report
+      agent: quality-engineer
+      description: 테스트 결과서 및 구현 보고서 생성
+      depends-on: [backend, frontend]
   conditions:
-    backend-only: backend-architect
-    frontend-only: frontend-architect
     infrastructure: devops-architect
-  description: TDD 기반 백엔드/프론트엔드 병렬 구현
 mcp-servers: [context7, playwright]
 hierarchy-input: true
 parallel-processing: true
@@ -34,14 +45,38 @@ parallel-processing: true
 
 ---
 
-## 실행 플로우
+## 실행 플로우 (Phase 기반)
 
-| Task 유형 | 실행 단계 | Agent |
-|----------|----------|-------|
-| Backend-only | 1 → 2 → 4 → 5 → 6 → 7 → 8 | backend-architect |
-| Frontend-only | 1 → 3 → 4 → 5 → 6 → 7 → 8 | frontend-architect |
-| Full-stack | 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 | backend + frontend |
-| infrastructure | 1 → 2(간소화) → 7 → 8 | devops-architect |
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: analysis (system-architect)                        │
+│ - 설계 문서 분석, 구현 플래그(hasBackend/hasFrontend) 설정   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+┌─────────────────────────┐   ┌─────────────────────────┐
+│ Phase 2: backend        │   │ Phase 3: frontend       │
+│ (backend-architect)     │   │ (frontend-architect)    │
+│ - TDD 기반 구현         │ ⇄ │ - UI 구현 및 E2E 테스트 │
+│ [condition: hasBackend] │   │ [condition: hasFrontend]│
+└─────────────────────────┘   └─────────────────────────┘
+            │                               │
+            └───────────────┬───────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 4: test-report (quality-engineer)                     │
+│ - 테스트 결과서 및 구현 보고서 생성                          │
+│ [depends-on: backend, frontend]                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Task 유형 | 실행 Phase | Agent |
+|----------|-----------|-------|
+| Backend-only | analysis → backend → test-report | system + backend + quality |
+| Frontend-only | analysis → frontend → test-report | system + frontend + quality |
+| Full-stack | analysis → backend ⇄ frontend → test-report | 전체 (병렬) |
+| infrastructure | analysis → backend(간소화) → test-report | devops-architect |
 
 ---
 
@@ -155,18 +190,37 @@ npx tsx .orchay/script/transition.ts {Task-ID} build -p {project} --start
 
 ### 5단계: 테스트 결과서 생성 ⭐
 
-```
-생성 파일:
-├── 070-tdd-test-results.md (Task 폴더)
-├── 070-e2e-test-results.md (Task 폴더)
-└── test-results/[timestamp]/
-    ├── tdd/coverage/
-    └── e2e/
-        ├── e2e-test-report.html ← 브라우저 열기
-        └── screenshots/
+> ⚠️ **MUST**: 이 단계를 완료하지 않으면 다음 단계로 진행하지 마세요.
+
+**1. 타임스탬프 디렉토리 생성** (형식: `YYYYMMDD-HHMMSS`):
+
+```bash
+# 타임스탬프 생성 및 디렉토리 구조 생성
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p test-results/${TIMESTAMP}/tdd/coverage
+mkdir -p test-results/${TIMESTAMP}/e2e/screenshots
 ```
 
-**WBS 업데이트**: `test-result: none` → `pass` | `fail`
+**2. 테스트 결과 파일 생성**:
+
+| 파일 | 경로 | 필수 |
+|------|------|------|
+| TDD 결과서 | `{Task폴더}/070-tdd-test-results.md` | ✅ |
+| E2E 결과서 | `{Task폴더}/070-e2e-test-results.md` | ✅ |
+| 커버리지 리포트 | `test-results/{timestamp}/tdd/coverage/` | ✅ |
+| E2E HTML 리포트 | `test-results/{timestamp}/e2e/e2e-test-report.html` | ✅ |
+| 스크린샷 | `test-results/{timestamp}/e2e/screenshots/` | ⚠️ (실패 시) |
+
+**3. 검증** (다음 단계 진행 전 필수 확인):
+
+```bash
+# 폴더 존재 및 파일 생성 확인
+ls -la test-results/${TIMESTAMP}/
+ls -la test-results/${TIMESTAMP}/tdd/coverage/
+ls -la test-results/${TIMESTAMP}/e2e/
+```
+
+**4. WBS 업데이트**: `test-result: none` → `pass` | `fail`
 
 **테스트 결과서 필수 포함 항목**:
 - 테스트 실행 요약 (총 테스트 수, 성공/실패 수, 실행 시간)

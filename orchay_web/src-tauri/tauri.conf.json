@@ -5,7 +5,7 @@
   "identifier": "com.orchay.desktop",
   "build": {
     "frontendDist": "../.output/public",
-    "devUrl": "http://localhost:3000",
+    "devUrl": "http://localhost:13200",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },

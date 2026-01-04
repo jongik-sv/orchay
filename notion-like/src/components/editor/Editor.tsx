@@ -27,11 +27,17 @@ interface EditorProps {
 export function Editor({ initialContent, onChange }: EditorProps) {
   // BlockNote 인스턴스 생성
   // initialContent가 있으면 JSON 파싱하여 전달, 없으면 undefined
+  // BlockNote는 빈 배열을 허용하지 않으므로 반드시 non-empty array이거나 undefined여야 함
   const editor = useCreateBlockNote({
-    initialContent: initialContent
+    initialContent: initialContent?.trim()
       ? (() => {
           try {
-            return JSON.parse(initialContent);
+            const parsed = JSON.parse(initialContent);
+            // 빈 배열이면 undefined 반환 (BlockNote 요구사항)
+            if (Array.isArray(parsed) && parsed.length === 0) {
+              return undefined;
+            }
+            return parsed;
           } catch (error) {
             console.error("[Editor] Failed to parse initialContent:", error);
             return undefined;

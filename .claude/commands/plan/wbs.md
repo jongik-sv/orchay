@@ -81,7 +81,7 @@ tasks:
     title: "Task 제목"
     category: development # .orchay/settings/workflows.json의 categories 참조
     domain: backend # backend, frontend, infra, test, fullstack, database
-    status: "[ ]" # "[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"
+    status: "[  ]" # "[  ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"
     priority: high # critical, high, medium, low
     assignee: "-"
     schedule: "2026-01-01 ~ 2026-01-05"
@@ -174,7 +174,7 @@ workPackages:
 
 | 상태 코드 | ID            | 한글     | 영문          | Phase     |
 | --------- | ------------- | -------- | ------------- | --------- |
-| `"[ ]"`   | todo          | 시작 전  | Todo          | todo      |
+| `"[  ]"`  | todo          | 시작 전  | Todo          | todo      |
 | `"[dd]"`  | detail-design | 상세설계 | Detail Design | design    |
 | `"[ap]"`  | approve       | 승인     | Approve       | design    |
 | `"[im]"`  | implement     | 구현     | Implement     | implement |
@@ -184,13 +184,13 @@ workPackages:
 ### 워크플로우 (모든 카테고리 동일)
 
 ```
-[ ] → [dd] → [ap] → [im] → [vf] → [xx]
+[  ] → [dd] → [ap] → [im] → [vf] → [xx]
 start  approve  build   verify   done
 ```
 
 | Transition      | Command   | 설명      |
 | --------------- | --------- | --------- |
-| `[ ]` → `[dd]`  | start     | 설계 시작 |
+| `[  ]` → `[dd]` | start     | 설계 시작 |
 | `[dd]` → `[ap]` | approve   | 설계 승인 |
 | `[ap]` → `[im]` | build/fix | 구현 시작 |
 | `[im]` → `[vf]` | verify    | 검증 시작 |
