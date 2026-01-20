@@ -179,10 +179,7 @@ ORCHAY_DONE:{project}/TSK-01-01-01:apply:success
 
 ## 완료 신호
 
-⚠️ **중요: 이 신호는 반드시 모든 출력의 가장 마지막에 출력해야 합니다.**
-⚠️ **ORCHAY_DONE 출력 후에는 어떤 텍스트도 절대 출력하지 마세요.**
-
-결과 보고, 요약, 축하 메시지 등은 모두 ORCHAY_DONE **이전에** 완료해야 합니다.
+작업의 **모든 출력이 끝난 후 가장 마지막에** 다음 순서로 실행:
 
 **1. execution 필드 제거:**
 ```bash
@@ -201,8 +198,7 @@ ORCHAY_DONE:{project}/{task-id}:apply:success
 ORCHAY_DONE:{project}/{task-id}:apply:error:{에러 요약}
 ```
 
-> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다.
-> 이 신호 이후에 추가 출력이 있으면 완료 탐지가 실패합니다.
+> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.
 
 ---
 

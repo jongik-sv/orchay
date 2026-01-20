@@ -1,25 +1,39 @@
 ---
 subagent:
   phases:
+    # 공통: 모든 category
     - id: analysis
       agent: system-architect
       description: 설계 문서 분석 및 구현 플래그 설정
+
+    # development 카테고리 전용
     - id: backend
       agent: backend-architect
       description: TDD 기반 백엔드 구현
-      condition: hasBackend
-      parallel-with: frontend
+      condition: category == 'development' && hasBackend
+      parallel-with: [frontend]
     - id: frontend
       agent: frontend-architect
       description: UI 구현 및 E2E 테스트
-      condition: hasFrontend
-      parallel-with: backend
-    - id: test-report
+      condition: category == 'development' && hasFrontend
+      parallel-with: [backend]
+    - id: dev-test-report
       agent: quality-engineer
       description: 테스트 결과서 및 구현 보고서 생성
+      condition: category == 'development'
       depends-on: [backend, frontend]
-  conditions:
-    infrastructure: devops-architect
+
+    # infrastructure 카테고리 전용
+    - id: infra-implement
+      agent: devops-architect
+      description: 인프라 구현 (스크립트, 설정, 배포)
+      condition: category == 'infrastructure'
+    - id: infra-test-report
+      agent: quality-engineer
+      description: 인프라 검증 결과서 생성
+      condition: category == 'infrastructure'
+      depends-on: [infra-implement]
+
 mcp-servers: [context7, playwright]
 hierarchy-input: true
 parallel-processing: true
@@ -47,6 +61,8 @@ parallel-processing: true
 
 ## 실행 플로우 (Phase 기반)
 
+### development 카테고리
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Phase 1: analysis (system-architect)                        │
@@ -65,7 +81,7 @@ parallel-processing: true
             └───────────────┬───────────────┘
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 4: test-report (quality-engineer)                     │
+│ Phase 4: dev-test-report (quality-engineer)                 │
 │ - 테스트 결과서 및 구현 보고서 생성                          │
 │ [depends-on: backend, frontend]                             │
 └─────────────────────────────────────────────────────────────┘
@@ -76,7 +92,33 @@ parallel-processing: true
 | Backend-only | analysis → backend → test-report | system + backend + quality |
 | Frontend-only | analysis → frontend → test-report | system + frontend + quality |
 | Full-stack | analysis → backend ⇄ frontend → test-report | 전체 (병렬) |
-| infrastructure | analysis → backend(간소화) → test-report | devops-architect |
+
+### infrastructure 카테고리
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: analysis (system-architect)                        │
+│ - 기술 설계 문서 분석, 구현 범위 확인                        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 2: infra-implement (devops-architect)                 │
+│ - 인프라 구현 (스크립트, 설정, 배포)                         │
+│ - CI/CD 파이프라인, 환경 설정, 모니터링 등                   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 3: infra-test-report (quality-engineer)               │
+│ - 인프라 검증 결과서 생성                                    │
+│ [depends-on: infra-implement]                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| 작업 유형 | 실행 Phase | Agent |
+|----------|-----------|-------|
+| 인프라 설정 | analysis → infra-implement → test-report | system + devops + quality |
 
 ---
 
@@ -324,10 +366,7 @@ ORCHAY_DONE:{project}/TSK-01-01-01:build:success
 
 ## 완료 신호
 
-⚠️ **중요: 이 신호는 반드시 모든 출력의 가장 마지막에 출력해야 합니다.**
-⚠️ **ORCHAY_DONE 출력 후에는 어떤 텍스트도 절대 출력하지 마세요.**
-
-결과 보고, 요약, 축하 메시지 등은 모두 ORCHAY_DONE **이전에** 완료해야 합니다.
+작업의 **모든 출력이 끝난 후 가장 마지막에** 다음 형식으로 출력:
 
 **성공:**
 ```
@@ -339,8 +378,7 @@ ORCHAY_DONE:{project}/{task-id}:build:success
 ORCHAY_DONE:{project}/{task-id}:build:error:{에러 요약}
 ```
 
-> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다.
-> 이 신호 이후에 추가 출력이 있으면 완료 탐지가 실패합니다.
+> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.
 
 ---
 
@@ -354,5 +392,8 @@ ORCHAY_DONE:{project}/{task-id}:build:error:{에러 요약}
 
 <!--
 wf:build lite
-Version: 1.3
+Version: 1.4
+Changelog:
+  1.4 - category별 Phase 분기 (development/infrastructure 조건부 실행, infra-implement phase 추가)
+  1.3 - 초기 버전
 -->

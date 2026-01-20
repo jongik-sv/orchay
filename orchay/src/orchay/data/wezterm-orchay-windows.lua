@@ -19,10 +19,7 @@ local DEFAULTS = {
   -- Shell
   default_prog = { 'powershell.exe', '-NoLogo' },
 
-  -- Appearance
-  font_family = 'JetBrains Mono',
-  font_weight = 'Medium',
-  font_size = 11.0,
+  -- Appearance (font는 시스템 기본값 사용)
   color_scheme = 'Tokyo Night',
   window_opacity = 0.95,
   window_padding = { left = 5, right = 5, top = 5, bottom = 5 },
@@ -76,8 +73,6 @@ local DEFAULTS = {
 -- WezTerm 기본 설정 (DEFAULTS 사용)
 -- =============================================================================
 config.default_prog = DEFAULTS.default_prog
-config.font = wezterm.font(DEFAULTS.font_family, { weight = DEFAULTS.font_weight })
-config.font_size = DEFAULTS.font_size
 config.color_scheme = DEFAULTS.color_scheme
 config.window_background_opacity = DEFAULTS.window_opacity
 config.window_padding = DEFAULTS.window_padding

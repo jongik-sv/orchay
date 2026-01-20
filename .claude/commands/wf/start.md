@@ -1,7 +1,46 @@
 ---
 subagent:
-  primary: requirements-analyst
-  description: 요구사항 분석 및 기본설계 문서 생성
+  phases:
+    # 공통: 모든 category
+    - id: context
+      agent: requirements-analyst
+      description: 입력 검증, 컨텍스트 수집, 범위 검증, category/UI 플래그 설정
+
+    # development 카테고리 전용
+    - id: design-doc
+      agent: system-architect
+      description: 010-design.md 생성
+      condition: category == 'development'
+      parallel-with: [traceability, test-spec, ui-design]
+    - id: traceability
+      agent: requirements-analyst
+      description: 025-traceability-matrix.md 생성
+      condition: category == 'development'
+      parallel-with: [design-doc, test-spec, ui-design]
+    - id: test-spec
+      agent: quality-engineer
+      description: 026-test-specification.md 생성
+      condition: category == 'development'
+      parallel-with: [design-doc, traceability, ui-design]
+    - id: ui-design
+      agent: frontend-architect
+      description: 011-ui-design.md 및 ui-assets/ 생성 (PRD/WBS 기반)
+      condition: category == 'development' && hasUI
+      parallel-with: [design-doc, traceability, test-spec]
+
+    # defect 카테고리 전용
+    - id: defect-analysis
+      agent: quality-engineer
+      description: 010-defect-analysis.md 생성 (현상, 재현방법, 원인분석, 수정방안)
+      condition: category == 'defect'
+
+    # infrastructure 카테고리 전용
+    - id: tech-design
+      agent: devops-architect
+      description: 010-tech-design.md 생성 (목적, 현재상태, 목표상태, 구현계획)
+      condition: category == 'infrastructure'
+
+mcp-servers: [sequential-thinking, context7]
 hierarchy-input: true
 parallel-processing: true
 ---
@@ -29,13 +68,13 @@ parallel-processing: true
 
 ## 상태 전환 규칙
 
-| category | 현재 | 다음 | 생성 문서 | 내부 호출 |
-|----------|------|------|----------|----------|
-| development | `[  ]` | `[dd]` | `010-design.md` | `/wf:design` |
+| category | 현재 | 다음 | 생성 문서 | 비고 |
+|----------|------|------|----------|------|
+| development | `[  ]` | `[dd]` | `010-design.md`, `025-traceability-matrix.md`, `026-test-specification.md` + (hasUI: `011-ui-design.md`, `ui-assets/`) | 통합 설계 (Phase 기반) |
 | defect | `[  ]` | `[dd]` | `010-defect-analysis.md` | - |
 | infrastructure | `[  ]` | `[dd]` | `010-tech-design.md` | - |
 
-> **참고**: development 카테고리는 내부적으로 `/wf:design` 워크플로우를 호출합니다.
+> ⚠️ **중요**: development 카테고리는 **Phase 기반 병렬 처리**로 010, 025, 026 문서를 모두 생성해야 합니다.
 
 ---
 
@@ -104,18 +143,228 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project} --start
 ❌ 범위 외: PRD 동일 섹션이지만 Task 설명에 없는 기능
 ```
 
-### 5. 문서 생성
+### 5. 문서 생성 ⭐
 
 - Task 폴더: `.orchay/projects/{project}/tasks/{TSK-ID}/`
-- 템플릿 참조: `.orchay/templates/010-*.md`
+- 템플릿 참조: `.orchay/templates/`
 
-**category별 문서 구조**:
+---
 
-| category | 문서 | 주요 섹션 |
-|----------|------|----------|
-| development | `010-design.md` | 개요, 시나리오, 기능요구, 비즈니스규칙, 화면요구, 수용기준 |
-| defect | `010-defect-analysis.md` | 현상, 재현방법, 원인분석, 수정방안 |
-| infrastructure | `010-tech-design.md` | 목적, 현재상태, 목표상태, 구현계획 |
+#### 5-A. development 카테고리 (Phase 기반 통합 설계)
+
+> ⚠️ **development 카테고리는 Phase 기반 병렬 처리로 문서를 생성합니다.**
+> **3개 문서(010, 025, 026)를 모두 생성해야 합니다. 하나라도 누락하면 안 됩니다.**
+
+**실행 플로우 (Phase 기반 병렬 처리)**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: context (requirements-analyst)                     │
+│ - 입력 검증, 컨텍스트 수집, 범위 검증, UI 플래그 설정        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+    ┌───────────────────────┼───────────────────────┐
+    │                       │                       │
+    ▼                       ▼                       ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ design-doc  │     │ traceability│     │ test-spec   │     │ ui-design   │
+│ (system-    │     │ (require-   │     │ (quality-   │     │ (frontend-  │
+│  architect) │  ⇄  │  ments-     │  ⇄  │  engineer)  │  ⇄  │  architect) │
+│             │     │  analyst)   │     │             │     │             │
+│ 010-design  │     │ 025-trace   │     │ 026-test    │     │ 011-ui +    │
+│ .md         │     │ ...md       │     │ ...md       │     │ ui-assets/  │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+    │                       │                       │       [condition:   │
+    │                       │                       │        hasUI]       │
+    └───────────────────────┴───────────────────────┴───────────┘
+                                    │
+                            [상태 전환: [dd]]
+```
+
+> **참고**: `ui-design`은 `hasUI = true`인 경우에만 실행되며, 다른 Phase와 병렬로 처리됩니다.
+> UI 설계는 PRD/WBS에서 직접 화면 요구사항을 추출하여 독립적으로 진행합니다.
+
+**필수 생성 문서**:
+
+| 문서 | 용도 | 필수 |
+|------|------|------|
+| `010-design.md` | 통합 설계 (기본+상세) | ✅ |
+| `025-traceability-matrix.md` | 요구사항 추적성 매트릭스 | ✅ |
+| `026-test-specification.md` | 테스트 명세서 | ✅ |
+
+**조건부 생성 문서** (hasUI = true인 경우):
+
+| 문서 | 용도 | 조건 |
+|------|------|------|
+| `011-ui-design.md` | 화면 설계 문서 | domain이 `frontend` 또는 `fullstack` |
+| `ui-assets/*.svg` | 화면 와이어프레임 | domain이 `frontend` 또는 `fullstack` |
+
+**hasUI 판별 기준** (wbs.yaml의 domain 필드):
+
+| domain 값 | hasUI | 설명 |
+|-----------|-------|------|
+| `frontend` | true | 프론트엔드 컴포넌트, 페이지 |
+| `fullstack` | true | 페이지 통합 (UI + API) |
+| `backend` | false | API, 서비스 로직 |
+| `infra` | false | 인프라, 설정 |
+| `test` | false | 테스트 코드 |
+
+**010-design.md 주요 섹션** (템플릿: `.orchay/templates/010-design.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 1. 개요 | 배경, 목적, 범위 |
+| 2. 사용자 분석 | 대상 사용자, 페르소나 |
+| 3. 유즈케이스 | 다이어그램, 상세 |
+| 4. 사용자 시나리오 | 단계별 진행 |
+| 5. 화면 설계 | 와이어프레임, 흐름도 |
+| 6. 인터랙션 설계 | 액션-피드백, 상태별 변화 |
+| 7. 데이터 요구사항 | 필요 데이터, 관계, 유효성 |
+| 8. 비즈니스 규칙 | 핵심 규칙, 상세 설명 |
+| 9. 에러 처리 | 예상 에러, 표시 방식 |
+| 10. 연관 문서 | 025, 026 참조 |
+| 11. 구현 범위 | 영향 영역, 의존성, 제약 |
+| 12. 체크리스트 | 설계 완료 확인 |
+
+**025-traceability-matrix.md 주요 섹션** (템플릿: `.orchay/templates/025-traceability-matrix.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 0. 문서 메타데이터 | Task ID, 참조 문서, 작성 정보 |
+| 1. 기능 요구사항 추적 | PRD → 설계 → 테스트 매핑 |
+| 2. 비즈니스 규칙 추적 | BR → 구현 → 검증 매핑 |
+| 3. 테스트 역추적 매트릭스 | 테스트 → 요구사항 역추적 |
+| 4. 데이터 모델 추적 | 엔티티 → ORM 스키마 → DTO 매핑 |
+| 5. 인터페이스 추적 | 인터페이스 → API 엔드포인트 매핑 |
+| 6. 화면 추적 | 화면 → 컴포넌트 매핑 |
+| 7. 추적성 검증 요약 | 커버리지 통계, 미매핑 항목 |
+
+**026-test-specification.md 주요 섹션** (템플릿: `.orchay/templates/026-test-specification.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 0. 문서 메타데이터 | Task ID, 참조 문서, 작성 정보 |
+| 1. 테스트 전략 개요 | 범위, 환경, 커버리지 목표 |
+| 2. 단위 테스트 시나리오 | UT-XXX 케이스 목록 및 상세 |
+| 3. E2E 테스트 시나리오 | E2E-XXX 케이스 목록 및 상세 |
+| 4. UI 테스트케이스 (매뉴얼) | TC-XXX 매뉴얼 테스트 |
+| 5. 테스트 데이터 (Fixture) | Mock, 시드, 테스트 계정 |
+| 6. data-testid 목록 | 페이지별 셀렉터 정의 |
+| 7. 테스트 커버리지 목표 | 단위/E2E 커버리지 기준 |
+
+---
+
+##### UI 설계 Phase (병렬 실행, 조건부)
+
+> **조건**: `hasUI = true` (domain이 `frontend` 또는 `fullstack`)
+> **실행**: 다른 Phase와 **병렬**로 실행 (PRD/WBS 기반 독립 설계)
+
+**생성 위치**: `.orchay/projects/{project}/tasks/{TSK-ID}/`
+
+| 문서 | 용도 | 조건 |
+|------|------|------|
+| `011-ui-design.md` | 화면 설계 문서 | hasUI |
+| `ui-assets/*.svg` | 화면 와이어프레임 | hasUI |
+
+**실행 내용** (wf:ui 로직 인라인):
+1. PRD/WBS에서 화면 요구사항 추출 (병렬 실행을 위해 010 의존성 제거)
+2. UI 테마 가이드 참조 (`.orchay/{project}/ui-theme-*.md`)
+3. 화면 흐름 설계 (SCR-XX)
+4. 화면별 상세 설계 (레이아웃, 컴포넌트, 상태, 액션)
+5. SVG 화면 생성 (ui-assets/)
+6. 011-ui-design.md 작성
+
+**SVG 파일명 규칙**:
+```
+screen-{순번}-{화면명}.svg           # 기본 상태
+screen-{순번}-{화면명}-{상태}.svg    # 상태별 변화
+```
+
+**011-ui-design.md 주요 섹션** (템플릿: `.orchay/templates/011-ui-design.md`):
+
+| 섹션 | 내용 |
+|------|------|
+| 1. 화면 목록 | SCR-XX, 목적, SVG 참조 |
+| 2. 화면 전환 흐름 | Mermaid stateDiagram, 액션-화면 매트릭스 |
+| 3. 화면별 상세 | 레이아웃, 컴포넌트, 상태, 액션 |
+| 4. 공통 컴포넌트 | 모달, 알림, 토스트 |
+| 5. 반응형 설계 | Breakpoint (Desktop/Tablet/Mobile) |
+| 6. 접근성 | 키보드 네비게이션, ARIA, 색상 대비 |
+| 7. SVG 파일 목록 | 전체 SVG 파일 미리보기 |
+
+> ⚠️ **hasUI = false인 경우 이 Phase를 건너뛰고 상태 전환으로 진행합니다.**
+
+---
+
+#### 5-B. defect 카테고리
+
+**실행 플로우**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: context (requirements-analyst)                     │
+│ - 입력 검증, 컨텍스트 수집, category 확인                    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 2: defect-analysis (quality-engineer)                 │
+│ - 010-defect-analysis.md 생성                               │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                    [상태 전환: [dd]]
+```
+
+| 문서 | 주요 섹션 |
+|------|----------|
+| `010-defect-analysis.md` | 현상, 재현방법, 원인분석, 수정방안 |
+
+**010-defect-analysis.md 상세 섹션**:
+
+| 섹션 | 내용 |
+|------|------|
+| 1. 결함 개요 | 결함 ID, 제목, 심각도, 우선순위 |
+| 2. 현상 | 증상 설명, 스크린샷, 로그 |
+| 3. 재현 방법 | 단계별 재현 절차, 환경 정보 |
+| 4. 원인 분석 | 근본 원인, 영향 범위, 관련 코드 |
+| 5. 수정 방안 | 해결 방법, 대안, 리스크 |
+| 6. 테스트 계획 | 검증 방법, 회귀 테스트 |
+
+---
+
+#### 5-C. infrastructure 카테고리
+
+**실행 플로우**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1: context (requirements-analyst)                     │
+│ - 입력 검증, 컨텍스트 수집, category 확인                    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 2: tech-design (devops-architect)                     │
+│ - 010-tech-design.md 생성                                   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                    [상태 전환: [dd]]
+```
+
+| 문서 | 주요 섹션 |
+|------|----------|
+| `010-tech-design.md` | 목적, 현재상태, 목표상태, 구현계획 |
+
+**010-tech-design.md 상세 섹션**:
+
+| 섹션 | 내용 |
+|------|------|
+| 1. 개요 | 배경, 목적, 범위 |
+| 2. 현재 상태 | As-Is 아키텍처, 문제점 |
+| 3. 목표 상태 | To-Be 아키텍처, 기대 효과 |
+| 4. 구현 계획 | 단계별 작업, 롤백 계획 |
+| 5. 리스크 분석 | 위험 요소, 대응 방안 |
+| 6. 검증 계획 | 테스트 방법, 모니터링 |
 
 ### 6. 상태 전환 (자동)
 
@@ -128,7 +377,89 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 
 ---
 
-## 출력 예시 (병렬 처리)
+## 출력 예시
+
+### 단일 Task (development)
+
+```
+[wf:start] 워크플로우 시작
+
+입력: TSK-01-01
+카테고리: development
+domain: frontend → hasUI: true
+
+📋 컨텍스트 수집 완료
+├── PRD 참조: 섹션 4.1.1
+├── TRD 참조: 확인됨
+├── 범위 검증: 통과
+└── UI 플래그: true (domain=frontend)
+
+📝 문서 생성 (Phase 기반):
+├── 010-design.md ✅
+├── 025-traceability-matrix.md ✅
+└── 026-test-specification.md ✅
+
+🎨 UI 설계 (hasUI=true):
+├── 011-ui-design.md ✅
+└── ui-assets/ (SVG 4개)
+
+🔄 상태 전환: [  ] → [dd]
+
+✅ 완료
+
+---
+ORCHAY_DONE:{project}/TSK-01-01:start:success
+```
+
+### 단일 Task (defect)
+
+```
+[wf:start] 워크플로우 시작
+
+입력: TSK-02-01
+카테고리: defect
+
+📋 컨텍스트 수집 완료
+├── 결함 참조: BUG-123
+├── 재현 환경: 확인됨
+└── 영향 범위: 분석됨
+
+🔍 결함 분석 (quality-engineer):
+└── 010-defect-analysis.md ✅
+
+🔄 상태 전환: [  ] → [dd]
+
+✅ 완료
+
+---
+ORCHAY_DONE:{project}/TSK-02-01:start:success
+```
+
+### 단일 Task (infrastructure)
+
+```
+[wf:start] 워크플로우 시작
+
+입력: TSK-03-01
+카테고리: infrastructure
+
+📋 컨텍스트 수집 완료
+├── 대상 시스템: 확인됨
+├── 현재 상태: 분석됨
+└── 목표 상태: 정의됨
+
+🏗️ 기술 설계 (devops-architect):
+└── 010-tech-design.md ✅
+
+🔄 상태 전환: [  ] → [dd]
+
+✅ 완료
+
+---
+ORCHAY_DONE:{project}/TSK-03-01:start:success
+```
+
+### 병렬 처리 (WP/ACT)
 
 ```
 [wf:start] 워크플로우 시작 (병렬 처리)
@@ -137,11 +468,14 @@ npx tsx .orchay/script/transition.ts {Task-ID} start -p {project}
 대상 Task: 8개 ([  ] Todo 필터)
 
 📦 병렬 처리:
-├── [1/8] TSK-01-01-01 ✅ → [dd]
-├── [2/8] TSK-01-01-02 ✅ → [dd]
+├── [1/8] TSK-01-01 (development) ✅ → [dd] (010 ✅, 025 ✅, 026 ✅, UI ✅)
+├── [2/8] TSK-01-02 (development) ✅ → [dd] (010 ✅, 025 ✅, 026 ✅, UI ✅)
+├── [3/8] TSK-01-03 (defect) ✅ → [dd] (010-defect ✅)
+├── [4/8] TSK-01-04 (infrastructure) ✅ → [dd] (010-tech ✅)
 ...
 
 📊 결과: 성공 8, 실패 0, 스킵 7
+📝 카테고리별: development 5, defect 2, infrastructure 1
 
 ---
 ORCHAY_DONE:{project}/WP-01:start:success
@@ -151,6 +485,8 @@ ORCHAY_DONE:{project}/WP-01:start:success
 
 ## 에러 케이스
 
+### 기본 에러
+
 | 에러 | 메시지 |
 |------|--------|
 | Task 없음 | `[ERROR] Task를 찾을 수 없습니다` |
@@ -158,14 +494,50 @@ ORCHAY_DONE:{project}/WP-01:start:success
 | category 없음 | `[ERROR] Task category가 지정되지 않았습니다` |
 | PRD 참조 없음 | `[WARN] PRD 참조를 찾을 수 없습니다` |
 
+### development 카테고리 에러 (Phase 기반)
+
+| 에러 | 메시지 | 처리 |
+|------|--------|------|
+| 010 템플릿 없음 | `[ERROR] 010-design.md 템플릿을 찾을 수 없습니다` | 중단 |
+| 025 템플릿 없음 | `[ERROR] 025-traceability-matrix.md 템플릿을 찾을 수 없습니다` | 중단 |
+| 026 템플릿 없음 | `[ERROR] 026-test-specification.md 템플릿을 찾을 수 없습니다` | 중단 |
+| **025 문서 미생성** | `[ERROR] 025-traceability-matrix.md를 생성하지 않았습니다` | **중단** |
+| **026 문서 미생성** | `[ERROR] 026-test-specification.md를 생성하지 않았습니다` | **중단** |
+| UI 테마 없음 | `[WARN] UI 테마 가이드가 없습니다. 기본 스타일 적용` | 경고 후 계속 |
+| 화면 요구사항 없음 | `[WARN] 010-design.md에 화면 요구사항이 없습니다` | 경고 후 계속 |
+
+### UI 설계 관련 에러 (hasUI = true인 경우)
+
+| 에러 | 메시지 | 처리 |
+|------|--------|------|
+| PRD 화면 요구사항 없음 | `[WARN] PRD에서 화면 요구사항을 찾을 수 없습니다` | 경고 후 계속 |
+| SVG 생성 실패 | `[ERROR] SVG 생성 실패: {파일명}` | UI Phase 실패 |
+
+**UI 설계 실패 시 복구**:
+
+UI 설계 Phase가 실패한 경우:
+1. 다른 문서(010, 025, 026)가 정상 생성되었는지 확인
+2. 상태가 `[dd]`로 전환되었는지 확인
+3. 수동으로 UI 설계 실행:
+   ```bash
+   /wf:ui {project}/{task-id}
+   ```
+
+> wf:ui는 `[dd]` 상태에서 독립적으로 실행 가능합니다.
+
+> ⚠️ **중요**: 010, 025, 026 문서 중 하나라도 생성되지 않으면 상태 전환을 수행하지 마세요.
+
 ---
 
 ## 완료 신호
 
-⚠️ **중요: 이 신호는 반드시 모든 출력의 가장 마지막에 출력해야 합니다.**
-⚠️ **ORCHAY_DONE 출력 후에는 어떤 텍스트도 절대 출력하지 마세요.**
+> ⚠️ **완료 신호 전 필수 확인** (development 카테고리):
+> - [ ] 010-design.md 생성 완료
+> - [ ] 025-traceability-matrix.md 생성 완료
+> - [ ] 026-test-specification.md 생성 완료
+> - [ ] transition.ts 실행 완료
 
-결과 보고, 요약, 축하 메시지 등은 모두 ORCHAY_DONE **이전에** 완료해야 합니다.
+작업의 **모든 출력이 끝난 후 가장 마지막에** 다음 형식으로 출력:
 
 **성공:**
 ```
@@ -177,8 +549,7 @@ ORCHAY_DONE:{project}/{task-id}:start:success
 ORCHAY_DONE:{project}/{task-id}:start:error:{에러 요약}
 ```
 
-> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다.
-> 이 신호 이후에 추가 출력이 있으면 완료 탐지가 실패합니다.
+> ⚠️ 이 출력은 orchay 스케줄러가 작업 완료를 감지하는 데 사용됩니다. 반드시 정확한 형식으로 출력하세요.
 
 ---
 
@@ -192,5 +563,11 @@ ORCHAY_DONE:{project}/{task-id}:start:error:{에러 요약}
 
 <!--
 wf:start lite
-Version: 1.1
+Version: 1.5
+Changelog:
+  1.5 - category별 Phase 분기 (development/defect/infrastructure 조건부 실행)
+  1.4 - UI 설계 Phase 병렬화 (010 의존성 제거, PRD/WBS 기반 독립 설계)
+  1.3 - wf:design 완전 통합 (Phase 기반 다중 에이전트 병렬 처리, UI 설계 Phase 추가)
+  1.2 - wf:design 로직 인라인 통합 (025, 026 문서 필수 생성 명시)
+  1.1 - 초기 버전
 -->
