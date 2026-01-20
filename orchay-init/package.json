@@ -1,6 +1,6 @@
 {
   "name": "orchay-init",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Initialize orchay project structure (.claude and .orchay folders)",
   "bin": {
     "orchay-init": "bin/cli.js"
