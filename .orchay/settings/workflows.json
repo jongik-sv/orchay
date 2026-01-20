@@ -3,7 +3,7 @@
   "version": "2.0",
   "defaultCategory": "development",
   "states": {
-    "[  ]": { "id": "todo", "label": "시작 전", "labelEn": "Todo", "icon": "pi-inbox", "color": "#6b7280", "severity": "secondary", "progressWeight": 0, "phase": "todo" },
+    "[ ]": { "id": "todo", "label": "시작 전", "labelEn": "Todo", "icon": "pi-inbox", "color": "#6b7280", "severity": "secondary", "progressWeight": 0, "phase": "todo" },
     "[dd]": { "id": "detail-design", "label": "상세설계", "labelEn": "Detail Design", "icon": "pi-file-edit", "color": "#8b5cf6", "severity": "info", "progressWeight": 40, "phase": "design" },
     "[ap]": { "id": "approve", "label": "승인", "labelEn": "Approve", "icon": "pi-check-square", "color": "#10b981", "severity": "success", "progressWeight": 50, "phase": "design" },
     "[im]": { "id": "implement", "label": "구현", "labelEn": "Implement", "icon": "pi-code", "color": "#f59e0b", "severity": "warning", "progressWeight": 60, "phase": "implement" },
@@ -107,9 +107,9 @@
   "workflows": {
     "development": {
       "name": "Development Workflow",
-"states": ["[  ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
+"states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
-        { "from": "[  ]", "to": "[dd]", "command": "start" },
+        { "from": "[ ]", "to": "[dd]", "command": "start" },
         { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
         { "from": "[im]", "to": "[vf]", "command": "verify" },
@@ -123,9 +123,9 @@
     },
     "defect": {
       "name": "Defect Workflow",
-"states": ["[  ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
+"states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
-        { "from": "[  ]", "to": "[dd]", "command": "start" },
+        { "from": "[ ]", "to": "[dd]", "command": "start" },
         { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "fix" },
         { "from": "[im]", "to": "[vf]", "command": "verify" },
@@ -139,9 +139,9 @@
     },
     "infrastructure": {
       "name": "Infrastructure Workflow",
-"states": ["[  ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
+"states": ["[ ]", "[dd]", "[ap]", "[im]", "[vf]", "[xx]"],
       "transitions": [
-        { "from": "[  ]", "to": "[dd]", "command": "start" },
+        { "from": "[ ]", "to": "[dd]", "command": "start" },
         { "from": "[dd]", "to": "[ap]", "command": "approve" },
         { "from": "[ap]", "to": "[im]", "command": "build" },
         { "from": "[im]", "to": "[vf]", "command": "verify" },

@@ -352,24 +352,70 @@ python -m orchay.utils.migrate_wbs .orchay/projects/myapp/
 
 ---
 
-## 다음 단계
-
-1. WBS 검토 및 수정
-2. Task 우선순위 결정
-3. `/wf:start` → 설계 시작
-4. `/wf:approve` → 설계 승인
-5. `/wf:build` → TDD 기반 구현
-6. `/wf:done` → 작업 완료
-
----
-
 ## 성공 기준
 
-- **요구사항 커버리지**: PRD 모든 기능이 Task로 분해됨
-- **적정 규모**: 모든 Task가 1일~1주 범위 내
-- **추적성**: 각 Task에 prdRef 연결
-- **구조화**: requirements 블록에 관련 정보 그룹핑
-- **파싱 안정성**: YAML 스키마 준수로 파싱 오류 제거
+WBS 생성 후 아래 기준이 프로젝트에 적용되었는지 반드시 검증합니다.
+
+| 성공 요인 | 설명 | 검증 방법 | 적용 여부 |
+|-----------|------|-----------|-----------|
+| **요구사항 커버리지** | PRD 모든 기능이 Task로 분해됨 | PRD 기능 목록 vs Task prdRef 비교 | [ ] |
+| **적정 규모** | 모든 Task가 1일~1주 범위 내 | Task별 schedule 필드 확인 | [ ] |
+| **추적성** | 각 Task에 prdRef 연결 | requirements.prdRef 존재 여부 | [ ] |
+| **구조화** | requirements 블록에 관련 정보 그룹핑 | items, acceptance, techSpec 등 존재 | [ ] |
+| **파싱 안정성** | YAML 스키마 준수로 파싱 오류 제거 | `python -m orchay.wbs_parser` 실행 | [ ] |
+
+### 적용 검증 절차
+
+WBS 생성 완료 후 다음 절차를 수행합니다:
+
+1. **커버리지 검증**
+   ```bash
+   # PRD에서 기능 ID(FR-*) 추출 후 wbs.yaml의 prdRef와 비교
+   grep -oE "FR-[A-Z]+-[0-9]+" prd.md | sort -u > /tmp/prd_refs.txt
+   grep -oE "FR-[A-Z]+-[0-9]+" wbs.yaml | sort -u > /tmp/wbs_refs.txt
+   diff /tmp/prd_refs.txt /tmp/wbs_refs.txt
+   ```
+   - 누락된 요구사항이 있으면 Task 추가
+
+2. **규모 검증**
+   - 각 Task의 schedule 필드 확인
+   - 1주 초과 Task는 하위 Task로 분할
+   - 1일 미만 Task는 상위 Task로 병합 검토
+
+3. **추적성 검증**
+   - `requirements.prdRef`가 없는 Task 목록 확인
+   - 인프라/설정 Task 제외 모든 Task에 prdRef 필수
+
+4. **구조화 검증**
+   - 모든 Task에 최소 `items`, `acceptance` 존재 확인
+   - 개발 Task는 `techSpec` 권장
+   - API Task는 `apiSpec` 필수
+   - 프론트엔드 Task는 `uiSpec` 권장
+
+5. **파싱 검증**
+   ```bash
+   # YAML 문법 검증
+   python -c "import yaml; yaml.safe_load(open('wbs.yaml'))"
+
+   # 스키마 검증 (orchay 파서 사용)
+   python -m orchay.wbs_parser .orchay/projects/{project}/wbs.yaml
+   ```
+
+### 검증 결과 리포트
+
+검증 완료 후 사용자에게 다음 형식으로 리포트합니다:
+
+```markdown
+## WBS 검증 결과
+
+| 성공 요인 | 적용 여부 | 비고 |
+|-----------|-----------|------|
+| 요구사항 커버리지 | ✅ 적용됨 | 15/15 요구사항 매핑 |
+| 적정 규모 | ⚠️ 일부 미흡 | TSK-02-03 (2주 → 분할 필요) |
+| 추적성 | ✅ 적용됨 | 모든 개발 Task에 prdRef 존재 |
+| 구조화 | ✅ 적용됨 | requirements 블록 완비 |
+| 파싱 안정성 | ✅ 적용됨 | YAML 파싱 성공 |
+```
 
 ---
 
