@@ -342,7 +342,7 @@ class TestSendCommand:
 
             await dispatch_service.dispatch_task(worker, task)
 
-            # /clear가 전송됨
+            # /clear가 전송됨 (clear_before_dispatch=True)
             calls = [str(c) for c in mock_send.call_args_list]
             assert any("/clear" in c for c in calls)
 

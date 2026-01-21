@@ -32,11 +32,13 @@ class WorkerDetection:
 
     Attributes:
         OUTPUT_LINES: 상태 감지를 위해 읽어올 pane 출력 라인 수
+        DONE_DETECTION_LINES: DONE 신호 감지를 위해 읽어올 pane 출력 라인 수
         IDLE_DETECTION_DELAY: 시작 후 idle 감지 지연 시간 (초)
         RETRY_WAIT_SECONDS: 재시도 대기 시간 (자동 재개 등)
     """
 
     OUTPUT_LINES: int = 50
+    DONE_DETECTION_LINES: int = 100
     IDLE_DETECTION_DELAY: float = 3.0
     RETRY_WAIT_SECONDS: float = 3.0
 

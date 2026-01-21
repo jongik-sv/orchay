@@ -6,11 +6,10 @@ Worker pane의 출력을 분석하여 상태를 감지합니다.
 import logging
 import re
 import time
+import zoneinfo
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
-
-import zoneinfo
 
 from orchay.domain.constants import WORKER_DETECTION
 from orchay.models.worker import PausedInfo
@@ -110,7 +109,10 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
     """텍스트에서 재개 시간을 파싱합니다.
 
     시간 + 10분에 재개합니다 (예: 6pm → 6:10pm).
-분이 있으면 올림 처리합니다 (예: 5:59pm → 6pm → 6:10pm).
+    분이 있으면 올림 처리합니다 (예: 5:59pm → 6pm → 6:10pm).
+
+    시간이 이미 지났으면 즉시 재시도합니다 (1분 뒤).
+    (다음날로 설정하면 이미 해제된 rate limit을 24시간 기다리게 됨)
 
     Args:
         text: "resets 6pm", "rate limit 9:30am" 등
@@ -127,9 +129,9 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
         >>> parse_resume_time("resets 6pm", detected_at)
         datetime(2025, 1, 2, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 6pm + 10분
 
-        >>> detected_at = datetime(2025, 1, 2, 18, 5, tzinfo=ZoneInfo("Asia/Seoul"))
+        >>> detected_at = datetime(2025, 1, 2, 18, 15, tzinfo=ZoneInfo("Asia/Seoul"))
         >>> parse_resume_time("resets 6pm", detected_at)
-        datetime(2025, 1, 3, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 다음날 6:10pm
+        datetime(2025, 1, 2, 18, 16, tzinfo=ZoneInfo("Asia/Seoul"))  # 이미 지남 → 1분 뒤
     """
     for pattern in TIME_PATTERNS:
         match = pattern.search(text)
@@ -159,9 +161,10 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
                 hour=hour, minute=10, second=0, microsecond=0, tzinfo=tz
             )
 
-            # 시간이 지났으면 다음날로
+            # 시간이 이미 지났으면 즉시 재시도 (1분 뒤)
+            # (다음날로 설정하면 이미 해제된 rate limit을 24시간 기다리게 됨)
             if resume_time <= detected_at:
-                resume_time += timedelta(days=1)
+                resume_time = detected_at + timedelta(minutes=1)
 
             return resume_time
 
@@ -242,19 +245,24 @@ async def detect_worker_state(
     if not await pane_exists(pane_id):
         return "dead", None
 
-    # 출력 텍스트 조회
-    output = await wezterm_get_text(pane_id, lines=WORKER_DETECTION.OUTPUT_LINES)
+    # 1. pane 텍스트 조회 (100줄 - DONE 신호 + 기본 상태 모두 처리)
+    # 성능 최적화: 한 번의 wezterm_get_text 호출로 두 용도 모두 처리
+    output = await wezterm_get_text(
+        pane_id, lines=WORKER_DETECTION.DONE_DETECTION_LINES
+    )
 
     # 빈 출력이면 busy로 간주
     if not output.strip():
         return "busy", None
 
-    # 1. ORCHAY_DONE 체크 (최우선 - 완료 신호는 busy보다 우선)
+    # 2. ORCHAY_DONE 체크 (최우선 - 완료 신호는 busy보다 우선)
     done_info = parse_done_signal(output)
     if done_info:
         return "done", done_info
 
-    # 2. 일시 중단 패턴 (rate limit 등은 실제 제약이므로 우선)
+    # 이하 기본 상태 감지 (100줄 전체에서 패턴 검색)
+
+    # 3. 일시 중단 패턴 (rate limit 등은 실제 제약이므로 우선)
     for pattern in PAUSE_PATTERNS:
         if pattern.search(output):
             # 시간 파싱 시도
@@ -281,24 +289,24 @@ async def detect_worker_state(
                 logger.info(f"Token limit detected (no time), using fallback: {resume_at}")
                 return "paused", paused_info
 
-    # 3. 작업 중 패턴 체크 (명시적 busy 상태)
+    # 4. 작업 중 패턴 체크 (명시적 busy 상태)
     # Claude Code가 작업 중일 때 나타나는 패턴이 있으면 busy
     # "esc to interrupt", "ctrl+t to hide" 등은 작업 중에만 표시됨
     for pattern in BUSY_PATTERNS:
         if pattern.search(output):
             return "busy", None
 
-    # 4. 에러 패턴
+    # 5. 에러 패턴
     for pattern in ERROR_PATTERNS:
         if pattern.search(output):
             return "error", None
 
-    # 5. 질문/입력 대기 패턴
+    # 6. 질문/입력 대기 패턴
     for pattern in BLOCKED_PATTERNS:
         if pattern.search(output):
             return "blocked", None
 
-    # 6. 프롬프트 패턴 체크
+    # 7. 프롬프트 패턴 체크
     # - Task 실행 중(has_active_task=True): 프롬프트로 idle 감지 안 함
     # - Task 없음(has_active_task=False): 프롬프트로 idle 감지 허용
     # - 시작 후 지연 시간 이내: 무조건 프롬프트로 idle 감지 (Worker 초기화용)
@@ -310,5 +318,41 @@ async def detect_worker_state(
             if pattern.search(last_text):
                 return "idle", None
 
-    # 7. 기본값: 작업 중
+    # 8. 기본값: 작업 중
     return "busy", None
+
+
+# /wf: 명령어 패턴에서 Task ID 추출
+# 예: "/wf:build orchay/TSK-01-01" → "orchay/TSK-01-01"
+WF_COMMAND_PATTERN = re.compile(r"/wf:\w+\s+((?:[\w-]+/)?(TSK-[\w-]+))")
+
+
+async def extract_running_task_from_pane(pane_id: int) -> str | None:
+    """pane 텍스트에서 현재 실행 중인 Task ID를 추출합니다.
+
+    가장 최근의 /wf:xxx 명령어에서 Task ID를 찾습니다.
+    ORCHAY_DONE 신호가 있으면 해당 Task는 완료된 것으로 간주하여 None 반환.
+
+    Args:
+        pane_id: WezTerm pane ID
+
+    Returns:
+        Task ID (예: "TSK-01-01") 또는 None
+    """
+    output = await wezterm_get_text(pane_id, lines=WORKER_DETECTION.OUTPUT_LINES)
+
+    if not output.strip():
+        return None
+
+    # ORCHAY_DONE 신호가 있으면 Task 완료로 간주
+    if DONE_PATTERN.search(output):
+        return None
+
+    # /wf:xxx 명령어에서 Task ID 추출 (가장 최근 것)
+    matches = list(WF_COMMAND_PATTERN.finditer(output))
+    if matches:
+        full_id = matches[-1].group(1)
+        # "project/TSK-XX-XX" 형식이면 "/" 뒤 부분만 반환
+        return full_id.split("/")[-1]
+
+    return None

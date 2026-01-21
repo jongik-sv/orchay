@@ -137,6 +137,20 @@ class DispatchService:
                     message=f"Worker 상태가 {actual_state}",
                 )
 
+            # pane에서 이 Task가 이미 실행 중인지 최종 확인
+            from orchay.worker import extract_running_task_from_pane
+
+            pane_task = await extract_running_task_from_pane(worker.pane_id)
+            if pane_task == task.id:
+                logger.warning(
+                    f"Worker {worker.id}: {task.id}가 이미 이 pane에서 실행 중 (dispatch 취소)"
+                )
+                self._reset_assignment(worker, task)
+                return DispatchResult(
+                    success=False,
+                    message="이미 실행 중",
+                )
+
         # Worker 상태 업데이트
         await dispatch_task(worker, task, self._mode)
 
@@ -266,7 +280,7 @@ class DispatchService:
         Returns:
             DispatchResult
         """
-        # /clear 전송 (옵션)
+        # /clear 전송 (설정에 따라, DONE 신호 감지 정확도 향상을 위해 권장)
         if self._config.dispatch.clear_before_dispatch:
             await self._send_clear(worker)
 

@@ -311,6 +311,39 @@ class WorkerService:
         """
         return {w.current_task for w in self._workers if w.current_task}
 
+    async def scan_running_tasks_from_panes(self) -> set[str]:
+        """모든 Worker pane에서 실행 중인 Task ID를 스캔합니다.
+
+        pane 텍스트에서 /wf:xxx 명령어의 Task ID를 추출하여
+        메모리 상태(current_task)와 비교하고 불일치 시 동기화합니다.
+
+        Returns:
+            pane에서 발견된 실행 중인 Task ID 집합
+        """
+        from orchay.worker import extract_running_task_from_pane
+
+        running_tasks: set[str] = set()
+
+        for worker in self._workers:
+            # dead 상태 worker는 스킵 (pane이 없으므로 스캔 불가)
+            if worker.state == WorkerState.DEAD:
+                continue
+
+            task_id = await extract_running_task_from_pane(worker.pane_id)
+            if task_id:
+                running_tasks.add(task_id)
+
+                # 메모리/pane 불일치 감지 및 동기화
+                if worker.current_task != task_id:
+                    logger.warning(
+                        f"Worker {worker.id}: 메모리/pane 불일치 감지 "
+                        f"(메모리={worker.current_task}, pane={task_id}), 동기화 수행"
+                    )
+                    worker.current_task = task_id
+                    worker.state = WorkerState.BUSY
+
+        return running_tasks
+
     async def update_worker_state_with_continuation(
         self,
         worker: Worker,
@@ -596,3 +629,52 @@ class WorkerService:
             worker.reset()
         else:
             worker.state = WorkerState.IDLE
+
+    async def reconnect_dead_worker(self, worker: Worker) -> bool:
+        """dead 상태의 Worker를 새 pane에 재연결합니다.
+
+        현재 WezTerm pane 목록을 조회하여 사용 가능한 pane을 찾아
+        Worker의 pane_id를 업데이트합니다.
+
+        Args:
+            worker: 재연결할 Worker (dead 상태)
+
+        Returns:
+            재연결 성공 여부
+        """
+        # 현재 pane 목록 조회
+        panes = await wezterm_list_panes()
+        if not panes:
+            logger.warning("WezTerm pane을 찾을 수 없습니다.")
+            return False
+
+        # 이미 할당된 pane_id 집합
+        used_pane_ids = {w.pane_id for w in self._workers if w.id != worker.id}
+
+        # 현재 활성 pane (스케줄러) 제외
+        current_pane_id = await self._detect_current_pane()
+        if current_pane_id == -1:
+            logger.warning(
+                "현재 pane 감지 실패, 스케줄러 pane과 충돌 가능성 있음"
+            )
+
+        # 사용 가능한 pane 찾기
+        for pane in panes:
+            if pane.pane_id in used_pane_ids:
+                continue
+            # current_pane_id가 -1이면 스킵하지 않음 (감지 실패)
+            if current_pane_id != -1 and pane.pane_id == current_pane_id:
+                continue
+
+            # 사용 가능한 pane 발견
+            old_pane_id = worker.pane_id
+            worker.pane_id = pane.pane_id
+            worker.state = WorkerState.IDLE
+            logger.info(
+                f"Worker {worker.id}: pane 재연결 완료 "
+                f"(pane {old_pane_id} → {pane.pane_id})"
+            )
+            return True
+
+        logger.warning(f"Worker {worker.id}: 사용 가능한 pane이 없습니다.")
+        return False

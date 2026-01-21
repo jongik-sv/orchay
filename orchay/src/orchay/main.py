@@ -219,12 +219,21 @@ class Orchestrator:
         """유휴 Worker에 실행 가능 Task를 분배합니다.
 
         Phase 2.4: 새로 추가된 헬퍼 메서드.
+        중복 방지: 메모리 기반 체크 + pane 텍스트 스캔 이중 검증.
         """
         # 실행 가능 Task 조회
         executable = self._task_service.get_executable_tasks(self.mode)
-        running_task_ids = self._worker_service.running_task_ids()
 
-        logger.debug(f"_dispatch_idle_workers: executable={len(executable)}개")
+        # pane 기반 스캔 (메모리/pane 불일치 시 동기화 포함)
+        pane_running_tasks = await self._worker_service.scan_running_tasks_from_panes()
+
+        # 메모리 기반 + pane 기반 이중 체크
+        running_task_ids = self._worker_service.running_task_ids() | pane_running_tasks
+
+        logger.debug(
+            f"_dispatch_idle_workers: executable={len(executable)}개, "
+            f"running={len(running_task_ids)}개 (pane={len(pane_running_tasks)}개)"
+        )
 
         for worker in self.workers:
             if not executable:
@@ -233,12 +242,15 @@ class Orchestrator:
             if worker.state != WorkerState.IDLE or worker.is_manually_paused:
                 continue
 
-            task = executable.pop(0)
+            # 중복 실행 방지: pop 전에 running_task_ids에 있는 task 스킵
+            while executable and executable[0].id in running_task_ids:
+                skipped = executable.pop(0)
+                logger.warning(f"중복 실행 방지: {skipped.id}는 이미 실행 중 (running_task_ids)")
 
-            # 중복 실행 방지
-            if task.id in running_task_ids:
-                logger.warning(f"중복 실행 방지: {task.id}는 이미 다른 Worker에서 실행 중")
-                continue
+            if not executable:
+                break
+
+            task = executable.pop(0)
 
             # Race condition 방지: dispatch 전에 즉시 할당 상태 설정
             task.assigned_worker = worker.id
