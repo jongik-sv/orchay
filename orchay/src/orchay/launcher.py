@@ -130,19 +130,31 @@ def _get_project_dir() -> Path:
         Path: orchay 패키지 루트 디렉토리 (pyproject.toml 위치)
 
     Note:
-        - 일반 실행: __file__ (src/orchay/launcher.py) 기준 3단계 상위
         - PyInstaller frozen: 실행 파일 위치 기준
+        - 일반 실행: __file__에서 상위로 올라가며 pyproject.toml 탐색
     """
     if getattr(sys, "frozen", False):
         # PyInstaller frozen 환경: 실행 파일 위치
         return Path(sys.executable).parent
-    else:
-        # 일반 실행: src/orchay/launcher.py → orchay/
-        # __file__: orchay/src/orchay/launcher.py
-        # parent[0]: orchay/src/orchay/
-        # parent[1]: orchay/src/
-        # parent[2]: orchay/ (프로젝트 루트)
-        return Path(__file__).resolve().parent.parent.parent
+
+    # 일반 실행: pyproject.toml을 찾을 때까지 상위 디렉토리 탐색
+    current = Path(__file__).resolve().parent
+    for _ in range(10):  # 최대 10단계까지 탐색
+        pyproject = current / "pyproject.toml"
+        if pyproject.exists():
+            # pyproject.toml에 orchay 패키지 정보가 있는지 확인
+            try:
+                content = pyproject.read_text(encoding="utf-8")
+                if "orchay" in content:
+                    return current
+            except (OSError, UnicodeDecodeError):
+                pass
+        if current.parent == current:  # 루트 도달
+            break
+        current = current.parent
+
+    # fallback: 기존 방식 (3단계 상위)
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def _get_bundled_file(filename: str) -> Path:
@@ -175,6 +187,18 @@ def _get_bundled_file(filename: str) -> Path:
         return _get_project_dir() / filename
 
 
+def _is_installed_package() -> bool:
+    """pip/pipx로 설치된 패키지인지 확인.
+
+    Returns:
+        bool: site-packages에 설치된 경우 True
+    """
+    current_file = Path(__file__).resolve()
+    # site-packages 또는 dist-packages에 있으면 설치된 패키지
+    path_str = str(current_file).lower()
+    return "site-packages" in path_str or "dist-packages" in path_str
+
+
 def get_orchay_cmd() -> str:
     """orchay 실행 명령 반환.
 
@@ -182,13 +206,18 @@ def get_orchay_cmd() -> str:
         str: orchay 실행 명령 문자열
 
     Note:
-        - 일반 실행: uv run --project {project_dir} python -m orchay
-        - PyInstaller frozen: 직접 실행 (uv 없이)
+        - PyInstaller frozen: 직접 실행 파일 경로
+        - pip/pipx 설치: python -m orchay (이미 PATH에 있음)
+        - 개발 환경: uv run --project {project_dir} python -m orchay
     """
     if getattr(sys, "frozen", False):
         # PyInstaller frozen 환경: 직접 실행
         return str(Path(sys.executable))
+    elif _is_installed_package():
+        # pip/pipx 설치 환경: 이미 설치되어 있으므로 직접 호출
+        return f"{sys.executable} -m orchay"
     else:
+        # 개발 환경: uv run 사용
         project_dir = _get_project_dir()
         return f"uv run --project {project_dir} python -m orchay"
 
