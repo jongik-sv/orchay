@@ -1,11 +1,11 @@
 """Worker 상태 감지 테스트."""
 
 import time
+import zoneinfo
 from datetime import datetime
 from unittest.mock import patch
 
 import pytest
-import zoneinfo
 
 import orchay.worker
 from orchay.models.worker import PausedInfo, Worker, WorkerState
@@ -290,15 +290,17 @@ class TestDetectWorkerState:
             patch("orchay.worker.wezterm_get_text") as mock_get_text,
         ):
             mock_pane_exists.return_value = True
-            mock_get_text.return_value = "weekly limit reached, resets at Oct 9 10:30am"
+            # 11pm은 대부분의 시간대에서 미래이므로 안정적인 테스트 가능
+            mock_get_text.return_value = "weekly limit reached, resets at 11pm"
 
             state, paused_info = await detect_worker_state(pane_id=1)
 
             assert state == "paused"
-            # 시간 파싱 성공: 10:30am → 11am + 10분 = 11:10am
             assert isinstance(paused_info, PausedInfo)
-            assert paused_info.resume_at.hour == 11
-            assert paused_info.resume_at.minute == 10
+            # 시간 파싱 성공: 11pm + 10분 = 11:10pm
+            # (현재 시간이 11:10pm 이전이면 오늘 11:10pm, 이후면 1분 뒤)
+            assert paused_info.resume_at is not None
+            assert paused_info.reason == "rate limit"
 
     @pytest.mark.asyncio
     async def test_detect_paused_context_limit(self) -> None:
@@ -446,13 +448,14 @@ class TestParseResumeTime:
         assert result.day == 2  # 오늘
 
     def test_parse_6pm_when_after(self) -> None:
-        """6pm 파싱: 현재 시간이 6:10pm 후면 내일 6:10pm."""
+        """6pm 파싱: 현재 시간이 6:10pm 후면 1분 뒤 즉시 재시도."""
         detected_at = datetime(2025, 1, 2, 19, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
         result = parse_resume_time("resets 6pm", detected_at)
 
-        assert result.hour == 18
-        assert result.minute == 10  # 6pm + 10분
-        assert result.day == 3  # 다음날
+        # 이미 지났으면 1분 뒤 즉시 재시도 (다음날 대기 X)
+        assert result.hour == 19
+        assert result.minute == 1  # 19:00 + 1분
+        assert result.day == 2  # 오늘
 
     def test_parse_5_59pm(self) -> None:
         """5:59pm 파싱: 6:10pm으로 동일."""
@@ -464,12 +467,18 @@ class TestParseResumeTime:
         assert result.minute == 10
 
     def test_parse_9am(self) -> None:
-        """9am 파싱: 9:10am."""
-        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
-        result = parse_resume_time("resets 9am", detected_at)
+        """9am 파싱: 현재 8am이면 9:10am, 현재 2pm이면 1분 뒤."""
+        # 9:10am 전이면 오늘 9:10am
+        detected_at_before = datetime(2025, 1, 2, 8, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_before = parse_resume_time("resets 9am", detected_at_before)
+        assert result_before.hour == 9
+        assert result_before.minute == 10
 
-        assert result.hour == 9
-        assert result.minute == 10  # 9am + 10분
+        # 9:10am 후면 1분 뒤 즉시 재시도
+        detected_at_after = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_after = parse_resume_time("resets 9am", detected_at_after)
+        assert result_after.hour == 14
+        assert result_after.minute == 1  # 14:00 + 1분
 
     def test_parse_9_30pm(self) -> None:
         """9:30pm 파싱: 10:10pm (올림)."""
@@ -481,20 +490,32 @@ class TestParseResumeTime:
         assert result.minute == 10
 
     def test_parse_12pm(self) -> None:
-        """12pm 파싱 (정오): 12:10pm."""
-        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
-        result = parse_resume_time("resets 12pm", detected_at)
+        """12pm 파싱 (정오): 12:10pm 전이면 오늘, 후면 1분 뒤."""
+        # 12:10pm 전이면 오늘 12:10pm
+        detected_at_before = datetime(2025, 1, 2, 10, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_before = parse_resume_time("resets 12pm", detected_at_before)
+        assert result_before.hour == 12
+        assert result_before.minute == 10
 
-        assert result.hour == 12
-        assert result.minute == 10  # 12pm + 10분
+        # 12:10pm 후면 1분 뒤 즉시 재시도
+        detected_at_after = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_after = parse_resume_time("resets 12pm", detected_at_after)
+        assert result_after.hour == 14
+        assert result_after.minute == 1
 
     def test_parse_12am(self) -> None:
-        """12am 파싱 (자정): 12:10am."""
-        detected_at = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
-        result = parse_resume_time("resets 12am", detected_at)
+        """12am 파싱 (자정): 12:10am 전이면 오늘, 후면 1분 뒤."""
+        # 12:10am 전이면 오늘 12:10am
+        detected_at_before = datetime(2025, 1, 2, 0, 5, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_before = parse_resume_time("resets 12am", detected_at_before)
+        assert result_before.hour == 0
+        assert result_before.minute == 10
 
-        assert result.hour == 0
-        assert result.minute == 10  # 12am + 10분
+        # 12:10am 후면 1분 뒤 즉시 재시도
+        detected_at_after = datetime(2025, 1, 2, 14, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Seoul"))
+        result_after = parse_resume_time("resets 12am", detected_at_after)
+        assert result_after.hour == 14
+        assert result_after.minute == 1
 
     def test_parse_with_timezone(self) -> None:
         """타임존 정보 포함 파싱."""

@@ -6,11 +6,10 @@ Worker pane의 출력을 분석하여 상태를 감지합니다.
 import logging
 import re
 import time
+import zoneinfo
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
-
-import zoneinfo
 
 from orchay.domain.constants import WORKER_DETECTION
 from orchay.models.worker import PausedInfo
@@ -110,7 +109,10 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
     """텍스트에서 재개 시간을 파싱합니다.
 
     시간 + 10분에 재개합니다 (예: 6pm → 6:10pm).
-분이 있으면 올림 처리합니다 (예: 5:59pm → 6pm → 6:10pm).
+    분이 있으면 올림 처리합니다 (예: 5:59pm → 6pm → 6:10pm).
+
+    시간이 이미 지났으면 즉시 재시도합니다 (1분 뒤).
+    (다음날로 설정하면 이미 해제된 rate limit을 24시간 기다리게 됨)
 
     Args:
         text: "resets 6pm", "rate limit 9:30am" 등
@@ -127,9 +129,9 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
         >>> parse_resume_time("resets 6pm", detected_at)
         datetime(2025, 1, 2, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 6pm + 10분
 
-        >>> detected_at = datetime(2025, 1, 2, 18, 5, tzinfo=ZoneInfo("Asia/Seoul"))
+        >>> detected_at = datetime(2025, 1, 2, 18, 15, tzinfo=ZoneInfo("Asia/Seoul"))
         >>> parse_resume_time("resets 6pm", detected_at)
-        datetime(2025, 1, 3, 18, 10, tzinfo=ZoneInfo("Asia/Seoul"))  # 다음날 6:10pm
+        datetime(2025, 1, 2, 18, 16, tzinfo=ZoneInfo("Asia/Seoul"))  # 이미 지남 → 1분 뒤
     """
     for pattern in TIME_PATTERNS:
         match = pattern.search(text)
@@ -159,9 +161,10 @@ def parse_resume_time(text: str, detected_at: datetime) -> datetime:
                 hour=hour, minute=10, second=0, microsecond=0, tzinfo=tz
             )
 
-            # 시간이 지났으면 다음날로
+            # 시간이 이미 지났으면 즉시 재시도 (1분 뒤)
+            # (다음날로 설정하면 이미 해제된 rate limit을 24시간 기다리게 됨)
             if resume_time <= detected_at:
-                resume_time += timedelta(days=1)
+                resume_time = detected_at + timedelta(minutes=1)
 
             return resume_time
 
