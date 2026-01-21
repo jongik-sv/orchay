@@ -1349,8 +1349,28 @@ class OrchayApp(App[None]):
             current_task = worker.current_task
             prev_state = worker.state
 
-            # Worker 리셋 (상태 무관하게 항상 리셋)
-            worker.reset()
+            # dead 상태인 경우 pane 재연결 시도
+            if worker.state == WorkerState.DEAD:
+                if self._real_orchestrator is not None:
+                    worker_service = self._real_orchestrator._worker_service  # pyright: ignore[reportPrivateUsage]
+                    success = await worker_service.reconnect_dead_worker(worker)
+                    if not success:
+                        self.notify(
+                            f"Worker {worker.id}: 재연결할 pane이 없습니다",
+                            severity="error",
+                        )
+                        return
+                    self.notify(
+                        f"Worker {worker.id}: pane {worker.pane_id}에 재연결됨",
+                        severity="information",
+                    )
+                else:
+                    self.notify("Orchestrator not available", severity="error")
+                    return
+            else:
+                # 기존 리셋 로직 (dead가 아닌 경우)
+                worker.reset()
+
             worker.is_manually_paused = False  # 수동 일시정지도 해제
 
             # 파일에서도 정리

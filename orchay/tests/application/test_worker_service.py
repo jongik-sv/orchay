@@ -851,3 +851,85 @@ class TestHandleIdleState:
         service._handle_idle_state(worker, {})
 
         assert worker.state == WorkerState.IDLE
+
+
+class TestReconnectDeadWorker:
+    """reconnect_dead_worker 메서드 테스트."""
+
+    @pytest.mark.asyncio
+    async def test_reconnects_to_available_pane(self) -> None:
+        """TC-WS-35: 사용 가능한 pane에 재연결합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        # Worker 1: dead 상태 (pane 100 사라짐)
+        dead_worker = create_worker(id=1, pane_id=100, state=WorkerState.DEAD)
+        # Worker 2: 정상 (pane 101 사용 중)
+        active_worker = create_worker(id=2, pane_id=101, state=WorkerState.IDLE)
+        service.workers = [dead_worker, active_worker]
+
+        # Mock pane 목록: 101 (사용 중), 102 (새 pane), 103 (스케줄러)
+        mock_panes = [
+            MagicMock(pane_id=101),
+            MagicMock(pane_id=102),
+            MagicMock(pane_id=103),
+        ]
+
+        with (
+            patch.object(service, "_detect_current_pane", return_value=103),
+            patch(
+                "orchay.application.worker_service.wezterm_list_panes",
+                return_value=mock_panes,
+            ),
+        ):
+            result = await service.reconnect_dead_worker(dead_worker)
+
+        assert result is True
+        assert dead_worker.pane_id == 102  # 새 pane에 연결
+        assert dead_worker.state == WorkerState.IDLE
+
+    @pytest.mark.asyncio
+    async def test_fails_when_no_available_pane(self) -> None:
+        """TC-WS-36: 사용 가능한 pane이 없으면 실패합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        dead_worker = create_worker(id=1, pane_id=100, state=WorkerState.DEAD)
+        active_worker = create_worker(id=2, pane_id=101, state=WorkerState.IDLE)
+        service.workers = [dead_worker, active_worker]
+
+        # Mock: 모든 pane이 사용 중이거나 스케줄러
+        mock_panes = [
+            MagicMock(pane_id=101),  # Worker 2가 사용 중
+            MagicMock(pane_id=102),  # 스케줄러
+        ]
+
+        with (
+            patch.object(service, "_detect_current_pane", return_value=102),
+            patch(
+                "orchay.application.worker_service.wezterm_list_panes",
+                return_value=mock_panes,
+            ),
+        ):
+            result = await service.reconnect_dead_worker(dead_worker)
+
+        assert result is False
+        assert dead_worker.pane_id == 100  # 변경 안됨
+        assert dead_worker.state == WorkerState.DEAD  # 상태 유지
+
+    @pytest.mark.asyncio
+    async def test_fails_when_no_panes(self) -> None:
+        """TC-WS-37: pane 목록이 비어있으면 실패합니다."""
+        config = create_config()
+        service = WorkerService(config)
+
+        dead_worker = create_worker(id=1, pane_id=100, state=WorkerState.DEAD)
+        service.workers = [dead_worker]
+
+        with patch(
+            "orchay.application.worker_service.wezterm_list_panes",
+            return_value=[],
+        ):
+            result = await service.reconnect_dead_worker(dead_worker)
+
+        assert result is False

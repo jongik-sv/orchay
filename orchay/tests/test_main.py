@@ -360,6 +360,8 @@ class TestOrchestratorTick:
         orch.tasks = []
         orch._task_service = MagicMock()
         orch._worker_service = MagicMock()
+        # scan_running_tasks_from_panes()는 async 함수이므로 AsyncMock 사용
+        orch._worker_service.scan_running_tasks_from_panes = AsyncMock(return_value=set())
         orch._dispatch_service = MagicMock()
         return orch
 
@@ -442,6 +444,8 @@ class TestOrchestratorDispatchIdleWorkers:
         orch = Orchestrator(config, wbs_file, tmp_path, "test")
         orch._task_service = MagicMock()
         orch._worker_service = MagicMock()
+        # scan_running_tasks_from_panes()는 async 함수이므로 AsyncMock 사용
+        orch._worker_service.scan_running_tasks_from_panes = AsyncMock(return_value=set())
         orch._dispatch_service = MagicMock()
         return orch
 

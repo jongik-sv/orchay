@@ -421,8 +421,8 @@ class TestDetectWorkerState:
             assert isinstance(paused_info, PausedInfo)
 
     @pytest.mark.asyncio
-    async def test_50_lines_limit(self) -> None:
-        """UT-015: 최근 50줄만 검색."""
+    async def test_output_lines_limit(self) -> None:
+        """UT-015: 100줄 한 번 읽어서 DONE + 기본 상태 모두 처리 (성능 최적화)."""
         with (
             patch("orchay.worker.pane_exists", return_value=True),
             patch("orchay.worker.wezterm_get_text") as mock_get_text,
@@ -431,8 +431,9 @@ class TestDetectWorkerState:
 
             await detect_worker_state(pane_id=1)
 
-            # wezterm_get_text가 lines=50으로 호출되었는지 확인
-            mock_get_text.assert_called_once_with(1, lines=50)
+            # 성능 최적화: wezterm_get_text가 한 번만 호출됨 (100줄)
+            assert mock_get_text.call_count == 1
+            mock_get_text.assert_called_once_with(1, lines=100)
 
 
 class TestParseResumeTime:
